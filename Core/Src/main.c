@@ -11,11 +11,10 @@
 #include "cmsis_os.h"
 #include "usart.h"
 #include "gpio.h"
+#include "servo_action.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
-#include "motion_control.h"
 
 /* USER CODE END Includes */
 
@@ -91,10 +90,10 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   MX_USART2_UART_Init();
+  MX_UART5_Init();
+  MX_UART7_Init();
+  ServoAction_Init(&huart7);
   /* USER CODE BEGIN 2 */
-
-  MotionControl_Init(&huart3, &huart2);
-  (void)MotionControl_RunDefaultSequence();
 
   /* USER CODE END 2 */
 

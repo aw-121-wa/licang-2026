@@ -20,6 +20,7 @@
             ],
             "includePath": [
                 "${workspaceFolder}/Core/Inc",
+                "${workspaceFolder}/App",
                 "${workspaceFolder}/Motor",
                 "${workspaceFolder}/IMU",
                 "${workspaceFolder}/Drivers/STM32F7xx_HAL_Driver/Inc",
@@ -33,6 +34,7 @@
             "browse": {
                 "path": [
                     "${workspaceFolder}/Core/Inc",
+                    "${workspaceFolder}/App",
                     "${workspaceFolder}/Motor",
                     "${workspaceFolder}/IMU",
                     "${workspaceFolder}/Drivers/STM32F7xx_HAL_Driver/Inc",

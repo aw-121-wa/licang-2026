@@ -1,4 +1,6 @@
 #include "jy61p.h"
+#include "servo_action.h"
+#include "uart_command.h"
 
 static UART_HandleTypeDef *jy61p_uart = NULL;
 static uint8_t jy61p_rx_byte = 0U;
@@ -275,9 +277,13 @@ uint32_t Jy61P_GetChecksumErrorCount(void)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     Jy61P_UartRxCpltCallback(huart);
+    UartCommand_UartRxCpltCallback(huart);
+    ServoAction_UartRxCpltCallback(huart);
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     Jy61P_UartErrorCallback(huart);
+    UartCommand_UartErrorCallback(huart);
+    ServoAction_UartErrorCallback(huart);
 }

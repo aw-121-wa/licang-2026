@@ -1,6 +1,10 @@
 # Keil build outputs
 /MDK-ARM/chassis_motor/
 /MDK-ARM/*.lst
+/MDK-ARM/EventRecorderStub.scvd
+
+# Packaged deliverables: keep archives, ignore duplicate expanded copies
+/output/FreeRTOS配置包_2026-08-24/
 
 # Keil per-user IDE state
 /MDK-ARM/*.uvguix.*
@@ -10,4 +14,3 @@
 *.code-workspace
 .DS_Store
 Thumbs.db
-

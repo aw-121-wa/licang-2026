@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F750xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Motor;../IMU;../Drivers/STM32F7xx_HAL_Driver/Inc;../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F7xx/Include;../Drivers/CMSIS/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1</IncludePath>
+              <IncludePath>../Core/Inc;../App;../Motor;../IMU;../Drivers/STM32F7xx_HAL_Driver/Inc;../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F7xx/Include;../Drivers/CMSIS/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -530,6 +530,41 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>App</GroupName>
+          <Files>
+            <File>
+              <FileName>competition_path.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/competition_path.c</FilePath>
+            </File>
+            <File>
+              <FileName>competition_path.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/competition_path.h</FilePath>
+            </File>
+            <File>
+              <FileName>uart_command.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/uart_command.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_command.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/uart_command.h</FilePath>
+            </File>
+            <File>
+              <FileName>servo_action.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/servo_action.c</FilePath>
+            </File>
+            <File>
+              <FileName>servo_action.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/servo_action.h</FilePath>
             </File>
           </Files>
         </Group>

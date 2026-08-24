@@ -12,6 +12,7 @@
 - 4号电机：右后轮。
 - USART3，115200：四台电机驱动器通信。
 - USART2，PD5/PD6，9600：JY60/JY61P 通信。
+- UART5，PC12/PD2，115200：PC/VOFA 命令和路径调试接口（PC12=TX，PD2=RX）。
 - 麦轮直径：75 mm。
 - 麦轮坐标：车头方向为 `+X`，车体左侧为 `+Y`，逆时针旋转为 `+Omega`。
 - 当前 X 型麦轮方向矩阵：前进 `++++`，左移 `-++-`，逆时针 `-+-+`。
@@ -19,10 +20,12 @@
 ## 模块结构
 
 - `Core/`：CubeMX 系统、时钟、GPIO、串口和 FreeRTOS 初始化。
+- `App/competition_path.*`：比赛路径编排层，只按顺序调用 `MotionControl` 公共接口，不包含驱动协议、麦轮公式或 IMU 解析。
 - `Motor/motor_control.*`：张大头驱动协议、地址和安装方向、`F6/FD` 命令、四轴缓存与同步触发。
 - `Motor/mecanum_kinematics.*`：不依赖 HAL 的麦轮运动学解算和等比例限幅。
-- `Motor/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、故障停车和动作序列。
+- `Motor/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、任意角度平移、故障停车和动作序列。
 - `IMU/jy61p.*`：JY60/JY61P 数据帧解析、连续航向角和串口中断接收。
+- `App/uart_command.*`：UART5 ASCII 命令接收、解析、路径编辑、状态查询和 FreeRTOS 命令投递。
 - `.vscode/`：IntelliSense 与 Keil 构建任务。
 
 ## 已确定的设计决策
@@ -35,6 +38,13 @@
 - 软件线性加减速用于降低速度模式启停冲击。
 - IMU 启动无数据、运动中离线或电机串口发送失败时停止运动。
 - 通用麦轮限幅保持四轮比例。
+- 平移方向统一使用极坐标：0°前进、+90°左移、180°后退、-90°右移，角度范围为 -180°～+180°。
+- 指定的极坐标距离表示实际平移轨迹长度；每个控制周期把轮速限幅后的有效平移 RPM 纳入距离积分。
+- `MotionControl_RunDefaultSequence()` 的独立测试仍由 `DIAGONAL_TEST_ENABLE` 控制；正式 FreeRTOS 路径由 `App/competition_path.c` 管理。
+- 当前正式路径为左前 `+30°` 斜线运行 1800 mm，并软减速到 0。
+- FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
+- UART5 接收使用单字节 `HAL_UART_Receive_IT()`；UART5 中断只收字节和投递行缓冲，运动命令统一由 `ChassisTask` 执行。
+- 当前正式路径保留在编译代码中，用户路径使用独立的静态 RAM 表，最多 20 段；`PATH LOAD DEFAULT` 将当前编译默认路径载入 RAM。
 
 ## 用户工作偏好
 
@@ -43,3 +53,10 @@
 - 重视多份现有代码和公开优秀实现的对比，但不能忽略本车实际安装关系。
 - 希望主动发现隐藏问题，并清楚区分“已验证”“需要实车标定”和“尚未实现”。
 - 交付时说明修改文件、构建结果、风险和下一步实车检查点。
+
+## Servo action-group sequence (2026-08-24)
+
+- UART7 PE7=RX and PE8=TX, 9600-8-N-1, Hiwonder/Lobot action-group controller.
+- Action group 0 is the start pose; action group 1 is the 8.24 disk-machine sequence.
+- The controller must be preloaded with the two `.rob` files; the MCU sends only the action-group invocation frame.
+- The chassis command interface is enabled only after group 0 completion. Group 1 runs after two successful chassis commands, then the sequence is locked.

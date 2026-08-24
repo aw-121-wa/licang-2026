@@ -13,6 +13,8 @@ typedef struct
 void MecanumKinematics_Solve(float forward, float left,
                              float counter_clockwise,
                              MecanumWheelValues *wheels);
+float MecanumKinematics_DesaturateWithScale(MecanumWheelValues *wheels,
+                                             float maximum_magnitude);
 void MecanumKinematics_Desaturate(MecanumWheelValues *wheels,
                                   float maximum_magnitude);
 

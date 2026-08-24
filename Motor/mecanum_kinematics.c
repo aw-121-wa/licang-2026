@@ -16,13 +16,13 @@ void MecanumKinematics_Solve(float forward, float left,
     wheels->rear_right  = forward - left + counter_clockwise;
 }
 
-void MecanumKinematics_Desaturate(MecanumWheelValues *wheels,
-                                  float maximum_magnitude)
+float MecanumKinematics_DesaturateWithScale(MecanumWheelValues *wheels,
+                                             float maximum_magnitude)
 {
     float maximum;
     float value;
-    float scale;
-    if ((wheels == 0) || (maximum_magnitude <= 0.0f)) { return; }
+    float scale = 1.0f;
+    if ((wheels == 0) || (maximum_magnitude <= 0.0f)) { return 1.0f; }
     maximum = Mecanum_Absolute(wheels->front_left);
     value = Mecanum_Absolute(wheels->front_right); if (value > maximum) { maximum = value; }
     value = Mecanum_Absolute(wheels->rear_left); if (value > maximum) { maximum = value; }
@@ -35,4 +35,11 @@ void MecanumKinematics_Desaturate(MecanumWheelValues *wheels,
         wheels->rear_left *= scale;
         wheels->rear_right *= scale;
     }
+    return scale;
+}
+
+void MecanumKinematics_Desaturate(MecanumWheelValues *wheels,
+                                  float maximum_magnitude)
+{
+    (void)MecanumKinematics_DesaturateWithScale(wheels, maximum_magnitude);
 }
