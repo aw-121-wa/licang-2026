@@ -1,0 +1,13 @@
+# Keil build outputs
+/MDK-ARM/chassis_motor/
+/MDK-ARM/*.lst
+
+# Keil per-user IDE state
+/MDK-ARM/*.uvguix.*
+/MDK-ARM/*.uvoptx
+
+# Editor and operating-system noise
+*.code-workspace
+.DS_Store
+Thumbs.db
+

@@ -1,0 +1,7 @@
+{
+    "C_Cpp.default.configurationProvider": null,
+    "C_Cpp.errorSquiggles": "enabled",
+    "files.associations": {
+        "*.h": "c"
+    }
+}
