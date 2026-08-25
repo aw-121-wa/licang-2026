@@ -201,7 +201,7 @@ static RoundPillarStatus RoundPillar_Orbit(void)
         {
             break;
         }
-        if (RoundPillar_SendBodySpeed(-RZ_ORBIT_FORWARD_RPM,
+        if (RoundPillar_SendBodySpeed(RZ_ORBIT_FORWARD_RPM,
                                       0.0f,
                                       -RZ_ORBIT_OMEGA_RPM) != HAL_OK)
         {
@@ -247,7 +247,7 @@ static RoundPillarStatus RoundPillar_Orbit(void)
         {
             break;
         }
-        if (RoundPillar_SendBodySpeed(RZ_ORBIT_FORWARD_RPM,
+        if (RoundPillar_SendBodySpeed(-RZ_ORBIT_FORWARD_RPM,
                                       0.0f,
                                       RZ_ORBIT_OMEGA_RPM) != HAL_OK)
         {
