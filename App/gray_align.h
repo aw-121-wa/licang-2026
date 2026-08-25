@@ -9,14 +9,18 @@
 #define GRAY_ALIGN_PERIOD_MS            20U
 #define GRAY_ALIGN_APPROACH_RPM         25.0f
 #define GRAY_ALIGN_RETREAT_RPM          25.0f
-#define GRAY_ALIGN_ROTATE_RPM           10.0f
+#define GRAY_ALIGN_HEADING_KP           2.0f
+#define GRAY_ALIGN_HEADING_KD           0.15f
+#define GRAY_ALIGN_HEADING_DEADBAND_DEG 0.15f
+#define GRAY_ALIGN_HEADING_MAX_RPM      8.0f
 
 typedef enum
 {
     GRAY_ALIGN_OK = 0,
     GRAY_ALIGN_CANCELED,
     GRAY_ALIGN_ERROR_TIMEOUT,
-    GRAY_ALIGN_ERROR_MOTOR_UART
+    GRAY_ALIGN_ERROR_MOTOR_UART,
+    GRAY_ALIGN_ERROR_IMU
 } GrayAlignStatus;
 
 GrayAlignStatus GrayAlign_Run(void);

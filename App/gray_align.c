@@ -51,55 +51,55 @@ static HAL_StatusTypeDef GrayAlign_Stop(void)
     return MotorControl_StopAll();
 }
 
-static HAL_StatusTypeDef GrayAlign_Command(const GrayAlignSample *sample)
+static float GrayAlign_HeadingCorrection(float locked_yaw,
+                                          float *previous_error)
 {
-    float left = 0.0f;
-    float counter_clockwise = 0.0f;
+    float current_yaw = Jy61P_GetContinuousYaw();
+    float error = locked_yaw - current_yaw;
+    float correction;
 
-    if ((sample->mid2 != 0U) && (sample->mid1 != 0U))
+    correction = (GRAY_ALIGN_HEADING_KP * error) +
+                 (GRAY_ALIGN_HEADING_KD * (error - *previous_error));
+    *previous_error = error;
+
+    if ((error <= GRAY_ALIGN_HEADING_DEADBAND_DEG) &&
+        (error >= -GRAY_ALIGN_HEADING_DEADBAND_DEG))
     {
-        /* Both outside sensors are on the line: retreat before re-aligning. */
-        left = GRAY_ALIGN_RETREAT_RPM;
+        correction = 0.0f;
     }
-    else if (sample->mid2 != 0U)
+    else if (correction > GRAY_ALIGN_HEADING_MAX_RPM)
     {
-        /* The left side is too deep; rotate away from MID2. */
-        counter_clockwise = GRAY_ALIGN_ROTATE_RPM;
+        correction = GRAY_ALIGN_HEADING_MAX_RPM;
     }
-    else if (sample->mid1 != 0U)
+    else if (correction < -GRAY_ALIGN_HEADING_MAX_RPM)
     {
-        /* The right side is too deep; rotate away from MID1. */
-        counter_clockwise = -GRAY_ALIGN_ROTATE_RPM;
-    }
-    else if ((sample->in2 != 0U) && (sample->in1 == 0U))
-    {
-        /* IN2 arrived first; rotate until IN1 reaches the line. */
-        counter_clockwise = -GRAY_ALIGN_ROTATE_RPM;
-    }
-    else if ((sample->in1 != 0U) && (sample->in2 == 0U))
-    {
-        /* IN1 arrived first; rotate in the opposite direction. */
-        counter_clockwise = GRAY_ALIGN_ROTATE_RPM;
-    }
-    else
-    {
-        /* No sensor is on the line: approach it slowly along the left axis. */
-        left = -GRAY_ALIGN_APPROACH_RPM;
+        correction = -GRAY_ALIGN_HEADING_MAX_RPM;
     }
 
-    return GrayAlign_SendVelocity(0.0f, left, counter_clockwise);
+    return correction;
 }
 
 GrayAlignStatus GrayAlign_Run(void)
 {
     uint32_t start_tick = HAL_GetTick();
     uint32_t stable_since = 0U;
+    float locked_yaw;
+    float previous_error = 0.0f;
     uint8_t stable = 0U;
+
+    if (Jy61P_IsOnline(500U) == 0U)
+    {
+        (void)GrayAlign_Stop();
+        return GRAY_ALIGN_ERROR_IMU;
+    }
+    locked_yaw = Jy61P_GetContinuousYaw();
 
     for (;;)
     {
         uint32_t now = HAL_GetTick();
         GrayAlignSample sample = GrayAlign_ReadSensors();
+        float left;
+        float heading_correction;
 
         if (MotionControl_StopRequested != 0U)
         {
@@ -113,6 +113,11 @@ GrayAlignStatus GrayAlign_Run(void)
         {
             (void)GrayAlign_Stop();
             return GRAY_ALIGN_ERROR_TIMEOUT;
+        }
+        if (Jy61P_IsOnline(500U) == 0U)
+        {
+            (void)GrayAlign_Stop();
+            return GRAY_ALIGN_ERROR_IMU;
         }
 
         if ((sample.mid2 == 0U) &&
@@ -138,7 +143,12 @@ GrayAlignStatus GrayAlign_Run(void)
         else
         {
             stable = 0U;
-            if (GrayAlign_Command(&sample) != HAL_OK)
+            left = ((sample.mid2 != 0U) || (sample.mid1 != 0U)) ?
+                   GRAY_ALIGN_RETREAT_RPM : -GRAY_ALIGN_APPROACH_RPM;
+            heading_correction = GrayAlign_HeadingCorrection(
+                locked_yaw, &previous_error);
+            if (GrayAlign_SendVelocity(0.0f, left,
+                                       heading_correction) != HAL_OK)
             {
                 return GRAY_ALIGN_ERROR_MOTOR_UART;
             }

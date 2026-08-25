@@ -11,11 +11,11 @@
 57	481	8093665389006909	CMakeFiles/chassis_motor.elf.dir/Core/Src/usart.c.obj	5d73595a28b3aa12
 286	499	8093665391285862	CMakeFiles/chassis_motor.elf.dir/App/maixcam_link.c.obj	e441256eb7fb81e9
 329	509	8093665391725849	CMakeFiles/chassis_motor.elf.dir/App/warehouse_control.c.obj	a107502e1eef5bac
-291	514	8093665391335831	CMakeFiles/chassis_motor.elf.dir/App/ball_sequence.c.obj	24eb8c89f54f547a
+5	218	8093685563916047	CMakeFiles/chassis_motor.elf.dir/App/ball_sequence.c.obj	24eb8c89f54f547a
 280	530	8093665391225866	CMakeFiles/chassis_motor.elf.dir/App/servo_action.c.obj	4f77bdb45d9edddc
 318	556	8093665391615840	CMakeFiles/chassis_motor.elf.dir/App/turntable_control.c.obj	7bdf700ec9580d03
 481	564	8093665393241839	CMakeFiles/chassis_motor.elf.dir/Motor/mecanum_kinematics.c.obj	17f62f6eddae04a7
-4	152	8093677254184660	CMakeFiles/chassis_motor.elf.dir/App/gray_align.c.obj	7e8342b6b7a585d4
+13	224	8093685563996051	CMakeFiles/chassis_motor.elf.dir/App/gray_align.c.obj	7e8342b6b7a585d4
 401	704	8093665392436264	CMakeFiles/chassis_motor.elf.dir/Motor/motor_control.c.obj	4ec37e71151c43b8
 477	709	8093665393201831	CMakeFiles/chassis_motor.elf.dir/Motor/cangku_motor.c.obj	c17341dc6f2a5aba
 268	713	8093665391115749	CMakeFiles/chassis_motor.elf.dir/App/uart_command.c.obj	14478591dcf40d64
@@ -49,4 +49,4 @@
 1190	1713	8093665400331175	CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/tasks.c.obj	8cbdd6ceaaa93e59
 1256	1757	8093665400984267	CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c.obj	ef3275a221746270
 929	1868	8093665397720941	CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c.obj	339e56e272dfd0bb
-152	654	8093677255665042	chassis_motor.elf	c86a0b9a07a085c8
+224	578	8093685566099477	chassis_motor.elf	c86a0b9a07a085c8
