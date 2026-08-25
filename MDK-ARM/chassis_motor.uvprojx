@@ -587,6 +587,16 @@
               <FilePath>../App/ball_sequence.h</FilePath>
             </File>
             <File>
+              <FileName>gray_align.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/gray_align.c</FilePath>
+            </File>
+            <File>
+              <FileName>gray_align.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/gray_align.h</FilePath>
+            </File>
+            <File>
               <FileName>turntable_control.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/turntable_control.c</FilePath>

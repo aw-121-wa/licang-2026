@@ -22,7 +22,8 @@ typedef enum
     MOTION_ERROR_INVALID_ARGUMENT = 0xE3,
     MOTION_ERROR_ROTATE_TIMEOUT = 0xE4,
     MOTION_ERROR_MAIX_UART = 0xE5,
-    MOTION_ERROR_MAIX_TIMEOUT = 0xE6
+    MOTION_ERROR_MAIX_TIMEOUT = 0xE6,
+    MOTION_ERROR_GRAY_ALIGN = 0xE7
 } MotionControlStatus;
 
 /* Select the one-shot movement used by MotionControl_RunDefaultSequence(). */

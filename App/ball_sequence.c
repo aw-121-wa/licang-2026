@@ -1,5 +1,6 @@
 #include "ball_sequence.h"
 #include "cmsis_os.h"
+#include "gray_align.h"
 #include "maixcam_link.h"
 #include "motion_control.h"
 #include "servo_action.h"
@@ -47,6 +48,7 @@ BallSequenceStatus BallSequence_Run(void)
     BallSequenceStatus status;
     ServoActionStatus servo_status;
     WarehouseStatus warehouse_status;
+    GrayAlignStatus gray_status;
     uint8_t cancel_after_return;
 
     BallSequence_LastStatus = BALL_SEQUENCE_OK;
@@ -59,7 +61,23 @@ BallSequenceStatus BallSequence_Run(void)
         return BallSequence_LastStatus;
     }
 
-    /* Group 1 is the return/recognition-ready posture and runs before MaixCAM. */
+    /* Align the chassis to MID2-IN2-IN1-MID1 = 0-1-1-0 first. */
+    BallSequence_State = BALL_SEQUENCE_ALIGNING;
+    gray_status = GrayAlign_Run();
+    if (gray_status == GRAY_ALIGN_CANCELED)
+    {
+        BallSequence_State = BALL_SEQUENCE_CANCELED;
+        BallSequence_LastStatus = BALL_SEQUENCE_CANCELED_BY_STOP;
+        return BallSequence_LastStatus;
+    }
+    if (gray_status != GRAY_ALIGN_OK)
+    {
+        BallSequence_State = BALL_SEQUENCE_ERROR;
+        BallSequence_LastStatus = BALL_SEQUENCE_ERROR_GRAY_ALIGN;
+        return BallSequence_LastStatus;
+    }
+
+    /* Group 1 is the return/recognition-ready posture and runs after alignment. */
     BallSequence_State = BALL_SEQUENCE_RETURN_RUNNING;
     ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
     servo_status = ServoAction_RunGroup(SERVO_ACTION_RETURN_GROUP,
@@ -170,6 +188,7 @@ const char *BallSequence_StateName(BallSequenceState state)
     switch (state)
     {
     case BALL_SEQUENCE_IDLE:            return "IDLE";
+    case BALL_SEQUENCE_ALIGNING:        return "ALIGNING";
     case BALL_SEQUENCE_WAITING_MAIXCAM: return "WAIT_MAIX";
     case BALL_SEQUENCE_GRAB_RUNNING:    return "GRAB";
     case BALL_SEQUENCE_RETURN_RUNNING:  return "RETURN";
@@ -191,6 +210,7 @@ const char *BallSequence_StatusName(BallSequenceStatus status)
     case BALL_SEQUENCE_ERROR_MAIX_TIMEOUT: return "MAIX_TIMEOUT";
     case BALL_SEQUENCE_ERROR_SERVO:        return "SERVO";
     case BALL_SEQUENCE_ERROR_TURNTABLE:    return "TURNTABLE";
+    case BALL_SEQUENCE_ERROR_GRAY_ALIGN:   return "GRAY_ALIGN";
     default:                               return "UNKNOWN";
     }
 }

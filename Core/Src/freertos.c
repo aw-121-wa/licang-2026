@@ -259,6 +259,11 @@ void StartChassisTask(void *argument)
           result = MOTION_ERROR_MOTOR_UART;
           ChassisTask_Ready = 1U;
         }
+        else if (ball_result == BALL_SEQUENCE_ERROR_GRAY_ALIGN)
+        {
+          result = MOTION_ERROR_GRAY_ALIGN;
+          ChassisTask_Ready = 1U;
+        }
         else
         {
           result = MOTION_ERROR_MAIX_UART;

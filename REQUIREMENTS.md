@@ -92,6 +92,13 @@
 - `STATUS` reports `BALL_STATE`, `BALL_STATUS`, `BALL_ROUND`, `MAIX_TX`, `MAIX_RX`, `MAIX_INVALID`, `MAIX_TIMEOUT` and `MAIX_UART_ERR`.
 - A MaixCAM timeout or UART4 send failure does not move the arm and allows retrying `BALL`; action-group failures retain arm error lock. `STOP` ends a waiting round immediately; a STOP during group 2/turntable still waits for group 1 return to complete, then cancels the rest of the batch.
 
+## BALL 灰度校准（2026-08-25）
+
+- `BALL` 必须先执行灰度校准，再允许动作组 1、MaixCAM 识别和动作组 2。四路从左到右为 `MID2 IN2 IN1 MID1`，实际 STM32 引脚分别为 `PD8 PD0 PD1 PD3`。
+- 灰度输入使用上拉，低电平表示压线。唯一成功状态是逻辑 `0 1 1 0`：`IN1/IN2` 同时在线，`MID1/MID2` 同时离线，并且连续稳定 50 ms；`MID1/MID2` 同时在线不能判定成功。
+- 四路全离线时以 25 RPM 慢速靠近；只有一个内侧传感器在线时以 10 RPM 原地旋转；外侧传感器在线时微调退出，外侧同时在线时整体后退。5 s 内未达到稳定目标返回灰度校准错误，不执行后续动作组。
+- 校准成功后停车并清零 JY61P 连续航向，再进入已有的动作组 1 → MaixCAM → 动作组 2 → 转盘流程。旋转正负方向需要首次实车确认。
+
 ## 仓库转盘协同（2026-08-25）
 
 - 仓库电机固定使用 USART1：PA9=TX、PA10=RX、115200、8N1、无硬件流控；地址必须为 `ZDT_MOTOR_ADDR = 0x05`。UART5 仍只用于 VOFA，USART3 仍只用于底盘地址 1–4。

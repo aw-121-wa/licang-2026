@@ -73,6 +73,13 @@
 - `GRAB` remains a separate single cycle: group 2 (clamp) -> one turntable slot -> group 1 (return). While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
 - MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during group 2/turntable it still completes group 1 (return) before ending the remaining batch.
 
+## BALL gray alignment (2026-08-25)
+
+- The four gray sensors are ordered from left to right as `MID2`, `IN2`, `IN1`, `MID1`: `MID2=PD8`, `IN2=PD0`, `IN1=PD1`, `MID1=PD3`.
+- Inputs use GPIO pull-ups and active-low line detection. The logical `OnLine` order is therefore `0 1 1 0` for the only valid alignment state: both inner sensors on the line and both outer sensors off the line.
+- `App/gray_align.*` runs before BALL action group 1. It approaches with 25 RPM, uses 10 RPM rotation for fine correction, holds the exact target for 50 ms, stops all wheels, and resets the continuous JY61P yaw before returning success. The alignment timeout is 5 s.
+- `MID1`/`MID2` are overshoot protection sensors, not completion sensors. If both are on, the chassis retreats; if either is on, alignment cannot succeed until it is off. The signs of the 10 RPM rotation corrections must be confirmed on the first real vehicle test.
+
 ## Warehouse turntable coordination (2026-08-25)
 
 - `ZDT_MOTOR_ADDR = 0x05U` is the single authoritative warehouse-motor address. Chassis addresses 1–4 on USART3 remain unchanged.

@@ -7,14 +7,14 @@
 
 # =============================================================================
 # Project: chassis_motor
-# Configurations: 
+# Configurations: Debug
 # =============================================================================
 # =============================================================================
 
 #############################################
 # Rule for compiling ASM files.
 
-rule ASM_COMPILER__chassis_motor.2eelf_unscanned_
+rule ASM_COMPILER__chassis_motor.2eelf_unscanned_Debug
   depfile = $DEP_FILE
   deps = gcc
   command = ${LAUNCHER}${CODE_CHECK}"C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-gcc.exe" $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
@@ -24,7 +24,7 @@ rule ASM_COMPILER__chassis_motor.2eelf_unscanned_
 #############################################
 # Rule for compiling C files.
 
-rule C_COMPILER__chassis_motor.2eelf_unscanned_
+rule C_COMPILER__chassis_motor.2eelf_unscanned_Debug
   depfile = $DEP_FILE
   deps = gcc
   command = ${LAUNCHER}${CODE_CHECK}"C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-gcc.exe" $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
@@ -34,7 +34,7 @@ rule C_COMPILER__chassis_motor.2eelf_unscanned_
 #############################################
 # Rule for linking C executable.
 
-rule C_EXECUTABLE_LINKER__chassis_motor.2eelf_
+rule C_EXECUTABLE_LINKER__chassis_motor.2eelf_Debug
   command = C:\Windows\system32\cmd.exe /C "$PRE_LINK && "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-gcc.exe" $FLAGS $LINK_FLAGS $in -o $TARGET_FILE $LINK_PATH $LINK_LIBRARIES && $POST_BUILD"
   description = Linking C executable $TARGET_FILE; Generating HEX and BIN files
   restat = $RESTAT

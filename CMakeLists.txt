@@ -24,6 +24,7 @@ set(CHASSIS_SOURCES
     App/servo_action.c
     App/maixcam_link.c
     App/ball_sequence.c
+    App/gray_align.c
     App/turntable_control.c
     App/warehouse_control.c
 

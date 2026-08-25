@@ -12,7 +12,7 @@
 
 # =============================================================================
 # Project: chassis_motor
-# Configurations: 
+# Configurations: Debug
 # =============================================================================
 
 #############################################
@@ -20,6 +20,11 @@
 
 ninja_required_version = 1.5
 
+
+#############################################
+# Set configuration variable for custom commands.
+
+CONFIGURATION = Debug
 # =============================================================================
 # Include auxiliary files.
 
@@ -44,543 +49,504 @@ cmake_ninja_workdir = D$:/stm32project/中国机器人大赛立体仓库/licang-
 
 build cmake_object_order_depends_target_chassis_motor.elf: phony || .
 
-build CMakeFiles/chassis_motor.elf.dir/cmake/startup_stm32f750xx.s.obj: ASM_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/cmake/startup_stm32f750xx.s || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/cmake/startup_stm32f750xx.s.obj: ASM_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/cmake/startup_stm32f750xx.s || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\cmake\startup_stm32f750xx.s.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -x assembler-with-cpp -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -x assembler-with-cpp -g -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\cmake
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/main.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/main.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/main.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/main.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\main.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/gpio.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/gpio.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/gpio.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/gpio.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\gpio.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/freertos.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/freertos.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/freertos.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/freertos.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\freertos.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/usart.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/usart.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/usart.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/usart.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\usart.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_it.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/stm32f7xx_it.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_it.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/stm32f7xx_it.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\stm32f7xx_it.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_msp.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/stm32f7xx_hal_msp.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_msp.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/stm32f7xx_hal_msp.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\stm32f7xx_hal_msp.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_timebase_tim.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/stm32f7xx_hal_timebase_tim.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_timebase_tim.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/stm32f7xx_hal_timebase_tim.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\stm32f7xx_hal_timebase_tim.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Core/Src/system_stm32f7xx.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/system_stm32f7xx.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Core/Src/system_stm32f7xx.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Src/system_stm32f7xx.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Core\Src\system_stm32f7xx.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Core\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/App/competition_path.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/competition_path.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/App/competition_path.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/competition_path.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\competition_path.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/App/uart_command.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/uart_command.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/App/uart_command.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/uart_command.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\uart_command.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/App/servo_action.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/servo_action.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/App/servo_action.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/servo_action.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\servo_action.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/App/maixcam_link.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/maixcam_link.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/App/maixcam_link.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/maixcam_link.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\maixcam_link.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/App/ball_sequence.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/ball_sequence.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/App/ball_sequence.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/ball_sequence.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\ball_sequence.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/App/turntable_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/turntable_control.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/App/gray_align.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/gray_align.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
+  DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
+  DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\gray_align.c.obj.d
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
+  INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
+  OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
+  OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
+  TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
+
+build CMakeFiles/chassis_motor.elf.dir/App/turntable_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/turntable_control.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\turntable_control.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/App/warehouse_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/warehouse_control.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/App/warehouse_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/App/warehouse_control.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\App\warehouse_control.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\App
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Motor/motor_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/motor_control.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Motor/motor_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/motor_control.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Motor\motor_control.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Motor
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Motor/cangku_motor.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/cangku_motor.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Motor/cangku_motor.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/cangku_motor.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Motor\cangku_motor.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Motor
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Motor/mecanum_kinematics.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/mecanum_kinematics.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Motor/mecanum_kinematics.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/mecanum_kinematics.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Motor\mecanum_kinematics.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Motor
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Motor/motion_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/motion_control.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Motor/motion_control.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor/motion_control.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Motor\motion_control.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Motor
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/IMU/jy61p.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU/jy61p.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/IMU/jy61p.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU/jy61p.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\IMU\jy61p.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\IMU
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_cortex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_dma.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_dma_ex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_exti.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_flash.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_flash_ex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_gpio.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_i2c.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_i2c_ex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_pwr.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_pwr_ex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_rcc.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_rcc_ex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_tim.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_tim_ex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_uart.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_uart_ex.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Drivers\STM32F7xx_HAL_Driver\Src
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/croutine.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/croutine.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/croutine.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/croutine.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\croutine.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\event_groups.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/list.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/list.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/list.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/list.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\list.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/queue.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/queue.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/queue.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/queue.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\queue.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\stream_buffer.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/tasks.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/tasks.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/tasks.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/tasks.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\tasks.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/timers.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/timers.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/timers.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/timers.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\timers.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang\heap_4.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
-build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_ D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c || cmake_object_order_depends_target_chassis_motor.elf
+build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c.obj: C_COMPILER__chassis_motor.2eelf_unscanned_Debug D$:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c || cmake_object_order_depends_target_chassis_motor.elf
+  CONFIG = Debug
   DEFINES = -DSTM32F750xx -DUSE_HAL_DRIVER
   DEP_FILE = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\portable\GCC\ARM_CM7\r0p1\port.c.obj.d
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -std=c99 -Os
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g -std=c99 -Os
   INCLUDES = -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Core/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/App -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Motor -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/IMU -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/STM32F7xx_HAL_Driver/Inc/Legacy -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Device/ST/STM32F7xx/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Drivers/CMSIS/Include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/include -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -ID:/stm32project/中国机器人大赛立体仓库/licang-2026/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
   OBJECT_FILE_DIR = CMakeFiles\chassis_motor.elf.dir\Middlewares\Third_Party\FreeRTOS\Source\portable\GCC\ARM_CM7\r0p1
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
-  TARGET_PDB = chassis_motor.elf.pdb
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
 
@@ -591,15 +557,15 @@ build CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/p
 #############################################
 # Link the executable chassis_motor.elf
 
-build chassis_motor.elf: C_EXECUTABLE_LINKER__chassis_motor.2eelf_ CMakeFiles/chassis_motor.elf.dir/cmake/startup_stm32f750xx.s.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/main.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/gpio.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/freertos.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/usart.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_it.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_msp.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_timebase_tim.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/system_stm32f7xx.c.obj CMakeFiles/chassis_motor.elf.dir/App/competition_path.c.obj CMakeFiles/chassis_motor.elf.dir/App/uart_command.c.obj CMakeFiles/chassis_motor.elf.dir/App/servo_action.c.obj CMakeFiles/chassis_motor.elf.dir/App/maixcam_link.c.obj CMakeFiles/chassis_motor.elf.dir/App/ball_sequence.c.obj CMakeFiles/chassis_motor.elf.dir/App/turntable_control.c.obj CMakeFiles/chassis_motor.elf.dir/App/warehouse_control.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/motor_control.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/cangku_motor.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/mecanum_kinematics.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/motion_control.c.obj CMakeFiles/chassis_motor.elf.dir/IMU/jy61p.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/croutine.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/list.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/queue.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/tasks.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/timers.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c.obj
-  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections
+build chassis_motor.elf: C_EXECUTABLE_LINKER__chassis_motor.2eelf_Debug CMakeFiles/chassis_motor.elf.dir/cmake/startup_stm32f750xx.s.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/main.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/gpio.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/freertos.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/usart.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_it.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_msp.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/stm32f7xx_hal_timebase_tim.c.obj CMakeFiles/chassis_motor.elf.dir/Core/Src/system_stm32f7xx.c.obj CMakeFiles/chassis_motor.elf.dir/App/competition_path.c.obj CMakeFiles/chassis_motor.elf.dir/App/uart_command.c.obj CMakeFiles/chassis_motor.elf.dir/App/servo_action.c.obj CMakeFiles/chassis_motor.elf.dir/App/maixcam_link.c.obj CMakeFiles/chassis_motor.elf.dir/App/ball_sequence.c.obj CMakeFiles/chassis_motor.elf.dir/App/gray_align.c.obj CMakeFiles/chassis_motor.elf.dir/App/turntable_control.c.obj CMakeFiles/chassis_motor.elf.dir/App/warehouse_control.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/motor_control.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/cangku_motor.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/mecanum_kinematics.c.obj CMakeFiles/chassis_motor.elf.dir/Motor/motion_control.c.obj CMakeFiles/chassis_motor.elf.dir/IMU/jy61p.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c.obj CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/croutine.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/list.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/queue.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/tasks.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/timers.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c.obj CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c.obj
+  CONFIG = Debug
+  FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wall -fdata-sections -ffunction-sections -Os -g -DDEBUG -g
   LINK_FLAGS = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -Wl,--gc-sections -specs=nano.specs -specs=nosys.specs -TD:/stm32project/中国机器人大赛立体仓库/licang-2026/cmake/STM32F750V8Tx_FLASH.ld -Wl,-Map=chassis_motor.map,--cref
   OBJECT_DIR = CMakeFiles\chassis_motor.elf.dir
-  POST_BUILD = C:\Windows\system32\cmd.exe /C "cd /D D:\stm32project\中国机器人大赛立体仓库\licang-2026\build-gcc && "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-objcopy.exe" -O ihex D:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/chassis_motor.elf chassis_motor.hex && "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-objcopy.exe" -O binary D:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/chassis_motor.elf chassis_motor.bin && "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-size.exe" D:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/chassis_motor.elf"
+  POST_BUILD = C:\Windows\system32\cmd.exe /C "cd /D D:\stm32project\中国机器人大赛立体仓库\licang-2026\build-gcc && "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-objcopy.exe" -O ihex chassis_motor.elf chassis_motor.hex && "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-objcopy.exe" -O binary chassis_motor.elf chassis_motor.bin && "C:\Program Files (x86)\Arm GNU Toolchain arm-none-eabi\14.2 rel1\bin\arm-none-eabi-size.exe" chassis_motor.elf"
   PRE_LINK = cd .
-  TARGET_COMPILE_PDB = CMakeFiles\chassis_motor.elf.dir\
   TARGET_FILE = chassis_motor.elf
-  TARGET_PDB = chassis_motor.elf.pdb
+  TARGET_PDB = chassis_motor.elf.dbg
   TARGET_SUPPORT_DIR = CMakeFiles\chassis_motor.elf.dir
 
 
@@ -646,14 +612,14 @@ build all: phony chassis_motor.elf
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja D$:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/cmake_install.cmake: RERUN_CMAKE | C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeASMCompiler.cmake.in C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeASMInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCCompiler.cmake.in C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCCompilerABI.c C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCommonLanguageInclude.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCompilerIdDetection.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineASMCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerABI.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerSupport.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineSystem.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeGenericSystem.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeInitializeConfigs.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeLanguageInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeNinjaFindMake.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeParseImplicitIncludeInfo.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeParseImplicitLinkInfo.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeParseLibraryArchitecture.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystem.cmake.in C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInitialize.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeTestASMCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeTestCCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeTestCompilerCommon.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/ADSP-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/ARMCC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/ARMClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/AppleClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Borland-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Bruce-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Clang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Clang-DetermineCompilerInternal.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Compaq-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Cray-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/CrayClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Diab-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Embarcadero-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Fujitsu-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GHS-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-ASM.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-C.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-FindBinUtils.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/HP-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IAR-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Intel-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/LCC-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/MSVC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/NVHPC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/NVIDIA-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/OrangeC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/PGI-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/PathScale-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/PellesC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Renesas-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/SCO-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/SDCC-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/SunPro-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/TI-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/TIClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Tasking-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Watcom-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/XL-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/XLClang-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/zOS-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeASMLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeDetermineLinkerId.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeInspectASMLinker.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeInspectCLinker.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/FeatureTesting.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Platform/Generic.cmake CMakeCache.txt CMakeFiles/4.4.0/CMakeASMCompiler.cmake CMakeFiles/4.4.0/CMakeCCompiler.cmake CMakeFiles/4.4.0/CMakeSystem.cmake D$:/stm32project/中国机器人大赛立体仓库/licang-2026/CMakeLists.txt D$:/stm32project/中国机器人大赛立体仓库/licang-2026/cmake/toolchains/gcc-arm.cmake
+build build.ninja D$:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/cmake_install.cmake: RERUN_CMAKE | C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeASMInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCommonLanguageInclude.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeGenericSystem.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeInitializeConfigs.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeLanguageInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInitialize.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-ASM.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-C.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeASMLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Platform/Generic.cmake CMakeCache.txt CMakeFiles/4.4.0/CMakeASMCompiler.cmake CMakeFiles/4.4.0/CMakeCCompiler.cmake CMakeFiles/4.4.0/CMakeSystem.cmake D$:/stm32project/中国机器人大赛立体仓库/licang-2026/CMakeLists.txt D$:/stm32project/中国机器人大赛立体仓库/licang-2026/cmake/toolchains/gcc-arm.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeASMCompiler.cmake.in C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeASMInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCCompiler.cmake.in C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCCompilerABI.c C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCommonLanguageInclude.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCompilerIdDetection.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineASMCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerABI.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerId.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineCompilerSupport.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeDetermineSystem.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeFindBinUtils.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeGenericSystem.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeInitializeConfigs.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeLanguageInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeNinjaFindMake.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeParseImplicitIncludeInfo.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeParseImplicitLinkInfo.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeParseLibraryArchitecture.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystem.cmake.in C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInitialize.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeTestASMCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeTestCCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeTestCompilerCommon.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/ADSP-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/ARMCC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/ARMClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/AppleClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Borland-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Bruce-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Clang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Clang-DetermineCompilerInternal.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Compaq-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Cray-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/CrayClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Diab-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Embarcadero-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Fujitsu-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GHS-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-ASM.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-C.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-FindBinUtils.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/HP-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IAR-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IBMCPP-C-DetermineVersionInternal.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IBMClang-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Intel-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/LCC-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/MSVC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/NVHPC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/NVIDIA-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/OrangeC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/PGI-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/PathScale-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/PellesC-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Renesas-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/SCO-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/SDCC-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/SunPro-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/TI-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/TIClang-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Tasking-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/TinyCC-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/VisualAge-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/Watcom-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/XL-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/XLClang-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/zOS-C-DetermineCompiler.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeASMLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeDetermineLinkerId.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeInspectASMLinker.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeInspectCLinker.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/FeatureTesting.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Platform/Generic.cmake CMakeCache.txt CMakeFiles/4.4.0/CMakeASMCompiler.cmake CMakeFiles/4.4.0/CMakeCCompiler.cmake CMakeFiles/4.4.0/CMakeSystem.cmake D$:/stm32project/中国机器人大赛立体仓库/licang-2026/CMakeLists.txt D$:/stm32project/中国机器人大赛立体仓库/licang-2026/cmake/toolchains/gcc-arm.cmake: phony
+build C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeASMInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeCommonLanguageInclude.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeGenericSystem.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeInitializeConfigs.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeLanguageInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/CMakeSystemSpecificInitialize.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/CMakeCommonCompilerMacros.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-ASM.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU-C.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Compiler/GNU.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeASMLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Internal/CMakeCommonLinkerInformation.cmake C$:/Program$ Files/CMake/share/cmake-4.4/Modules/Platform/Generic.cmake CMakeCache.txt CMakeFiles/4.4.0/CMakeASMCompiler.cmake CMakeFiles/4.4.0/CMakeCCompiler.cmake CMakeFiles/4.4.0/CMakeSystem.cmake D$:/stm32project/中国机器人大赛立体仓库/licang-2026/CMakeLists.txt D$:/stm32project/中国机器人大赛立体仓库/licang-2026/cmake/toolchains/gcc-arm.cmake: phony
 
 
 #############################################
