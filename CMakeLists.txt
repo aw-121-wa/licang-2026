@@ -94,10 +94,11 @@ target_link_options(${PROJECT_NAME}.elf PRIVATE
     -Wl,-Map=${PROJECT_NAME}.map,--cref
 )
 
-# Post-build: generate hex and bin
+# Post-build: generate hex and bin (use relative paths to avoid Chinese path issues with objcopy)
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.hex
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.bin
-    COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${PROJECT_NAME}.elf>
+    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE_NAME:${PROJECT_NAME}.elf> ${PROJECT_NAME}.hex
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE_NAME:${PROJECT_NAME}.elf> ${PROJECT_NAME}.bin
+    COMMAND ${CMAKE_SIZE} $<TARGET_FILE_NAME:${PROJECT_NAME}.elf>
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Generating HEX and BIN files"
 )
