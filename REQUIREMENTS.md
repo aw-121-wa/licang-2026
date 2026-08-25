@@ -26,6 +26,7 @@
 - UART5 只接收 ASCII 命令并返回文本，不得直接发送张大头电机协议。
 - UART5 中断只负责单字节接收、行缓冲和投递；所有运动函数只能由 `ChassisTask` 在任务上下文调用。
 - `STOP` 通过 `MotionControl_RequestStop()` 进入当前 20 ms 控制周期，不能依赖普通运动队列排队后才生效。
+- `BALL` 是无参数的 UART5 ASCII 命令；仅在底盘空闲、动作组 0 已完成时接受，并启动五轮 MaixCAM 握手流程。
 - 动态路径使用静态 RAM 表，最多 20 段；路径编辑只允许在底盘 IDLE 时进行。
 - 当前默认编译路径与用户 RAM 路径分离，`PATH LOAD DEFAULT` 负责载入默认路径。
 
@@ -78,8 +79,24 @@
 
 ## Servo action-group sequence (2026-08-24)
 
-- On boot, UART7 (PE7/PE8, 9600-8-N-1) runs action group 0 (start pose) and waits for its completion frame.
-- UART5 chassis commands remain rejected until the start pose completes.
-- Two successfully completed chassis commands are accepted; a STOP or motion error does not increment the count.
-- After the second successful command, action group 1 (8.24 disk-machine) runs once. On completion the sequence is locked.
-- The two `.rob` files must be downloaded to controller slots 0 and 1; the MCU sends only invocation frames.
+- On boot, UART7 (PE7/PE8, 9600-8-N-1) sends action group 0 (`出发姿态.rob`) once, but does not wait for a completion frame.
+- UART5 chassis commands become available after the normal IMU/motor preparation. The operator must wait for the physical start pose to finish before sending `GRAB` or `BALL`, because group 0 completion is no longer observable by the MCU.
+- Chassis motion commands are not limited by count. A STOP or motion error does not trigger the arm sequence.
+- When the chassis is idle, UART5 command `GRAB` explicitly runs action group 1 (`8.25-圆盘机夹.rob`) once, then runs action group 2 (`8.25-圆盘机回位.rob`) only after group 1 completes. After group 2 completes successfully, chassis motion commands remain available; repeated `GRAB` commands are rejected.
+- The three `.rob` files must be downloaded to controller slots 0, 1 and 2; the MCU sends only invocation frames.
+
+## MaixCAM five-round ball sequence (2026-08-25)
+
+- UART4 uses PC10=TX, PC11=RX, 115200-8-N-1, no flow control and IRQ reception. MaixCAM must use 3.3 V TTL, crossed TX/RX and common ground.
+- Each `BALL` round sends `1\r\n`, waits no more than 10 s for MaixCAM's valid ASCII line `1`, runs group 1, then runs group 2. The sequence stops after exactly five successful group-2 completions and accepts a new `BALL` batch afterwards.
+- `STATUS` reports `BALL_STATE`, `BALL_STATUS`, `BALL_ROUND`, `MAIX_TX`, `MAIX_RX`, `MAIX_INVALID`, `MAIX_TIMEOUT` and `MAIX_UART_ERR`.
+- A MaixCAM timeout or UART4 send failure does not move the arm and allows retrying `BALL`; action-group failures retain arm error lock. `STOP` ends a waiting round immediately; a STOP during group 1/2 waits for return group 2 to complete, then cancels the rest of the batch.
+
+## 原地旋转任意角度（2026-08-25）
+
+- 提供 `MotionControl_RotateDeg(float angle_deg)`：正角为逆时针左转，负角为顺时针右转，允许绝对值 `1..360` 度（0 度无效）。
+- 必须以 JY61P `ContinuousYaw` 闭环判断旋转角度；旋转期间每 20 ms 检查 IMU 在线和 STOP 请求，IMU 失联、串口发送失败或超过 8000 ms 均安全停机并返回错误。
+- 四轮速度必须继续通过 `MecanumKinematics_Solve(0, 0, omega)` 和 `MotorControl_SetWheelSpeeds()` 发送，保持原有四轮同步触发；不改动电机协议、安装方向、麦轮公式、JY61P解析或 FreeRTOS 配置。
+- 默认参数：巡航 50 RPM、接近 15 RPM、最小有效 8 RPM；剩余 30 度开始减速、10 度进入低速区；进入 ±0.8 度后发送 0 RPM，连续稳定 5 个控制周期（约100 ms）才算完成。
+- 成功完成后调用 `Jy61P_ResetContinuousYaw()`，使后续前进/横移/斜线以旋转后的车头作为新的锁头参考。
+- UART5：`ROT CCW <deg>`、`ROT CW <deg>`；路径：`PATH ADD ROT CCW <deg>`、`PATH ADD ROT CW <deg>`。`PATH SHOW` 将显示友好的 CW/CCW 方向；旋转段不参与速度 Blend。

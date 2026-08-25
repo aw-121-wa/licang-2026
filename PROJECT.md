@@ -57,6 +57,21 @@
 ## Servo action-group sequence (2026-08-24)
 
 - UART7 PE7=RX and PE8=TX, 9600-8-N-1, Hiwonder/Lobot action-group controller.
-- Action group 0 is the start pose; action group 1 is the 8.24 disk-machine sequence.
-- The controller must be preloaded with the two `.rob` files; the MCU sends only the action-group invocation frame.
-- The chassis command interface is enabled only after group 0 completion. Group 1 runs after two successful chassis commands, then the sequence is locked.
+- Action group 0 is `出发姿态.rob`; action group 1 is `8.25-圆盘机夹.rob`; action group 2 is `8.25-圆盘机回位.rob`.
+- The controller must be preloaded with the three `.rob` files in slots 0, 1 and 2; the MCU sends only the action-group invocation frame.
+- At boot the MCU sends group 0 once but does not require a completion reply, because the installed controller does not provide a usable completion frame for it. Chassis commands become available after normal IMU/motor preparation; do not issue `GRAB` or `BALL` until the physical start pose has finished. Chassis motions are not count-limited; when the chassis is idle, UART5 command `GRAB` explicitly runs group 1 and, after its completion, group 2. After group 2 completes successfully, chassis motion commands remain available; repeated `GRAB` commands are rejected.
+
+## MaixCAM ball handshake (2026-08-25)
+
+- UART4 connects to MaixCAM at 115200-8-N-1: PC10=TX and PC11=RX. Use 3.3 V TTL, cross-connect TX/RX and share GND.
+- `App/maixcam_link.*` owns UART4 byte reception and accepts only an ASCII reply line `1` as a MaixCAM acknowledgement; outgoing request frame is always `1\r\n`.
+- UART5 command `BALL` runs five complete rounds: request MaixCAM, wait up to 10 s for reply `1`, run action group 1 (grab), then action group 2 (return). The fifth return ends the batch without a sixth request.
+- `GRAB` remains a separate single action-group 1 then 2 operation. While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
+- MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during a grab it finishes group 1 and group 2 return before ending the remaining batch.
+
+## IMU closed-loop in-place rotation (2026-08-25)
+
+- `MotionControl_RotateDeg(angle_deg)` rotates about the chassis centre using the existing mecanum inverse kinematics: positive angle is counter-clockwise/left and negative angle is clockwise/right.
+- Rotation is measured only by `Jy61P_GetContinuousYaw()`; it has no time- or encoder-pulse-based completion estimate. The heading baseline is reset at the start and after a settled successful rotation, so following translation holds the new vehicle heading.
+- UART5 accepts `ROT CCW <deg>` / `ROT CW <deg>` (1..360 degrees). User paths accept `PATH ADD ROT CCW <deg>` / `PATH ADD ROT CW <deg>`; a rotation is a hard path boundary rather than a blended translation segment.
+- Default parameters are 50 RPM cruise, 15 RPM approach, 8 RPM minimum effective speed, deceleration from 30 degrees, fine control from 10 degrees, 0.8-degree tolerance, five 20-ms settle periods, 250-ms ramp, and 8-s timeout.

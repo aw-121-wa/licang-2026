@@ -6,9 +6,11 @@
 /* Hiwonder/Lobot 舵控板串口参数。PE7=UART7_RX，PE8=UART7_TX。 */
 #define SERVO_ACTION_BAUDRATE              9600U
 #define SERVO_ACTION_START_GROUP           0U
-#define SERVO_ACTION_DISK_GROUP            1U
+#define SERVO_ACTION_GRAB_GROUP            1U
+#define SERVO_ACTION_RETURN_GROUP          2U
 #define SERVO_ACTION_START_TIMEOUT_MS      3000U
-#define SERVO_ACTION_DISK_TIMEOUT_MS       15000U
+#define SERVO_ACTION_GRAB_TIMEOUT_MS       15000U
+#define SERVO_ACTION_RETURN_TIMEOUT_MS     15000U
 
 typedef enum
 {
@@ -22,7 +24,8 @@ typedef enum
 {
     SERVO_SEQUENCE_STARTING = 0,
     SERVO_SEQUENCE_WAITING_MOTION,
-    SERVO_SEQUENCE_DISK_RUNNING,
+    SERVO_SEQUENCE_GRAB_RUNNING,
+    SERVO_SEQUENCE_RETURN_RUNNING,
     SERVO_SEQUENCE_DONE,
     SERVO_SEQUENCE_ERROR
 } ServoActionSequenceState;
@@ -33,6 +36,9 @@ extern volatile uint8_t ServoAction_MotionCompletedCount;
 extern volatile uint8_t ServoAction_LastCompletedGroup;
 
 void ServoAction_Init(UART_HandleTypeDef *huart);
+/* Send an action-group request without waiting for a completion frame. */
+ServoActionStatus ServoAction_StartGroupNoWait(uint8_t group,
+                                               uint16_t repeat_count);
 ServoActionStatus ServoAction_RunGroup(uint8_t group,
                                        uint16_t repeat_count,
                                        uint32_t timeout_ms);

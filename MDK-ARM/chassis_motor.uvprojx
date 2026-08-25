@@ -566,6 +566,26 @@
               <FileType>5</FileType>
               <FilePath>../App/servo_action.h</FilePath>
             </File>
+            <File>
+              <FileName>maixcam_link.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/maixcam_link.c</FilePath>
+            </File>
+            <File>
+              <FileName>maixcam_link.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/maixcam_link.h</FilePath>
+            </File>
+            <File>
+              <FileName>ball_sequence.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/ball_sequence.c</FilePath>
+            </File>
+            <File>
+              <FileName>ball_sequence.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/ball_sequence.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

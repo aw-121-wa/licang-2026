@@ -38,6 +38,11 @@ static uint8_t CompetitionPath_IsDiagonal(CompetitionPathMotionType type)
             (type == PATH_MOVE_RIGHT_REAR)) ? 1U : 0U;
 }
 
+static uint8_t CompetitionPath_IsRotate(CompetitionPathMotionType type)
+{
+    return (type == PATH_MOVE_ROTATE) ? 1U : 0U;
+}
+
 static float CompetitionPath_ToPolarAngle(const CompetitionPathSegment *segment)
 {
     switch (segment->type)
@@ -131,12 +136,20 @@ static MotionControlStatus CompetitionPath_RunSegments(
 
         CompetitionPath_CurrentStep = (uint32_t)index + 1U;
         CompetitionPath_UserCurrentStep = user_path ? (uint8_t)(index + 1U) : 0U;
-        status = MotionControl_MovePolarSegmentMm(
-            segments[index].distance_mm,
-            angle_deg,
-            0.0f,
-            cruise_rpm,
-            0.0f);
+        if (CompetitionPath_IsRotate(segments[index].type) != 0U)
+        {
+            /* Rotation is a path boundary; it starts only after prior motion ends. */
+            status = MotionControl_RotateDeg(segments[index].angle_deg);
+        }
+        else
+        {
+            status = MotionControl_MovePolarSegmentMm(
+                segments[index].distance_mm,
+                angle_deg,
+                0.0f,
+                cruise_rpm,
+                0.0f);
+        }
         CompetitionPath_LastStatus = status;
         if (CompetitionPath_StatusIsError(status) != 0U)
         {
@@ -197,20 +210,31 @@ CompetitionPathEditResult CompetitionPath_AddUserSegment(
     uint32_t distance_mm,
     float angle_deg)
 {
-    if ((type > PATH_MOVE_RIGHT_REAR) ||
-        (distance_mm == 0U) ||
-        (distance_mm > PATH_MAX_DISTANCE_MM))
+    if (type > PATH_MOVE_ROTATE)
     {
         return COMPETITION_PATH_EDIT_INVALID;
     }
-    if (CompetitionPath_IsDiagonal(type) != 0U)
+    if (CompetitionPath_IsRotate(type) != 0U)
+    {
+        if ((distance_mm != 0U) || (angle_deg == 0.0f) ||
+            (angle_deg < -360.0f) || (angle_deg > 360.0f))
+        {
+            return COMPETITION_PATH_EDIT_INVALID;
+        }
+    }
+    else if ((distance_mm == 0U) || (distance_mm > PATH_MAX_DISTANCE_MM))
+    {
+        return COMPETITION_PATH_EDIT_INVALID;
+    }
+    if ((CompetitionPath_IsRotate(type) == 0U) &&
+        (CompetitionPath_IsDiagonal(type) != 0U))
     {
         if (!((angle_deg > 0.0f) && (angle_deg <= 90.0f)))
         {
             return COMPETITION_PATH_EDIT_INVALID;
         }
     }
-    else if (angle_deg != 0.0f)
+    else if ((CompetitionPath_IsRotate(type) == 0U) && (angle_deg != 0.0f))
     {
         return COMPETITION_PATH_EDIT_INVALID;
     }

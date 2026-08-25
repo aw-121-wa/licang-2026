@@ -1,5 +1,7 @@
 #include "uart_command.h"
 #include "jy61p.h"
+#include "ball_sequence.h"
+#include "maixcam_link.h"
 #include "motion_control.h"
 #include "servo_action.h"
 #include <stdio.h>
@@ -100,6 +102,38 @@ static uint8_t UartCommand_ParseAngle(const char *text, float *angle_deg)
     return 1U;
 }
 
+static uint8_t UartCommand_ParseRotate(const char *direction,
+                                       const char *text,
+                                       float *signed_angle_deg)
+{
+    float angle_deg;
+    char *end;
+
+    if ((direction == 0) || (text == 0) || (signed_angle_deg == 0))
+    {
+        return 0U;
+    }
+    angle_deg = strtof(text, &end);
+    if ((end == text) || (*end != '\0') ||
+        !(angle_deg > 0.0f) || !(angle_deg <= 360.0f))
+    {
+        return 0U;
+    }
+    if (strcmp(direction, "CCW") == 0)
+    {
+        *signed_angle_deg = angle_deg;
+    }
+    else if (strcmp(direction, "CW") == 0)
+    {
+        *signed_angle_deg = -angle_deg;
+    }
+    else
+    {
+        return 0U;
+    }
+    return 1U;
+}
+
 static uint8_t UartCommand_IsDiagonalPathType(CompetitionPathMotionType type)
 {
     return ((type == PATH_MOVE_LEFT_FRONT) ||
@@ -184,6 +218,14 @@ static uint8_t UartCommand_SubmitMotion(const ChassisCommand *command)
     {
         return 0U;
     }
+    if (((command->type == CHASSIS_CMD_GRAB) &&
+         (ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION)) ||
+        ((command->type != CHASSIS_CMD_GRAB) &&
+         (ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION) &&
+         (ServoAction_SequenceState != SERVO_SEQUENCE_DONE)))
+    {
+        return 0U;
+    }
     MotionControl_ClearStopRequest();
     ChassisCommand_Busy = 1U;
     if (xQueueSend(ChassisCommandQueue, command, 0U) != pdPASS)
@@ -206,6 +248,7 @@ static const char *UartCommand_PathTypeName(CompetitionPathMotionType type)
     case PATH_MOVE_RIGHT_FRONT:  return "RF";
     case PATH_MOVE_LEFT_REAR:    return "LR";
     case PATH_MOVE_RIGHT_REAR:   return "RR";
+    case PATH_MOVE_ROTATE:       return "ROT";
     default:                     return "?";
     }
 }
@@ -225,7 +268,16 @@ static void UartCommand_SendPathShow(void)
         {
             break;
         }
-        if ((segment.type == PATH_MOVE_LEFT_FRONT) ||
+        if (segment.type == PATH_MOVE_ROTATE)
+        {
+            (void)snprintf(response, sizeof(response),
+                           "[%u] ROT %s ANGLE=%.1f\r\n",
+                           index,
+                           (segment.angle_deg > 0.0f) ? "CCW" : "CW",
+                           (double)((segment.angle_deg > 0.0f) ?
+                                    segment.angle_deg : -segment.angle_deg));
+        }
+        else if ((segment.type == PATH_MOVE_LEFT_FRONT) ||
             (segment.type == PATH_MOVE_RIGHT_FRONT) ||
             (segment.type == PATH_MOVE_LEFT_REAR) ||
             (segment.type == PATH_MOVE_RIGHT_REAR))
@@ -258,7 +310,8 @@ static void UartCommand_SendStatus(void)
 
     if (ChassisCommand_Busy != 0U)
     {
-        state = "RUNNING";
+        state = (MotionControl_State == MOTION_STATUS_ROTATING) ?
+                "ROTATING" : "RUNNING";
     }
     else if (ChassisCommand_LastStatus >= MOTION_ERROR_IMU_STARTUP)
     {
@@ -272,20 +325,37 @@ static void UartCommand_SendStatus(void)
            ((ChassisCommand_Mode == CHASSIS_MODE_MANUAL) ? "MANUAL" : "IDLE");
     (void)snprintf(response, sizeof(response),
                    "STATE=%s\r\nMODE=%s\r\nIMU=%s\r\nYAW=%.2f\r\n"
-                   "PATH_COUNT=%u\r\nPATH_STEP=%u\r\nSTOP_REQ=%u\r\n",
+                   "PATH_COUNT=%u\r\nPATH_STEP=%u\r\nSTOP_REQ=%u\r\n"
+                   "ROT_TARGET=%.1f\r\nROT_CURRENT=%.1f\r\nROT_ERROR=%.1f\r\n",
                    state,
                    mode,
                    (Jy61P_IsOnline(500U) != 0U) ? "ONLINE" : "OFFLINE",
                    (double)Jy61P_GetContinuousYaw(),
                    CompetitionPath_GetUserCount(),
                    CompetitionPath_UserCurrentStep,
-                   MotionControl_StopRequested);
+                   MotionControl_StopRequested,
+                   (double)MotionControl_RotateTargetDeg,
+                   (double)MotionControl_RotateCurrentDeg,
+                   (double)MotionControl_RotateErrorDeg);
     UartCommand_Send(response);
     (void)snprintf(response, sizeof(response),
                    "ARM=%s\r\nARM_MOTION_COUNT=%u\r\nARM_LAST_GROUP=%u\r\n",
                    ServoAction_SequenceStateName(ServoAction_SequenceState),
                    ServoAction_MotionCompletedCount,
                    ServoAction_LastCompletedGroup);
+    UartCommand_Send(response);
+    (void)snprintf(response, sizeof(response),
+                   "BALL_STATE=%s\r\nBALL_STATUS=%s\r\nBALL_ROUND=%u\r\n"
+                   "MAIX_TX=%lu\r\nMAIX_RX=%lu\r\nMAIX_INVALID=%lu\r\n"
+                   "MAIX_TIMEOUT=%lu\r\nMAIX_UART_ERR=%lu\r\n",
+                   BallSequence_StateName(BallSequence_State),
+                   BallSequence_StatusName(BallSequence_LastStatus),
+                   BallSequence_Round,
+                   (unsigned long)MaixCamLink_TxRequestCount,
+                   (unsigned long)MaixCamLink_RxReplyCount,
+                   (unsigned long)MaixCamLink_InvalidFrameCount,
+                   (unsigned long)MaixCamLink_TimeoutCount,
+                   (unsigned long)MaixCamLink_UartErrorCount);
     UartCommand_Send(response);
 }
 
@@ -295,9 +365,12 @@ static void UartCommand_SendHelp(void)
         "F <mm>\r\nB <mm>\r\nL <mm>\r\nR <mm>\r\n"
         "LF <mm> <deg>\r\nRF <mm> <deg>\r\n"
         "LR <mm> <deg>\r\nRR <mm> <deg>\r\n"
+        "ROT CCW <deg>\r\nROT CW <deg>\r\n"
+        "GRAB\r\nBALL\r\n"
         "STOP\r\nPATH CLEAR\r\nPATH ADD ...\r\nPATH SHOW\r\n"
+        "PATH ADD ROT CCW <deg>\r\nPATH ADD ROT CW <deg>\r\n"
         "PATH RUN\r\nPATH LOAD DEFAULT\r\nSTATUS\r\nHELP\r\n"
-        "ARM: group0 at startup, group1 after 2 completed motions\r\n");
+        "ARM: group0 at startup; GRAB=one cycle, BALL=five MaixCAM cycles\r\n");
 }
 
 static void UartCommand_ProcessLine(UartCommandLine *line)
@@ -363,6 +436,53 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
             return;
         }
         UartCommand_SendHelp();
+        return;
+    }
+    if (strcmp(command, "GRAB") == 0)
+    {
+        if (strtok(0, " \t") != 0)
+        {
+            UartCommand_ParseErrorCount++;
+            UartCommand_Send("ERR FORMAT\r\n");
+            return;
+        }
+        if (ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION)
+        {
+            UartCommand_Send("ERR GRAB_NOT_READY\r\n");
+            return;
+        }
+        chassis_command.type = CHASSIS_CMD_GRAB;
+        chassis_command.distance_mm = 0U;
+        chassis_command.angle_deg = 0.0f;
+        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
+        {
+            UartCommand_Send("ERR BUSY\r\n");
+        }
+        else
+        {
+            UartCommand_Send("OK GRAB\r\n");
+        }
+        return;
+    }
+    if (strcmp(command, "BALL") == 0)
+    {
+        if (strtok(0, " \t") != 0)
+        {
+            UartCommand_ParseErrorCount++;
+            UartCommand_Send("ERR FORMAT\r\n");
+            return;
+        }
+        chassis_command.type = CHASSIS_CMD_BALL;
+        chassis_command.distance_mm = 0U;
+        chassis_command.angle_deg = 0.0f;
+        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
+        {
+            UartCommand_Send("ERR BUSY\r\n");
+        }
+        else
+        {
+            UartCommand_Send("OK BALL\r\n");
+        }
         return;
     }
     if (strcmp(command, "PATH") == 0)
@@ -457,6 +577,41 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
                 UartCommand_Send("ERR FORMAT\r\n");
                 return;
             }
+            if (strcmp(argument, "ROT") == 0)
+            {
+                if ((angle_text == 0) ||
+                    (UartCommand_ParseRotate(distance_text, angle_text,
+                                             &chassis_command.angle_deg) == 0U) ||
+                    (strtok(0, " \t") != 0))
+                {
+                    UartCommand_ParseErrorCount++;
+                    UartCommand_Send("ERR ANGLE\r\n");
+                    return;
+                }
+                if (UartCommand_IsChassisAvailable() == 0U)
+                {
+                    UartCommand_Send("ERR BUSY\r\n");
+                    return;
+                }
+                edit_result = CompetitionPath_AddUserSegment(
+                    PATH_MOVE_ROTATE, 0U, chassis_command.angle_deg);
+                if (edit_result == COMPETITION_PATH_EDIT_FULL)
+                {
+                    UartCommand_Send("ERR PATH_FULL\r\n");
+                }
+                else if (edit_result != COMPETITION_PATH_EDIT_OK)
+                {
+                    UartCommand_Send("ERR ANGLE\r\n");
+                }
+                else
+                {
+                    (void)snprintf(line->text, sizeof(line->text),
+                                   "OK PATH ADD %u\r\n",
+                                   (unsigned)(CompetitionPath_GetUserCount() - 1U));
+                    UartCommand_Send(line->text);
+                }
+                return;
+            }
             if (UartCommand_ParseType(argument, &chassis_command.type,
                                       &path_type) == 0U)
             {
@@ -523,6 +678,31 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         }
         UartCommand_ParseErrorCount++;
         UartCommand_Send("ERR FORMAT\r\n");
+        return;
+    }
+
+    if (strcmp(command, "ROT") == 0)
+    {
+        argument = strtok(0, " \t");
+        angle_text = strtok(0, " \t");
+        if ((UartCommand_ParseRotate(argument, angle_text,
+                                     &chassis_command.angle_deg) == 0U) ||
+            (strtok(0, " \t") != 0))
+        {
+            UartCommand_ParseErrorCount++;
+            UartCommand_Send("ERR ANGLE\r\n");
+            return;
+        }
+        chassis_command.type = CHASSIS_CMD_ROTATE;
+        chassis_command.distance_mm = 0U;
+        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
+        {
+            UartCommand_Send("ERR BUSY\r\n");
+        }
+        else
+        {
+            UartCommand_Send("OK\r\n");
+        }
         return;
     }
 

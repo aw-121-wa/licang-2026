@@ -28,6 +28,7 @@
 
 #include "usart.h"
 #include "motion_control.h"
+#include "ball_sequence.h"
 #include "competition_path.h"
 #include "uart_command.h"
 #include "servo_action.h"
@@ -162,6 +163,7 @@ void StartChassisTask(void *argument)
 {
   /* USER CODE BEGIN StartChassisTask */
   MotionControlStatus result;
+  BallSequenceStatus ball_result;
   ServoActionStatus servo_result;
   ChassisCommand command;
 
@@ -176,10 +178,8 @@ void StartChassisTask(void *argument)
   MotionControl_Init(&huart3, &huart2);
   osDelay(100);
 
-  /* 出发姿态必须完成后，才允许外部发送底盘运动命令。 */
-  servo_result = ServoAction_RunGroup(SERVO_ACTION_START_GROUP,
-                                       1U,
-                                       SERVO_ACTION_START_TIMEOUT_MS);
+  /* 发送出发姿态，但不依赖舵控板的完成回传；部分舵控板不提供该帧。 */
+  servo_result = ServoAction_StartGroupNoWait(SERVO_ACTION_START_GROUP, 1U);
   if (servo_result != SERVO_ACTION_OK)
   {
     ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
@@ -225,6 +225,40 @@ void StartChassisTask(void *argument)
       {
         result = CompetitionPath_RunUserPath();
       }
+      else if (command.type == CHASSIS_CMD_ROTATE)
+      {
+        result = MotionControl_RotateDeg(command.angle_deg);
+      }
+      else if (command.type == CHASSIS_CMD_BALL)
+      {
+        ball_result = BallSequence_Run();
+        if ((ball_result == BALL_SEQUENCE_OK) ||
+            (ball_result == BALL_SEQUENCE_CANCELED_BY_STOP))
+        {
+          result = MOTION_STATUS_FINISHED;
+          ChassisTask_Ready = 1U;
+        }
+        else if (ball_result == BALL_SEQUENCE_ERROR_SERVO)
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+          ChassisTask_Ready = 0U;
+        }
+        else if (ball_result == BALL_SEQUENCE_ERROR_MAIX_TIMEOUT)
+        {
+          result = MOTION_ERROR_MAIX_TIMEOUT;
+          ChassisTask_Ready = 1U;
+        }
+        else
+        {
+          result = MOTION_ERROR_MAIX_UART;
+          ChassisTask_Ready = 1U;
+        }
+      }
+      else if (command.type == CHASSIS_CMD_GRAB)
+      {
+        /* GRAB is the operator's explicit trigger for action group 1. */
+        result = MOTION_STATUS_FINISHED;
+      }
       else
       {
         float angle_deg = 0.0f;
@@ -252,7 +286,9 @@ void StartChassisTask(void *argument)
       ChassisCommand_LastStatus = result;
       CompetitionPath_LastStatus = result;
       if ((result < MOTION_ERROR_IMU_STARTUP) &&
-          (MotionControl_WasStopped() == 0U))
+          (MotionControl_WasStopped() == 0U) &&
+          (command.type != CHASSIS_CMD_GRAB) &&
+          (command.type != CHASSIS_CMD_BALL))
       {
         ServoAction_MotionCompletedCount++;
       }
@@ -262,25 +298,46 @@ void StartChassisTask(void *argument)
         MotionControl_State = MOTION_STATUS_IDLE;
       }
       ChassisCommand_Mode = CHASSIS_MODE_IDLE;
-      ChassisCommand_Busy = 0U;
-
-      if (ServoAction_MotionCompletedCount >= 2U)
+      if (command.type != CHASSIS_CMD_GRAB)
       {
-        ServoAction_SequenceState = SERVO_SEQUENCE_DISK_RUNNING;
+        ChassisCommand_Busy = 0U;
+      }
+
+      if (command.type == CHASSIS_CMD_GRAB)
+      {
+        ServoAction_SequenceState = SERVO_SEQUENCE_GRAB_RUNNING;
         ChassisCommand_Busy = 1U;
-        servo_result = ServoAction_RunGroup(SERVO_ACTION_DISK_GROUP,
+        servo_result = ServoAction_RunGroup(SERVO_ACTION_GRAB_GROUP,
                                              1U,
-                                             SERVO_ACTION_DISK_TIMEOUT_MS);
+                                             SERVO_ACTION_GRAB_TIMEOUT_MS);
         if (servo_result == SERVO_ACTION_OK)
         {
-          ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
+          ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
+          servo_result = ServoAction_RunGroup(SERVO_ACTION_RETURN_GROUP,
+                                               1U,
+                                               SERVO_ACTION_RETURN_TIMEOUT_MS);
+          if (servo_result == SERVO_ACTION_OK)
+          {
+            ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
+            ChassisCommand_LastStatus = MOTION_STATUS_FINISHED;
+            CompetitionPath_LastStatus = MOTION_STATUS_FINISHED;
+            ChassisTask_Ready = 1U;
+          }
+          else
+          {
+            ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
+            ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
+            CompetitionPath_LastStatus = MOTION_ERROR_MOTOR_UART;
+            ChassisTask_Ready = 0U;
+          }
         }
         else
         {
           ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
+          ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
+          CompetitionPath_LastStatus = MOTION_ERROR_MOTOR_UART;
+          ChassisTask_Ready = 0U;
         }
-        /* 圆盘机动作结束后锁定流程，后续底盘指令不再接受。 */
-        ChassisTask_Ready = 0U;
         ChassisCommand_Mode = CHASSIS_MODE_IDLE;
         ChassisCommand_Busy = 0U;
       }

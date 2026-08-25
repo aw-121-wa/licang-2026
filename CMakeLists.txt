@@ -1,0 +1,121 @@
+cmake_minimum_required(VERSION 3.21)
+
+project(chassis_motor LANGUAGES C ASM)
+
+# This target intentionally uses the same ARMCC v5 runtime, startup file and
+# FreeRTOS RVDS Cortex-M7 port as MDK-ARM/chassis_motor.uvprojx.
+if(NOT CMAKE_C_COMPILER_ID STREQUAL "ARMCC")
+    message(FATAL_ERROR
+        "This project currently requires ARM Compiler 5 (armcc). Configure with "
+        "cmake/toolchains/armcc.cmake or the armcc-* CMake preset.")
+endif()
+
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
+set(CHASSIS_SOURCES
+    MDK-ARM/startup_stm32f750xx.s
+
+    Core/Src/main.c
+    Core/Src/gpio.c
+    Core/Src/freertos.c
+    Core/Src/usart.c
+    Core/Src/stm32f7xx_it.c
+    Core/Src/stm32f7xx_hal_msp.c
+    Core/Src/stm32f7xx_hal_timebase_tim.c
+    Core/Src/system_stm32f7xx.c
+
+    App/competition_path.c
+    App/uart_command.c
+    App/servo_action.c
+    App/maixcam_link.c
+    App/ball_sequence.c
+
+    Motor/motor_control.c
+    Motor/mecanum_kinematics.c
+    Motor/motion_control.c
+    IMU/jy61p.c
+
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c
+    Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c
+
+    Middlewares/Third_Party/FreeRTOS/Source/croutine.c
+    Middlewares/Third_Party/FreeRTOS/Source/event_groups.c
+    Middlewares/Third_Party/FreeRTOS/Source/list.c
+    Middlewares/Third_Party/FreeRTOS/Source/queue.c
+    Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c
+    Middlewares/Third_Party/FreeRTOS/Source/tasks.c
+    Middlewares/Third_Party/FreeRTOS/Source/timers.c
+    Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
+    Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
+    Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1/port.c
+)
+
+add_executable(${PROJECT_NAME} ${CHASSIS_SOURCES})
+set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".axf")
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    USE_HAL_DRIVER
+    STM32F750xx
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    Core/Inc
+    App
+    Motor
+    IMU
+    Drivers/STM32F7xx_HAL_Driver/Inc
+    Drivers/STM32F7xx_HAL_Driver/Inc/Legacy
+    Drivers/CMSIS/Device/ST/STM32F7xx/Include
+    Drivers/CMSIS/Include
+    Middlewares/Third_Party/FreeRTOS/Source/include
+    Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
+    Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1
+)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:--cpu=Cortex-M7.fp.sp>
+    $<$<COMPILE_LANGUAGE:C>:--c99>
+    $<$<COMPILE_LANGUAGE:ASM>:--cpu=Cortex-M7.fp.sp>
+)
+
+# The target has 64 KiB FLASH and the same 320 KiB RAM range used by the Keil
+# project. The scatter file enforces those limits. Keep CMake outputs separate,
+# so neither build system overwrites the other system's axf/hex files.
+target_link_options(${PROJECT_NAME} PRIVATE
+    "--scatter=${CMAKE_CURRENT_SOURCE_DIR}/cmake/STM32F750V8Tx.sct"
+    --entry=Reset_Handler
+    --map
+    --info=sizes,totals,unused,veneers
+)
+
+get_filename_component(ARMCC_BIN_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+find_program(ARMCC_FROMELF NAMES fromelf.exe fromelf
+    HINTS "${ARMCC_BIN_DIR}"
+    REQUIRED)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND "${ARMCC_FROMELF}"
+            --i32combined
+            "--output=$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.hex"
+            "$<TARGET_FILE:${PROJECT_NAME}>"
+    COMMENT "Creating Intel HEX firmware image"
+    VERBATIM
+)

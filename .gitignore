@@ -3,6 +3,9 @@
 /MDK-ARM/*.lst
 /MDK-ARM/EventRecorderStub.scvd
 
+# CMake/Ninja build outputs
+/build/
+
 # Packaged deliverables: keep archives, ignore duplicate expanded copies
 /output/FreeRTOS配置包_2026-08-24/
 

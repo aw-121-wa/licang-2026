@@ -1,4 +1,5 @@
 #include "jy61p.h"
+#include "maixcam_link.h"
 #include "servo_action.h"
 #include "uart_command.h"
 
@@ -277,6 +278,7 @@ uint32_t Jy61P_GetChecksumErrorCount(void)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     Jy61P_UartRxCpltCallback(huart);
+    MaixCamLink_UartRxCpltCallback(huart);
     UartCommand_UartRxCpltCallback(huart);
     ServoAction_UartRxCpltCallback(huart);
 }
@@ -284,6 +286,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     Jy61P_UartErrorCallback(huart);
+    MaixCamLink_UartErrorCallback(huart);
     UartCommand_UartErrorCallback(huart);
     ServoAction_UartErrorCallback(huart);
 }

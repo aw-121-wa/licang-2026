@@ -14,7 +14,8 @@ typedef enum
     PATH_MOVE_LEFT_FRONT,
     PATH_MOVE_RIGHT_FRONT,
     PATH_MOVE_LEFT_REAR,
-    PATH_MOVE_RIGHT_REAR
+    PATH_MOVE_RIGHT_REAR,
+    PATH_MOVE_ROTATE
 } CompetitionPathMotionType;
 
 typedef struct

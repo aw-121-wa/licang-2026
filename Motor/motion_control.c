@@ -17,6 +17,18 @@
 #define MOTION_RAMP_TIME_MS               300U
 #define MOTION_PI                          3.1415926f
 
+/* IMU closed-loop in-place rotation. Positive omega is counter-clockwise. */
+#define ROTATE_CRUISE_RPM                  60.0f
+#define ROTATE_APPROACH_RPM                15.0f
+#define ROTATE_MIN_EFFECTIVE_RPM            8.0f
+#define ROTATE_DECEL_START_DEG             30.0f
+#define ROTATE_FINE_START_DEG              10.0f
+#define ROTATE_TOLERANCE_DEG                0.8f
+#define ROTATE_SETTLE_CYCLES                5U
+#define ROTATE_RAMP_TIME_MS               250U
+#define ROTATE_TIMEOUT_MS                8000U
+#define ROTATE_MAX_ANGLE_DEG              360.0f
+
 #define FORWARD_DISTANCE_GAIN              1.000f
 #define LEFT_DISTANCE_GAIN                 1.000f
 #define FRONT_LEFT_GAIN                    1.000f
@@ -50,6 +62,12 @@ volatile float MotionControl_LastRearRightRpm = 0.0f;
 volatile float MotionControl_WheelScale = 1.0f;
 volatile float MotionControl_TraveledMm = 0.0f;
 volatile float MotionControl_TargetDistanceMm = 0.0f;
+volatile float MotionControl_RotateTargetDeg = 0.0f;
+volatile float MotionControl_RotateCurrentDeg = 0.0f;
+volatile float MotionControl_RotateErrorDeg = 0.0f;
+volatile float MotionControl_RotateCommandRpm = 0.0f;
+volatile uint8_t MotionControl_RotateSettleCount = 0U;
+volatile uint32_t MotionControl_RotateElapsedMs = 0U;
 
 static float previous_heading_error = 0.0f;
 
@@ -201,6 +219,12 @@ void MotionControl_Init(UART_HandleTypeDef *motor_uart,
     MotionControl_WheelScale = 1.0f;
     MotionControl_TraveledMm = 0.0f;
     MotionControl_TargetDistanceMm = 0.0f;
+    MotionControl_RotateTargetDeg = 0.0f;
+    MotionControl_RotateCurrentDeg = 0.0f;
+    MotionControl_RotateErrorDeg = 0.0f;
+    MotionControl_RotateCommandRpm = 0.0f;
+    MotionControl_RotateSettleCount = 0U;
+    MotionControl_RotateElapsedMs = 0U;
     MotionControl_State = MOTION_STATUS_IDLE;
     MotionControl_StopRequested = 0U;
     MotionControl_StoppedByRequest = 0U;
@@ -817,6 +841,152 @@ MotionControlStatus MotionControl_MoveRightRearMm(uint32_t distance_mm,
         return MotionControl_State;
     }
     return MotionControl_MovePolarMm(distance_mm, -(180.0f - angle_deg));
+}
+
+MotionControlStatus MotionControl_RotateDeg(float angle_deg)
+{
+    uint32_t start_tick;
+    uint32_t next_tick;
+
+    if ((Motion_Absolute(angle_deg) <= 0.0f) ||
+        (Motion_Absolute(angle_deg) > ROTATE_MAX_ANGLE_DEG))
+    {
+        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
+        return MotionControl_State;
+    }
+    if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U)
+    {
+        MotionControl_State = MOTION_ERROR_IMU_LOST;
+        return MotionControl_State;
+    }
+
+    /* Each rotation is measured relative to the heading at its start. */
+    Jy61P_ResetContinuousYaw();
+    MotionControl_State = MOTION_STATUS_ROTATING;
+    MotionControl_RotateTargetDeg = angle_deg;
+    MotionControl_RotateCurrentDeg = 0.0f;
+    MotionControl_RotateErrorDeg = angle_deg;
+    MotionControl_RotateCommandRpm = 0.0f;
+    MotionControl_RotateSettleCount = 0U;
+    MotionControl_RotateElapsedMs = 0U;
+    MotionControl_HeadingErrorDeg = 0.0f;
+    MotionControl_HeadingCorrectionRpm = 0.0f;
+    previous_heading_error = 0.0f;
+    MotionControl_BaseRpm = 0.0f;
+    MotionControl_EffectiveBaseRpm = 0.0f;
+    MotionControl_WheelScale = 1.0f;
+
+    start_tick = HAL_GetTick();
+    next_tick = start_tick;
+    for (;;)
+    {
+        uint32_t now = HAL_GetTick();
+        float error_deg;
+        float absolute_error_deg;
+        float magnitude_rpm;
+        float ramp_limit_rpm;
+        float wheel_scale = 1.0f;
+        uint8_t stop_result;
+
+        MotionControl_RotateElapsedMs = now - start_tick;
+        stop_result = MotionControl_HandleStopRequest();
+        if (stop_result != 0U)
+        {
+            MotionControl_RotateCommandRpm = 0.0f;
+            return MotionControl_State;
+        }
+        if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U)
+        {
+            MotionControl_RotateCommandRpm = 0.0f;
+            return Motion_SegmentFail(MOTION_ERROR_IMU_LOST);
+        }
+        if (MotionControl_RotateElapsedMs >= ROTATE_TIMEOUT_MS)
+        {
+            MotionControl_RotateCommandRpm = 0.0f;
+            return Motion_SegmentFail(MOTION_ERROR_ROTATE_TIMEOUT);
+        }
+
+        MotionControl_RotateCurrentDeg = Jy61P_GetContinuousYaw();
+        error_deg = MotionControl_RotateTargetDeg -
+                    MotionControl_RotateCurrentDeg;
+        absolute_error_deg = Motion_Absolute(error_deg);
+        MotionControl_RotateErrorDeg = error_deg;
+
+        if (absolute_error_deg <= ROTATE_TOLERANCE_DEG)
+        {
+            MotionControl_RotateCommandRpm = 0.0f;
+            if (Motion_SendChassisSpeed(0.0f, 0.0f, 0.0f,
+                                        &wheel_scale) != HAL_OK)
+            {
+                return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+            }
+            MotionControl_WheelScale = wheel_scale;
+            MotionControl_RotateSettleCount++;
+            if (MotionControl_RotateSettleCount >= ROTATE_SETTLE_CYCLES)
+            {
+                /* The settled heading becomes the reference for the next move. */
+                Jy61P_ResetContinuousYaw();
+                MotionControl_RotateCurrentDeg = MotionControl_RotateTargetDeg;
+                MotionControl_RotateErrorDeg = 0.0f;
+                previous_heading_error = 0.0f;
+                MotionControl_State = MOTION_STATUS_FINISHED;
+                return MotionControl_State;
+            }
+        }
+        else
+        {
+            MotionControl_RotateSettleCount = 0U;
+            if (absolute_error_deg >= ROTATE_DECEL_START_DEG)
+            {
+                magnitude_rpm = ROTATE_CRUISE_RPM;
+            }
+            else if (absolute_error_deg >= ROTATE_FINE_START_DEG)
+            {
+                magnitude_rpm = ROTATE_APPROACH_RPM +
+                    ((ROTATE_CRUISE_RPM - ROTATE_APPROACH_RPM) *
+                     ((absolute_error_deg - ROTATE_FINE_START_DEG) /
+                      (ROTATE_DECEL_START_DEG - ROTATE_FINE_START_DEG)));
+            }
+            else
+            {
+                magnitude_rpm = ROTATE_APPROACH_RPM *
+                                (absolute_error_deg / ROTATE_FINE_START_DEG);
+            }
+
+            if (MotionControl_RotateElapsedMs >= ROTATE_RAMP_TIME_MS)
+            {
+                ramp_limit_rpm = ROTATE_CRUISE_RPM;
+            }
+            else
+            {
+                ramp_limit_rpm = ROTATE_CRUISE_RPM *
+                    ((float)MotionControl_RotateElapsedMs /
+                     (float)ROTATE_RAMP_TIME_MS);
+            }
+            if (magnitude_rpm > ramp_limit_rpm)
+            {
+                magnitude_rpm = ramp_limit_rpm;
+            }
+            if ((ramp_limit_rpm >= ROTATE_MIN_EFFECTIVE_RPM) &&
+                (magnitude_rpm < ROTATE_MIN_EFFECTIVE_RPM))
+            {
+                magnitude_rpm = ROTATE_MIN_EFFECTIVE_RPM;
+            }
+
+            MotionControl_RotateCommandRpm = (error_deg > 0.0f) ?
+                                              magnitude_rpm : -magnitude_rpm;
+            if (Motion_SendChassisSpeed(0.0f, 0.0f,
+                                        MotionControl_RotateCommandRpm,
+                                        &wheel_scale) != HAL_OK)
+            {
+                MotionControl_RotateCommandRpm = 0.0f;
+                return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+            }
+            MotionControl_WheelScale = wheel_scale;
+        }
+
+        Motion_WaitControlPeriod(&next_tick);
+    }
 }
 
 MotionControlStatus MotionControl_PrepareForMove(void)

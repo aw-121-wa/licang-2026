@@ -1,0 +1,43 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "armcc-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/armcc.cmake",
+      "binaryDir": "${sourceDir}/build/${presetName}"
+    },
+    {
+      "name": "armcc-debug",
+      "displayName": "STM32F750 ARMCC Debug",
+      "inherits": "armcc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "armcc-release",
+      "displayName": "STM32F750 ARMCC Release",
+      "inherits": "armcc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "armcc-debug",
+      "configurePreset": "armcc-debug"
+    },
+    {
+      "name": "armcc-release",
+      "configurePreset": "armcc-release"
+    }
+  ]
+}

@@ -112,10 +112,40 @@ ServoActionStatus ServoAction_RunGroup(uint8_t group,
                                        uint16_t repeat_count,
                                        uint32_t timeout_ms)
 {
-    uint8_t frame[7];
     uint32_t start_tick;
 
     if ((servo_uart == 0) || (timeout_ms == 0U))
+    {
+        ServoAction_LastStatus = SERVO_ACTION_ERROR_ARGUMENT;
+        return ServoAction_LastStatus;
+    }
+
+    if (ServoAction_StartGroupNoWait(group, repeat_count) != SERVO_ACTION_OK)
+    {
+        return ServoAction_LastStatus;
+    }
+
+    start_tick = HAL_GetTick();
+    while ((uint32_t)(HAL_GetTick() - start_tick) < timeout_ms)
+    {
+        if (servo_completed_group == group)
+        {
+            ServoAction_LastStatus = SERVO_ACTION_OK;
+            return ServoAction_LastStatus;
+        }
+        osDelay(10U);
+    }
+
+    ServoAction_LastStatus = SERVO_ACTION_ERROR_TIMEOUT;
+    return ServoAction_LastStatus;
+}
+
+ServoActionStatus ServoAction_StartGroupNoWait(uint8_t group,
+                                               uint16_t repeat_count)
+{
+    uint8_t frame[7];
+
+    if (servo_uart == 0)
     {
         ServoAction_LastStatus = SERVO_ACTION_ERROR_ARGUMENT;
         return ServoAction_LastStatus;
@@ -137,18 +167,7 @@ ServoActionStatus ServoAction_RunGroup(uint8_t group,
         return ServoAction_LastStatus;
     }
 
-    start_tick = HAL_GetTick();
-    while ((uint32_t)(HAL_GetTick() - start_tick) < timeout_ms)
-    {
-        if (servo_completed_group == group)
-        {
-            ServoAction_LastStatus = SERVO_ACTION_OK;
-            return ServoAction_LastStatus;
-        }
-        osDelay(10U);
-    }
-
-    ServoAction_LastStatus = SERVO_ACTION_ERROR_TIMEOUT;
+    ServoAction_LastStatus = SERVO_ACTION_OK;
     return ServoAction_LastStatus;
 }
 
@@ -182,9 +201,10 @@ const char *ServoAction_SequenceStateName(ServoActionSequenceState state)
     {
     case SERVO_SEQUENCE_STARTING:       return "STARTING";
     case SERVO_SEQUENCE_WAITING_MOTION: return "WAIT_MOTION";
-    case SERVO_SEQUENCE_DISK_RUNNING:  return "DISK_RUNNING";
-    case SERVO_SEQUENCE_DONE:          return "DONE";
-    case SERVO_SEQUENCE_ERROR:         return "ERROR";
-    default:                           return "UNKNOWN";
+    case SERVO_SEQUENCE_GRAB_RUNNING:   return "GRAB_RUNNING";
+    case SERVO_SEQUENCE_RETURN_RUNNING: return "RETURN_RUNNING";
+    case SERVO_SEQUENCE_DONE:           return "DONE";
+    case SERVO_SEQUENCE_ERROR:          return "ERROR";
+    default:                            return "UNKNOWN";
     }
 }

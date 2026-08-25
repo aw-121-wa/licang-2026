@@ -16,6 +16,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "ball_sequence.h"
+#include "maixcam_link.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,10 +93,14 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   MX_USART2_UART_Init();
+  MX_UART4_Init();
   MX_UART5_Init();
   MX_UART7_Init();
   ServoAction_Init(&huart7);
   /* USER CODE BEGIN 2 */
+
+  MaixCamLink_Init(&huart4);
+  BallSequence_Init();
 
   /* USER CODE END 2 */
 
@@ -113,7 +120,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_Delay(1000U);
   }
   /* USER CODE END 3 */
 }

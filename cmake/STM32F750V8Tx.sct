@@ -1,0 +1,17 @@
+; STM32F750V8Tx memory layout. This matches the active MDK target:
+;   IROM1: 0x08000000, 64 KiB
+;   IRAM1: 0x20000000, 320 KiB
+LR_IROM1 0x08000000 0x00010000
+{
+    ER_IROM1 0x08000000 0x00010000
+    {
+        *.o (RESET, +First)
+        *(InRoot$$Sections)
+        .ANY (+RO)
+    }
+
+    RW_IRAM1 0x20000000 0x00050000
+    {
+        .ANY (+RW +ZI)
+    }
+}
