@@ -88,7 +88,7 @@
 ## MaixCAM six-ball sequence (2026-08-25)
 
 - UART4 uses PC10=TX, PC11=RX, 115200-8-N-1, no flow control and IRQ reception. MaixCAM must use 3.3 V TTL, crossed TX/RX and common ground.
-- `BALL` first runs group 1 (return/recognition posture). Each of its six possible rounds then sends `1\r\n`, waits no more than 10 s for MaixCAM's valid ASCII line `1`, runs group 2 (clamp), turns the warehouse one slot, then runs group 1 (return). MaixCAM may reply only after a qualified target is inside its configured trigger zone for three consecutive frames; one frame of colour-threshold noise must not trigger a clamp. If manual `GRAB` cycles already consumed slots, `BALL` runs only the remaining count.
+- `BALL` first runs group 1 (return/recognition posture). Each of its six possible rounds then sends the configured one-byte color request (`1` for red; the current no-argument BALL path selects red), waits no more than 10 s for MaixCAM's valid ASCII line `1`, runs group 2 (clamp), turns the warehouse one slot, then runs group 1 (return). MaixCAM may reply only after a new request, 150 ms of visual settling, a qualified target inside its configured trigger zone, and three consecutive frames; one frame of colour-threshold noise must not trigger a clamp. If manual `GRAB` cycles already consumed slots, `BALL` runs only the remaining count.
 - `STATUS` reports `BALL_STATE`, `BALL_STATUS`, `BALL_ROUND`, `MAIX_TX`, `MAIX_RX`, `MAIX_INVALID`, `MAIX_TIMEOUT` and `MAIX_UART_ERR`.
 - A MaixCAM timeout or UART4 send failure does not move the arm and allows retrying `BALL`; action-group failures retain arm error lock. `STOP` ends a waiting round immediately; a STOP during group 2/turntable still waits for group 1 return to complete, then cancels the rest of the batch.
 

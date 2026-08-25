@@ -1,0 +1,3 @@
+D:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/CMakeFiles/chassis_motor.elf.dir
+D:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/CMakeFiles/edit_cache.dir
+D:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/CMakeFiles/rebuild_cache.dir

@@ -1,14 +1,21 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(chassis_motor C ASM)
+project(chassis_motor LANGUAGES C ASM)
+
+# This target intentionally uses the same ARMCC v5 runtime, startup file and
+# FreeRTOS RVDS Cortex-M7 port as MDK-ARM/chassis_motor.uvprojx.
+if(NOT CMAKE_C_COMPILER_ID STREQUAL "ARMCC")
+    message(FATAL_ERROR
+        "This project currently requires ARM Compiler 5 (armcc). Configure with "
+        "cmake/toolchains/armcc.cmake or the armcc-* CMake preset.")
+endif()
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-# Source files
 set(CHASSIS_SOURCES
-    cmake/startup_stm32f750xx.s
+    MDK-ARM/startup_stm32f750xx.s
 
     Core/Src/main.c
     Core/Src/gpio.c
@@ -61,20 +68,18 @@ set(CHASSIS_SOURCES
     Middlewares/Third_Party/FreeRTOS/Source/timers.c
     Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
     Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
-    Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c
+    Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1/port.c
 )
 
-add_executable(${PROJECT_NAME}.elf ${CHASSIS_SOURCES})
+add_executable(${PROJECT_NAME} ${CHASSIS_SOURCES})
+set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".axf")
 
-# Optimize for size to fit in 64KB Flash
-target_compile_options(${PROJECT_NAME}.elf PRIVATE -Os)
-
-target_compile_definitions(${PROJECT_NAME}.elf PRIVATE
+target_compile_definitions(${PROJECT_NAME} PRIVATE
     USE_HAL_DRIVER
     STM32F750xx
 )
 
-target_include_directories(${PROJECT_NAME}.elf PRIVATE
+target_include_directories(${PROJECT_NAME} PRIVATE
     Core/Inc
     App
     Motor
@@ -85,19 +90,38 @@ target_include_directories(${PROJECT_NAME}.elf PRIVATE
     Drivers/CMSIS/Include
     Middlewares/Third_Party/FreeRTOS/Source/include
     Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
-    Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
+    Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1
 )
 
-# Linker script
-target_link_options(${PROJECT_NAME}.elf PRIVATE
-    -T${CMAKE_CURRENT_SOURCE_DIR}/cmake/STM32F750V8Tx_FLASH.ld
-    -Wl,-Map=${PROJECT_NAME}.map,--cref
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:--cpu=Cortex-M7.fp.sp>
+    $<$<COMPILE_LANGUAGE:C>:--c99>
+    # Matches Keil Target > C/C++ > One ELF Section per Function.
+    $<$<COMPILE_LANGUAGE:C>:--split_sections>
+    $<$<COMPILE_LANGUAGE:ASM>:--cpu=Cortex-M7.fp.sp>
 )
 
-# Post-build: generate hex and bin
-add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.hex
-    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.bin
-    COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${PROJECT_NAME}.elf>
-    COMMENT "Generating HEX and BIN files"
+# The target has 64 KiB FLASH and the same 320 KiB RAM range used by the Keil
+# project. The scatter file enforces those limits. Keep CMake outputs separate,
+# so neither build system overwrites the other system's axf/hex files.
+target_link_options(${PROJECT_NAME} PRIVATE
+    --cpu=Cortex-M7.fp.sp
+    "--scatter=${CMAKE_CURRENT_SOURCE_DIR}/cmake/STM32F750V8Tx.sct"
+    --entry=Reset_Handler
+    --map
+    --info=sizes,totals,unused,veneers
+)
+
+get_filename_component(ARMCC_BIN_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+find_program(ARMCC_FROMELF NAMES fromelf.exe fromelf
+    HINTS "${ARMCC_BIN_DIR}"
+    REQUIRED)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND "${ARMCC_FROMELF}"
+            --i32combined
+            "--output=$<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.hex"
+            "$<TARGET_FILE:${PROJECT_NAME}>"
+    COMMENT "Creating Intel HEX firmware image"
+    VERBATIM
 )

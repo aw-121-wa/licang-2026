@@ -6,6 +6,7 @@
 #include "warehouse_control.h"
 
 #define BALL_SEQUENCE_WAIT_PERIOD_MS        10U
+#define BALL_SEQUENCE_TARGET_COLOR          MAIXCAM_COLOR_RED
 
 volatile BallSequenceState BallSequence_State = BALL_SEQUENCE_IDLE;
 volatile BallSequenceStatus BallSequence_LastStatus = BALL_SEQUENCE_OK;
@@ -82,7 +83,7 @@ BallSequenceStatus BallSequence_Run(void)
     {
         BallSequence_Round = round;
         BallSequence_State = BALL_SEQUENCE_WAITING_MAIXCAM;
-        if (MaixCamLink_SendRequest() != MAIXCAM_LINK_OK)
+        if (MaixCamLink_SendRequest(BALL_SEQUENCE_TARGET_COLOR) != MAIXCAM_LINK_OK)
         {
             BallSequence_State = BALL_SEQUENCE_ERROR;
             BallSequence_LastStatus = BALL_SEQUENCE_ERROR_MAIX_UART;

@@ -8,6 +8,7 @@ static char maixcam_rx_line[MAIXCAM_RX_LINE_MAX];
 static uint8_t maixcam_rx_length = 0U;
 static uint8_t maixcam_rx_overflow = 0U;
 static volatile uint8_t maixcam_reply_pending = 0U;
+static volatile uint8_t maixcam_request_active = 0U;
 
 volatile uint32_t MaixCamLink_TxRequestCount = 0U;
 volatile uint32_t MaixCamLink_RxReplyCount = 0U;
@@ -28,8 +29,12 @@ static void MaixCamLink_CompleteLine(void)
         (maixcam_rx_length == 1U) &&
         (maixcam_rx_line[0] == '1'))
     {
-        maixcam_reply_pending = 1U;
-        MaixCamLink_RxReplyCount++;
+        if (maixcam_request_active != 0U)
+        {
+            maixcam_reply_pending = 1U;
+            maixcam_request_active = 0U;
+            MaixCamLink_RxReplyCount++;
+        }
     }
     else if ((maixcam_rx_length != 0U) || (maixcam_rx_overflow != 0U))
     {
@@ -43,6 +48,7 @@ void MaixCamLink_Init(UART_HandleTypeDef *huart)
     maixcam_uart = huart;
     maixcam_rx_byte = 0U;
     maixcam_reply_pending = 0U;
+    maixcam_request_active = 0U;
     MaixCamLink_TxRequestCount = 0U;
     MaixCamLink_RxReplyCount = 0U;
     MaixCamLink_InvalidFrameCount = 0U;
@@ -55,20 +61,35 @@ void MaixCamLink_Init(UART_HandleTypeDef *huart)
     }
 }
 
-MaixCamLinkStatus MaixCamLink_SendRequest(void)
+MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color)
 {
-    static const uint8_t request_frame[] = { '1', '\r', '\n' };
+    uint8_t command;
 
     if (maixcam_uart == 0)
     {
         return MAIXCAM_LINK_ERROR_ARGUMENT;
     }
 
+    if (color == MAIXCAM_COLOR_RED)
+    {
+        command = '1';
+    }
+    else if (color == MAIXCAM_COLOR_BLUE)
+    {
+        command = '2';
+    }
+    else
+    {
+        return MAIXCAM_LINK_ERROR_ARGUMENT;
+    }
+
     /* A reply received before this request belongs to an older transaction. */
     maixcam_reply_pending = 0U;
+    maixcam_request_active = 0U;
+    MaixCamLink_ResetLine();
     if (HAL_UART_Transmit(maixcam_uart,
-                          (uint8_t *)request_frame,
-                          sizeof(request_frame),
+                          &command,
+                          1U,
                           100U) != HAL_OK)
     {
         MaixCamLink_UartErrorCount++;
@@ -76,6 +97,7 @@ MaixCamLinkStatus MaixCamLink_SendRequest(void)
     }
 
     MaixCamLink_TxRequestCount++;
+    maixcam_request_active = 1U;
     return MAIXCAM_LINK_OK;
 }
 

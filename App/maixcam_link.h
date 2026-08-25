@@ -8,6 +8,12 @@
 
 typedef enum
 {
+    MAIXCAM_COLOR_RED = 1,
+    MAIXCAM_COLOR_BLUE = 2
+} MaixCamColor;
+
+typedef enum
+{
     MAIXCAM_LINK_OK = 0,
     MAIXCAM_LINK_ERROR_ARGUMENT,
     MAIXCAM_LINK_ERROR_UART
@@ -20,7 +26,7 @@ extern volatile uint32_t MaixCamLink_TimeoutCount;
 extern volatile uint32_t MaixCamLink_UartErrorCount;
 
 void MaixCamLink_Init(UART_HandleTypeDef *huart);
-MaixCamLinkStatus MaixCamLink_SendRequest(void);
+MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color);
 uint8_t MaixCamLink_TakeReply(void);
 void MaixCamLink_RecordTimeout(void);
 void MaixCamLink_UartRxCpltCallback(UART_HandleTypeDef *huart);

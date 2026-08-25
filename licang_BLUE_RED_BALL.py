@@ -90,6 +90,8 @@ BUTTON_BLUE = [220, 405, 200, 60]
 BUTTON_AUTO_ROI = [430, 405, 200, 60]
 TOUCH_DEBOUNCE_MS = 250
 MAIN_LOOP_SLEEP_MS = 1
+VISION_ARM_DELAY_MS = 150
+DETECT_CONFIRM_FRAMES = 3
 
 
 # ========================== Runtime State ==========================
@@ -98,6 +100,7 @@ current_mode = MODE_RED
 display_mode = MODE_RED
 detected_latched = False
 recognition_armed = False
+recognition_armed_at_ms = 0
 detected_streak = 0
 last_touch_ms = 0
 illumination_gpio = None
@@ -295,7 +298,7 @@ def save_roi_config(path=None):
 def set_mode(mode, source):
     """Set task mode from UART or debug display mode from touch."""
     global current_mode, display_mode, detected_latched
-    global recognition_armed, detected_streak, calibrating
+    global recognition_armed, recognition_armed_at_ms, detected_streak, calibrating
     global calibration_samples, last_status_message
     if mode not in (MODE_RED, MODE_BLUE):
         return False
@@ -304,6 +307,7 @@ def set_mode(mode, source):
         display_mode = mode
         detected_latched = False
         recognition_armed = True
+        recognition_armed_at_ms = ticks_ms()
         detected_streak = 0
         calibrating = False
         calibration_samples = []
@@ -430,11 +434,17 @@ def update_detection(blob, serial):
     global last_status_message, calibrating
     if calibrating or not recognition_armed or detected_latched:
         return
+    if (ticks_ms() - recognition_armed_at_ms) < VISION_ARM_DELAY_MS:
+        detected_streak = 0
+        return
     valid_blob = filter_blob(blob)
-    if valid_blob is None:
+    if (valid_blob is None) or (not is_blob_in_trigger_zone(valid_blob)):
         detected_streak = 0
         return
 
+    detected_streak += 1
+    if detected_streak < DETECT_CONFIRM_FRAMES:
+        return
     if serial is None:
         return
     try:
@@ -768,6 +778,7 @@ def _selftest():
     global ROI, TRIGGER_ZONE, ROI_CONFIG_PATH, GRAB_CENTER_X
     global CALIBRATED_CENTER_X, GRAB_CENTER_Y, BALL_WIDTH, BALL_HEIGHT
     global current_mode, display_mode, detected_latched, recognition_armed
+    global recognition_armed_at_ms
     global calibrating, last_touch_ms
     valid = _FakeBlob(295, 195, 50, 50, 1800)
     outside_trigger = _FakeBlob(245, 195, 50, 50, 1800)
@@ -807,6 +818,15 @@ def _selftest():
     assert detect_ball(blue_image) is valid
     assert blue_image.thresholds == [BLUE_THRESHOLD]
     update_detection(valid, serial)
+    assert serial.sent == []
+
+    sleep_ms(VISION_ARM_DELAY_MS)
+    update_detection(outside_trigger, serial)
+    assert serial.sent == []
+    update_detection(valid, serial)
+    update_detection(valid, serial)
+    assert serial.sent == []
+    update_detection(valid, serial)
     assert serial.sent == [b"1\n"]
 
     assert recognition_armed is False
@@ -821,6 +841,12 @@ def _selftest():
     next_blob = detect_ball(next_blue_image)
     assert next_blob is valid
     update_detection(next_blob, serial)
+    assert serial.sent == [b"1\n"]
+    sleep_ms(VISION_ARM_DELAY_MS)
+    update_detection(valid, serial)
+    update_detection(valid, serial)
+    assert serial.sent == [b"1\n"]
+    update_detection(valid, serial)
     assert serial.sent == [b"1\n", b"1\n"]
 
     process_command_bytes(b"1")
@@ -832,6 +858,12 @@ def _selftest():
     red_image = _ColorFakeImage(valid, RED_THRESHOLD)
     assert detect_ball(red_image) is valid
     assert red_image.thresholds == [RED_THRESHOLD]
+    update_detection(valid, serial)
+    assert serial.sent == [b"1\n", b"1\n"]
+    sleep_ms(VISION_ARM_DELAY_MS)
+    update_detection(valid, serial)
+    update_detection(valid, serial)
+    assert serial.sent == [b"1\n", b"1\n"]
     update_detection(valid, serial)
     assert serial.sent == [b"1\n", b"1\n", b"1\n"]
 
@@ -907,11 +939,14 @@ def _selftest():
     display_mode = MODE_RED
     detected_latched = False
     recognition_armed = False
+    recognition_armed_at_ms = 0
     calibrating = False
     with open(__file__, "r") as source_file:
         source = source_file.read()
     assert "while not app.need_exit()" in source
     assert "elif recognition_armed:" in source
+    assert "VISION_ARM_DELAY_MS" in source
+    assert "DETECT_CONFIRM_FRAMES" in source
     assert 'status = "WAIT CMD"' in source
     assert "finally:" in source
     assert "light_off()" in source
