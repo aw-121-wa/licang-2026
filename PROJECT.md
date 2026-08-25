@@ -80,6 +80,13 @@
 - `App/gray_align.*` runs before BALL action group 1. It locks the current continuous JY61P yaw at entry, moves only along the left/right axis at 25 RPM, and applies a small heading PD correction (`KP=2.0`, `KD=0.15`, limit 8 RPM) during the lateral move. It holds the exact target for 50 ms, stops all wheels, and resets the continuous JY61P yaw before returning success. The alignment timeout is 5 s.
 - `MID1`/`MID2` are overshoot protection sensors, not completion sensors. If either is on, the chassis retreats while maintaining the locked yaw; otherwise it approaches. IN1/IN2 appearing in sequence never commands a chassis rotation. IMU loss during alignment stops the chassis and returns an alignment error.
 
+## RZ round-pillar motion (2026-08-25)
+
+- UART5 command `RZ` enters the existing `ChassisCommandQueue` and is executed by `ChassisTask`; it does not start the servo, MaixCAM, BALL or warehouse-turntable flows.
+- `App/round_pillar.*` owns the complete RZ sequence. It uses only the PD10 digital infrared input (configured as active-low for the first hardware test), locks the yaw at RZ entry, moves right until PD10 is continuously detected for 30 ms, then uses `MotionControl_MovePolarSegmentMm(60, -90, 0, 20, 0)` for the additional 60 mm while preserving the same yaw reference.
+- Before orbiting, RZ resets ContinuousYaw once. The clockwise stage sends `forward=-40 RPM`, `left=0`, `omega=-60 RPM` until ContinuousYaw reaches -360 degrees. It stops and settles without resetting yaw, then measures the actual settled yaw and sends `forward=+40 RPM`, `left=0`, `omega=+60 RPM` until 90 degrees of reverse travel is complete. Only after the final stop and settle is ContinuousYaw reset.
+- RZ has independent approach/orbit timeouts, checks STOP and IMU loss during every stage, and returns to the ready state after cancellation or RZ failure. The generic `ROT` command remains an in-place rotation and is unchanged.
+
 ## Warehouse turntable coordination (2026-08-25)
 
 - `ZDT_MOTOR_ADDR = 0x05U` is the single authoritative warehouse-motor address. Chassis addresses 1–4 on USART3 remain unchanged.

@@ -597,6 +597,16 @@
               <FilePath>../App/gray_align.h</FilePath>
             </File>
             <File>
+              <FileName>round_pillar.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/round_pillar.c</FilePath>
+            </File>
+            <File>
+              <FileName>round_pillar.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/round_pillar.h</FilePath>
+            </File>
+            <File>
               <FileName>turntable_control.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/turntable_control.c</FilePath>

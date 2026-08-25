@@ -100,6 +100,16 @@
 - `MID1/MID2` 均离线且未达到目标时以 25 RPM 靠近；任一外侧传感器在线时以 25 RPM 反向退出。IN1/IN2 先后在线只影响是否达到目标，不改变航向。5 s 内未达到稳定目标返回灰度校准错误；IMU 失联立即停车并返回 IMU 错误，不降级为纯灰度控制。
 - 校准成功后停车并清零 JY61P 连续航向，再进入已有的动作组 1 → MaixCAM → 动作组 2 → 转盘流程。
 
+## RZ 绕桩动作（2026-08-25）
+
+- UART5 新增无参数命令 `RZ`，必须经 `ChassisCommandQueue` 投递并由 `ChassisTask` 执行；不得触发机械臂、BALL、MaixCAM 或转盘。
+- RZ 使用 PD10 单红外输入。第一版配置为 GPIO 输入、无上下拉、低电平有效；有效电平必须集中在 `RZ_IR_DETECTED_LEVEL`，实车若相反只允许修改该定义。
+- RZ 开始时检查 JY61P 在线并清零 ContinuousYaw，随后锁定 0°，只向左横移寻找 PD10；PD10 连续检测 30 ms 才确认，找桩超时为 5 s。找桩阶段使用 `KP=2.0`、`KD=0.15`、死区 0.15°、最大航向修正 8 RPM。
+- 红外触发后不重新找桩，使用 `MotionControl_MovePolarSegmentMm(60, -90°, 0, 20, 0)` 继续右移 60 mm；该阶段不得重置 Yaw，且必须响应 STOP 与 IMU 失联。
+- 绕桩开始前仅再清零一次 ContinuousYaw。顺时针 360°固定发送 `forward=-40 RPM`、`left=0`、`omega=-60 RPM`，以 ContinuousYaw `<= -360°` 为完成条件；绕桩总超时为 15 s。
+- 顺时针 360°后必须停车并等待稳定，但禁止清零 Yaw。读取实际稳定角 `reverse_start_yaw`，反向目标为 `reverse_start_yaw + 90°`，随后发送 `forward=+40 RPM`、`left=0`、`omega=+60 RPM`，达到目标后停车、等待稳定、清零 Yaw 并完成。禁止用 `MotionControl_RotateDeg(90°)` 替代。
+- RZ 取消或失败不永久锁死 `ChassisTask`；RZ 完成按一次独立底盘动作统计，取消不计入动作完成计数。
+
 ## 仓库转盘协同（2026-08-25）
 
 - 仓库电机固定使用 USART1：PA9=TX、PA10=RX、115200、8N1、无硬件流控；地址必须为 `ZDT_MOTOR_ADDR = 0x05`。UART5 仍只用于 VOFA，USART3 仍只用于底盘地址 1–4。

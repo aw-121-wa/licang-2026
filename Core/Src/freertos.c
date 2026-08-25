@@ -33,6 +33,7 @@
 #include "uart_command.h"
 #include "servo_action.h"
 #include "warehouse_control.h"
+#include "round_pillar.h"
 
 /* USER CODE END Includes */
 
@@ -165,6 +166,7 @@ void StartChassisTask(void *argument)
   /* USER CODE BEGIN StartChassisTask */
   MotionControlStatus result;
   BallSequenceStatus ball_result;
+  RoundPillarStatus rz_result = ROUND_PILLAR_OK;
   ServoActionStatus servo_result;
   WarehouseStatus warehouse_result;
   ChassisCommand command;
@@ -270,6 +272,31 @@ void StartChassisTask(void *argument)
           ChassisTask_Ready = 1U;
         }
       }
+      else if (command.type == CHASSIS_CMD_RZ)
+      {
+        rz_result = RoundPillar_Run();
+        if ((rz_result == ROUND_PILLAR_OK) ||
+            (rz_result == ROUND_PILLAR_CANCELED))
+        {
+          result = MOTION_STATUS_FINISHED;
+          ChassisTask_Ready = 1U;
+        }
+        else if (rz_result == ROUND_PILLAR_ERROR_IMU)
+        {
+          result = MOTION_ERROR_IMU_LOST;
+          ChassisTask_Ready = 1U;
+        }
+        else if (rz_result == ROUND_PILLAR_ERROR_MOTOR)
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+          ChassisTask_Ready = 1U;
+        }
+        else
+        {
+          result = MOTION_ERROR_RZ_TIMEOUT;
+          ChassisTask_Ready = 1U;
+        }
+      }
       else if (command.type == CHASSIS_CMD_GRAB)
       {
         /* GRAB is the operator's explicit trigger for action group 2 (clamp). */
@@ -304,7 +331,9 @@ void StartChassisTask(void *argument)
       if ((result < MOTION_ERROR_IMU_STARTUP) &&
           (MotionControl_WasStopped() == 0U) &&
           (command.type != CHASSIS_CMD_GRAB) &&
-          (command.type != CHASSIS_CMD_BALL))
+          (command.type != CHASSIS_CMD_BALL) &&
+          ((command.type != CHASSIS_CMD_RZ) ||
+           (rz_result == ROUND_PILLAR_OK)))
       {
         ServoAction_MotionCompletedCount++;
       }

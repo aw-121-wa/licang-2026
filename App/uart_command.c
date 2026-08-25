@@ -386,7 +386,7 @@ static void UartCommand_SendHelp(void)
         "LF <mm> <deg>\r\nRF <mm> <deg>\r\n"
         "LR <mm> <deg>\r\nRR <mm> <deg>\r\n"
         "ROT CCW <deg>\r\nROT CW <deg>\r\n"
-        "GRAB\r\nBALL\r\n"
+        "GRAB\r\nBALL\r\nRZ\r\n"
         "STOP\r\nPATH CLEAR\r\nPATH ADD ...\r\nPATH SHOW\r\n"
         "PATH ADD ROT CCW <deg>\r\nPATH ADD ROT CW <deg>\r\n"
         "PATH RUN\r\nPATH LOAD DEFAULT\r\nSTATUS\r\nHELP\r\n"
@@ -503,6 +503,27 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         else
         {
             UartCommand_Send("OK BALL\r\n");
+        }
+        return;
+    }
+    if (strcmp(command, "RZ") == 0)
+    {
+        if (strtok(0, " \t") != 0)
+        {
+            UartCommand_ParseErrorCount++;
+            UartCommand_Send("ERR FORMAT\r\n");
+            return;
+        }
+        chassis_command.type = CHASSIS_CMD_RZ;
+        chassis_command.distance_mm = 0U;
+        chassis_command.angle_deg = 0.0f;
+        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
+        {
+            UartCommand_Send("ERR BUSY\r\n");
+        }
+        else
+        {
+            UartCommand_Send("OK RZ\r\n");
         }
         return;
     }
