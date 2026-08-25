@@ -3,7 +3,7 @@
 本工程同时保留两种构建入口，二者编译的是同一套业务、HAL 和 FreeRTOS 源文件：
 
 - Keil：`MDK-ARM/chassis_motor.uvprojx`，原有使用方式不变。
-- CMake：根目录 `CMakeLists.txt`，使用 ARM Compiler 5，因此复用现有 `RVDS/ARM_CM7/r0p1` FreeRTOS 移植层和 Keil 启动文件，避免更换编译器后引入运行时差异。`cmake/STM32F750V8Tx.sct` 强制限制为 64 KiB Flash、320 KiB RAM，与 Keil 当前目标一致。
+- CMake：根目录 `CMakeLists.txt`，使用 ARM Compiler 5，因此复用现有 `RVDS/ARM_CM7/r0p1` FreeRTOS 移植层和 Keil 启动文件，避免更换编译器后引入运行时差异。CMake 也对齐 Keil 的 Cortex-M7 单精度 FPU、`--split_sections` 和 64 KiB Flash/320 KiB RAM 限制。
 
 ## 前提
 

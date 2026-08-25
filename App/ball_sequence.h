@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-#define BALL_SEQUENCE_ROUND_COUNT           5U
+#define BALL_SEQUENCE_ROUND_COUNT           6U
 
 typedef enum
 {
@@ -23,7 +23,8 @@ typedef enum
     BALL_SEQUENCE_CANCELED_BY_STOP,
     BALL_SEQUENCE_ERROR_MAIX_UART,
     BALL_SEQUENCE_ERROR_MAIX_TIMEOUT,
-    BALL_SEQUENCE_ERROR_SERVO
+    BALL_SEQUENCE_ERROR_SERVO,
+    BALL_SEQUENCE_ERROR_TURNTABLE
 } BallSequenceStatus;
 
 extern volatile BallSequenceState BallSequence_State;

@@ -32,6 +32,7 @@
 #include "competition_path.h"
 #include "uart_command.h"
 #include "servo_action.h"
+#include "warehouse_control.h"
 
 /* USER CODE END Includes */
 
@@ -165,6 +166,7 @@ void StartChassisTask(void *argument)
   MotionControlStatus result;
   BallSequenceStatus ball_result;
   ServoActionStatus servo_result;
+  WarehouseStatus warehouse_result;
   ChassisCommand command;
 
   (void)argument;
@@ -177,6 +179,10 @@ void StartChassisTask(void *argument)
 
   MotionControl_Init(&huart3, &huart2);
   osDelay(100);
+
+  /* Warehouse motor is isolated on USART1; an error must not disable the chassis. */
+  warehouse_result = WarehouseControl_Init(&huart1);
+  (void)warehouse_result;
 
   /* 发送出发姿态，但不依赖舵控板的完成回传；部分舵控板不提供该帧。 */
   servo_result = ServoAction_StartGroupNoWait(SERVO_ACTION_START_GROUP, 1U);
@@ -248,6 +254,11 @@ void StartChassisTask(void *argument)
           result = MOTION_ERROR_MAIX_TIMEOUT;
           ChassisTask_Ready = 1U;
         }
+        else if (ball_result == BALL_SEQUENCE_ERROR_TURNTABLE)
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+          ChassisTask_Ready = 1U;
+        }
         else
         {
           result = MOTION_ERROR_MAIX_UART;
@@ -256,7 +267,7 @@ void StartChassisTask(void *argument)
       }
       else if (command.type == CHASSIS_CMD_GRAB)
       {
-        /* GRAB is the operator's explicit trigger for action group 1. */
+        /* GRAB is the operator's explicit trigger for action group 2 (clamp). */
         result = MOTION_STATUS_FINISHED;
       }
       else
@@ -312,6 +323,8 @@ void StartChassisTask(void *argument)
                                              SERVO_ACTION_GRAB_TIMEOUT_MS);
         if (servo_result == SERVO_ACTION_OK)
         {
+          /* Group 2 is the clamp action; only its UART7 0x08 completion turns the table. */
+          warehouse_result = WarehouseControl_HandleActionGroup2Completed();
           ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
           servo_result = ServoAction_RunGroup(SERVO_ACTION_RETURN_GROUP,
                                                1U,
@@ -319,8 +332,17 @@ void StartChassisTask(void *argument)
           if (servo_result == SERVO_ACTION_OK)
           {
             ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
-            ChassisCommand_LastStatus = MOTION_STATUS_FINISHED;
-            CompetitionPath_LastStatus = MOTION_STATUS_FINISHED;
+            if ((warehouse_result == WAREHOUSE_STATUS_OK) ||
+                (warehouse_result == WAREHOUSE_STATUS_CANCELED))
+            {
+              ChassisCommand_LastStatus = MOTION_STATUS_FINISHED;
+              CompetitionPath_LastStatus = MOTION_STATUS_FINISHED;
+            }
+            else
+            {
+              ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
+              CompetitionPath_LastStatus = MOTION_ERROR_MOTOR_UART;
+            }
             ChassisTask_Ready = 1U;
           }
           else

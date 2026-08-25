@@ -31,8 +31,11 @@ set(CHASSIS_SOURCES
     App/servo_action.c
     App/maixcam_link.c
     App/ball_sequence.c
+    App/turntable_control.c
+    App/warehouse_control.c
 
     Motor/motor_control.c
+    Motor/cangku_motor.c
     Motor/mecanum_kinematics.c
     Motor/motion_control.c
     IMU/jy61p.c
@@ -93,6 +96,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<COMPILE_LANGUAGE:C>:--cpu=Cortex-M7.fp.sp>
     $<$<COMPILE_LANGUAGE:C>:--c99>
+    # Matches Keil Target > C/C++ > One ELF Section per Function.
+    $<$<COMPILE_LANGUAGE:C>:--split_sections>
     $<$<COMPILE_LANGUAGE:ASM>:--cpu=Cortex-M7.fp.sp>
 )
 
@@ -100,6 +105,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 # project. The scatter file enforces those limits. Keep CMake outputs separate,
 # so neither build system overwrites the other system's axf/hex files.
 target_link_options(${PROJECT_NAME} PRIVATE
+    --cpu=Cortex-M7.fp.sp
     "--scatter=${CMAKE_CURRENT_SOURCE_DIR}/cmake/STM32F750V8Tx.sct"
     --entry=Reset_Handler
     --map

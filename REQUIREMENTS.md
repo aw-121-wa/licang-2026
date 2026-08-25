@@ -26,7 +26,7 @@
 - UART5 只接收 ASCII 命令并返回文本，不得直接发送张大头电机协议。
 - UART5 中断只负责单字节接收、行缓冲和投递；所有运动函数只能由 `ChassisTask` 在任务上下文调用。
 - `STOP` 通过 `MotionControl_RequestStop()` 进入当前 20 ms 控制周期，不能依赖普通运动队列排队后才生效。
-- `BALL` 是无参数的 UART5 ASCII 命令；仅在底盘空闲、动作组 0 已完成时接受，并启动五轮 MaixCAM 握手流程。
+- `BALL` 是无参数的 UART5 ASCII 命令；仅在底盘空闲、仓库转盘已准备好且尚有球位时接受，并运行当前六球批次的剩余 MaixCAM 握手流程。
 - 动态路径使用静态 RAM 表，最多 20 段；路径编辑只允许在底盘 IDLE 时进行。
 - 当前默认编译路径与用户 RAM 路径分离，`PATH LOAD DEFAULT` 负责载入默认路径。
 
@@ -82,15 +82,24 @@
 - On boot, UART7 (PE7/PE8, 9600-8-N-1) sends action group 0 (`出发姿态.rob`) once, but does not wait for a completion frame.
 - UART5 chassis commands become available after the normal IMU/motor preparation. The operator must wait for the physical start pose to finish before sending `GRAB` or `BALL`, because group 0 completion is no longer observable by the MCU.
 - Chassis motion commands are not limited by count. A STOP or motion error does not trigger the arm sequence.
-- When the chassis is idle, UART5 command `GRAB` explicitly runs action group 1 (`8.25-圆盘机夹.rob`) once, then runs action group 2 (`8.25-圆盘机回位.rob`) only after group 1 completes. After group 2 completes successfully, chassis motion commands remain available; repeated `GRAB` commands are rejected.
+- When the chassis is idle, UART5 command `GRAB` runs action group 2 (`8.25-圆盘机夹.rob`), turns the warehouse one slot only after group 2 really completes, then runs action group 1 (`8.25-圆盘机回位.rob`).
 - The three `.rob` files must be downloaded to controller slots 0, 1 and 2; the MCU sends only invocation frames.
 
-## MaixCAM five-round ball sequence (2026-08-25)
+## MaixCAM six-ball sequence (2026-08-25)
 
 - UART4 uses PC10=TX, PC11=RX, 115200-8-N-1, no flow control and IRQ reception. MaixCAM must use 3.3 V TTL, crossed TX/RX and common ground.
-- Each `BALL` round sends `1\r\n`, waits no more than 10 s for MaixCAM's valid ASCII line `1`, runs group 1, then runs group 2. The sequence stops after exactly five successful group-2 completions and accepts a new `BALL` batch afterwards.
+- `BALL` first runs group 1 (return/recognition posture). Each of its six possible rounds then sends `1\r\n`, waits no more than 10 s for MaixCAM's valid ASCII line `1`, runs group 2 (clamp), turns the warehouse one slot, then runs group 1 (return). MaixCAM may reply only after a qualified target is inside its configured trigger zone for three consecutive frames; one frame of colour-threshold noise must not trigger a clamp. If manual `GRAB` cycles already consumed slots, `BALL` runs only the remaining count.
 - `STATUS` reports `BALL_STATE`, `BALL_STATUS`, `BALL_ROUND`, `MAIX_TX`, `MAIX_RX`, `MAIX_INVALID`, `MAIX_TIMEOUT` and `MAIX_UART_ERR`.
-- A MaixCAM timeout or UART4 send failure does not move the arm and allows retrying `BALL`; action-group failures retain arm error lock. `STOP` ends a waiting round immediately; a STOP during group 1/2 waits for return group 2 to complete, then cancels the rest of the batch.
+- A MaixCAM timeout or UART4 send failure does not move the arm and allows retrying `BALL`; action-group failures retain arm error lock. `STOP` ends a waiting round immediately; a STOP during group 2/turntable still waits for group 1 return to complete, then cancels the rest of the batch.
+
+## 仓库转盘协同（2026-08-25）
+
+- 仓库电机固定使用 USART1：PA9=TX、PA10=RX、115200、8N1、无硬件流控；地址必须为 `ZDT_MOTOR_ADDR = 0x05`。UART5 仍只用于 VOFA，USART3 仍只用于底盘地址 1–4。
+- `Turntable_MoveOneSlot()` 必须调用 `ZDT_MoveRelative(TURNTABLE_SLOT_DIRECTION, TURNTABLE_MOVE_SPEED_RPM, TURNTABLE_MOVE_ACCELERATION, 1280U)`，使用相对位置，不得自行拼接协议帧。
+- 只能在机械臂动作组 2（圆盘机夹）的真实 UART7 完成反馈之后转盘；动作组命令成功发送不是完成条件。动作组 1（圆盘机回位）或其他组完成不得触发转盘。
+- 现阶段未解析转盘驱动器到位反馈，`Turntable_WaitComplete()` 以 1280 脉冲、100 RPM、3200 脉冲/圈计算运行时间并加 600 ms 裕量，1500 ms 后超时。超时或 UART 错误必须执行停止、进入 `WAREHOUSE_STATE_ERROR`，且不得增加球计数。
+- `Warehouse_BallCount` 表示“组 2（夹取）已真实完成且对应一格转盘已成功完成”的数量。最大为 6；`WAREHOUSE_TURN_AFTER_LAST_BALL=1U`，因此第 6 球后默认也转一格，总理论相对脉冲为 `6 × 1280 = 7680`。
+- 若动作组 2 完成时已经收到 `STOP`，不得再下发新的转盘命令；仍须执行动作组 1 回位后取消本批。转盘等待期间收到 `STOP` 时必须向地址 5 发送停止命令，且不得增加球计数。
 
 ## 原地旋转任意角度（2026-08-25）
 

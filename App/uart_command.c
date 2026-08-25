@@ -4,6 +4,7 @@
 #include "maixcam_link.h"
 #include "motion_control.h"
 #include "servo_action.h"
+#include "warehouse_control.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -218,11 +219,14 @@ static uint8_t UartCommand_SubmitMotion(const ChassisCommand *command)
     {
         return 0U;
     }
-    if (((command->type == CHASSIS_CMD_GRAB) &&
-         (ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION)) ||
-        ((command->type != CHASSIS_CMD_GRAB) &&
-         (ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION) &&
-         (ServoAction_SequenceState != SERVO_SEQUENCE_DONE)))
+    if (((command->type == CHASSIS_CMD_GRAB) ||
+         (command->type == CHASSIS_CMD_BALL)) &&
+        (WarehouseControl_IsReadyForAction() == 0U))
+    {
+        return 0U;
+    }
+    if ((ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION) &&
+        (ServoAction_SequenceState != SERVO_SEQUENCE_DONE))
     {
         return 0U;
     }
@@ -357,6 +361,22 @@ static void UartCommand_SendStatus(void)
                    (unsigned long)MaixCamLink_TimeoutCount,
                    (unsigned long)MaixCamLink_UartErrorCount);
     UartCommand_Send(response);
+    (void)snprintf(response, sizeof(response),
+                   "WAREHOUSE_STATE=%s\r\nWAREHOUSE_STATUS=%s\r\n"
+                   "WAREHOUSE_BALL_COUNT=%u\r\nWAREHOUSE_G2_DONE=%lu\r\n"
+                   "WAREHOUSE_TURN_COUNT=%lu\r\nWAREHOUSE_LAST_HAL=%d\r\n"
+                   "WAREHOUSE_LAST_PULSES=%lu\r\nTURNTABLE=%s\r\n"
+                   "TURNTABLE_EXPECTED_MS=%lu\r\n",
+                   WarehouseControl_StateName((WarehouseState)Warehouse_State),
+                   WarehouseControl_StatusName(Warehouse_LastStatus),
+                   Warehouse_BallCount,
+                   (unsigned long)Warehouse_ActionGroup2DoneCount,
+                   (unsigned long)Warehouse_TurntableMoveCount,
+                   (int)Warehouse_LastTurntableStatus,
+                   (unsigned long)Warehouse_LastTurntablePulses,
+                   Turntable_StateName(Turntable_State),
+                   (unsigned long)Turntable_LastExpectedMoveMs);
+    UartCommand_Send(response);
 }
 
 static void UartCommand_SendHelp(void)
@@ -370,7 +390,7 @@ static void UartCommand_SendHelp(void)
         "STOP\r\nPATH CLEAR\r\nPATH ADD ...\r\nPATH SHOW\r\n"
         "PATH ADD ROT CCW <deg>\r\nPATH ADD ROT CW <deg>\r\n"
         "PATH RUN\r\nPATH LOAD DEFAULT\r\nSTATUS\r\nHELP\r\n"
-        "ARM: group0 at startup; GRAB=one cycle, BALL=five MaixCAM cycles\r\n");
+        "ARM: G0=start, G1=return, G2=clamp; GRAB=G2->turn->G1, BALL=max 6\r\n");
 }
 
 static void UartCommand_ProcessLine(UartCommandLine *line)
@@ -446,7 +466,8 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
             UartCommand_Send("ERR FORMAT\r\n");
             return;
         }
-        if (ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION)
+        if ((ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION) &&
+            (ServoAction_SequenceState != SERVO_SEQUENCE_DONE))
         {
             UartCommand_Send("ERR GRAB_NOT_READY\r\n");
             return;

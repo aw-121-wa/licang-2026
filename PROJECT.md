@@ -13,6 +13,7 @@
 - USART3，115200：四台电机驱动器通信。
 - USART2，PD5/PD6，9600：JY60/JY61P 通信。
 - UART5，PC12/PD2，115200：PC/VOFA 命令和路径调试接口（PC12=TX，PD2=RX）。
+- USART1，PA9/PA10，115200：仓库转盘专用张大头闭环步进电机（PA9=TX，PA10=RX，地址 `0x05`）。
 - 麦轮直径：75 mm。
 - 麦轮坐标：车头方向为 `+X`，车体左侧为 `+Y`，逆时针旋转为 `+Omega`。
 - 当前 X 型麦轮方向矩阵：前进 `++++`，左移 `-++-`，逆时针 `-+-+`。
@@ -26,6 +27,9 @@
 - `Motor/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、任意角度平移、故障停车和动作序列。
 - `IMU/jy61p.*`：JY60/JY61P 数据帧解析、连续航向角和串口中断接收。
 - `App/uart_command.*`：UART5 ASCII 命令接收、解析、路径编辑、状态查询和 FreeRTOS 命令投递。
+- `Motor/cangku_motor.*`：仓库转盘的单电机 Emm V5.0/x42 协议层；只操作 USART1 地址 `0x05`，不与底盘四轮共用状态。
+- `App/turntable_control.*`：仓库转盘一格相对运动、启用、停止及集中等待策略。
+- `App/warehouse_control.*`：机械臂组 2（夹取）完成后的仓库协同和六球计数状态机，由现有 `ChassisTask` 调用，不新建重复任务。
 - `.vscode/`：IntelliSense 与 Keil 构建任务。
 
 ## 已确定的设计决策
@@ -57,17 +61,26 @@
 ## Servo action-group sequence (2026-08-24)
 
 - UART7 PE7=RX and PE8=TX, 9600-8-N-1, Hiwonder/Lobot action-group controller.
-- Action group 0 is `出发姿态.rob`; action group 1 is `8.25-圆盘机夹.rob`; action group 2 is `8.25-圆盘机回位.rob`.
+- Action group 0 is `出发姿态.rob`; action group 1 is `8.25-圆盘机回位.rob`; action group 2 is `8.25-圆盘机夹.rob`.
 - The controller must be preloaded with the three `.rob` files in slots 0, 1 and 2; the MCU sends only the action-group invocation frame.
-- At boot the MCU sends group 0 once but does not require a completion reply, because the installed controller does not provide a usable completion frame for it. Chassis commands become available after normal IMU/motor preparation; do not issue `GRAB` or `BALL` until the physical start pose has finished. Chassis motions are not count-limited; when the chassis is idle, UART5 command `GRAB` explicitly runs group 1 and, after its completion, group 2. After group 2 completes successfully, chassis motion commands remain available; repeated `GRAB` commands are rejected.
+- At boot the MCU sends group 0 once but does not require a completion reply, because the installed controller does not provide a usable completion frame for it. Chassis commands become available after normal IMU/motor preparation; do not issue `GRAB` or `BALL` until the physical start pose has finished. `GRAB` runs group 2 (clamp), then one turntable slot, then group 1 (return).
 
 ## MaixCAM ball handshake (2026-08-25)
 
 - UART4 connects to MaixCAM at 115200-8-N-1: PC10=TX and PC11=RX. Use 3.3 V TTL, cross-connect TX/RX and share GND.
-- `App/maixcam_link.*` owns UART4 byte reception and accepts only an ASCII reply line `1` as a MaixCAM acknowledgement; outgoing request frame is always `1\r\n`.
-- UART5 command `BALL` runs five complete rounds: request MaixCAM, wait up to 10 s for reply `1`, run action group 1 (grab), then action group 2 (return). The fifth return ends the batch without a sixth request.
-- `GRAB` remains a separate single action-group 1 then 2 operation. While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
-- MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during a grab it finishes group 1 and group 2 return before ending the remaining batch.
+- `App/maixcam_link.*` owns UART4 byte reception and accepts only an ASCII reply line `1` as a MaixCAM acknowledgement; outgoing request frame is always `1\r\n`. The deployed `licang_BLUE_RED_BALL.py` sends that reply only when a color/shape-qualified target is inside the configured green trigger zone for three consecutive frames; a single threshold-noise blob must not start an arm action.
+- UART5 command `BALL` first runs action group 1 (return/recognition posture). It then runs the remaining rounds of the current six-ball warehouse batch: request MaixCAM, wait up to 10 s for reply `1`, run action group 2 (clamp), turn the warehouse one slot, then run action group 1 (return). The sixth group-2 completion also turns one slot and is followed by group 1 return.
+- `GRAB` remains a separate single cycle: group 2 (clamp) -> one turntable slot -> group 1 (return). While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
+- MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during group 2/turntable it still completes group 1 (return) before ending the remaining batch.
+
+## Warehouse turntable coordination (2026-08-25)
+
+- `ZDT_MOTOR_ADDR = 0x05U` is the single authoritative warehouse-motor address. Chassis addresses 1–4 on USART3 remain unchanged.
+- One slot is a relative `FD` move of `1280` pulses. `TURNTABLE_SLOT_DIRECTION` is currently `ZDT_DIR_CW`, speed is 100 RPM and acceleration is 0; all are centralized in `App/turntable_control.h` for hardware calibration.
+- `ServoAction_RunGroup(2)` waits for the real UART7 completion frame (`55 55 05 08 02 ...`). Only after that frame does `WarehouseControl_HandleActionGroup2Completed()` issue one turntable move. A command transmission is not considered completion.
+- The installed turntable driver has no returned completion/status parser. The initial completion criterion is its calculated 240 ms running time plus 600 ms settling margin (840 ms total), bounded by a 1500 ms timeout. This must be verified on hardware before competition.
+- A successful group-2/turntable pair increments `Warehouse_BallCount`. The counter is capped at six; `WAREHOUSE_TURN_AFTER_LAST_BALL` is `1U`, so the sixth ball also triggers a turn. A UART failure or timeout stops the turntable and enters the warehouse error state without incrementing the count.
+- If `STOP` is already pending when group 2 completes, no new turntable command is sent; group 1 still runs to return the arm, then the remaining warehouse batch is canceled. During a turntable timing wait, `STOP` sends the driver stop command and likewise does not increment the count.
 
 ## IMU closed-loop in-place rotation (2026-08-25)
 

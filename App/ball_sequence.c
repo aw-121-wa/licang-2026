@@ -3,6 +3,7 @@
 #include "maixcam_link.h"
 #include "motion_control.h"
 #include "servo_action.h"
+#include "warehouse_control.h"
 
 #define BALL_SEQUENCE_WAIT_PERIOD_MS        10U
 
@@ -41,13 +42,43 @@ void BallSequence_Init(void)
 BallSequenceStatus BallSequence_Run(void)
 {
     uint8_t round;
+    uint8_t round_count;
     BallSequenceStatus status;
     ServoActionStatus servo_status;
+    WarehouseStatus warehouse_status;
+    uint8_t cancel_after_return;
 
     BallSequence_LastStatus = BALL_SEQUENCE_OK;
     BallSequence_Round = 0U;
+    round_count = WarehouseControl_RemainingBallCount();
+    if ((round_count == 0U) || (round_count > BALL_SEQUENCE_ROUND_COUNT))
+    {
+        BallSequence_State = BALL_SEQUENCE_ERROR;
+        BallSequence_LastStatus = BALL_SEQUENCE_ERROR_TURNTABLE;
+        return BallSequence_LastStatus;
+    }
 
-    for (round = 1U; round <= BALL_SEQUENCE_ROUND_COUNT; round++)
+    /* Group 1 is the return/recognition-ready posture and runs before MaixCAM. */
+    BallSequence_State = BALL_SEQUENCE_RETURN_RUNNING;
+    ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
+    servo_status = ServoAction_RunGroup(SERVO_ACTION_RETURN_GROUP,
+                                        1U,
+                                        SERVO_ACTION_RETURN_TIMEOUT_MS);
+    if (servo_status != SERVO_ACTION_OK)
+    {
+        BallSequence_State = BALL_SEQUENCE_ERROR;
+        BallSequence_LastStatus = BALL_SEQUENCE_ERROR_SERVO;
+        ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
+        return BallSequence_LastStatus;
+    }
+    if (MotionControl_StopRequested != 0U)
+    {
+        BallSequence_State = BALL_SEQUENCE_CANCELED;
+        BallSequence_LastStatus = BALL_SEQUENCE_CANCELED_BY_STOP;
+        return BallSequence_LastStatus;
+    }
+
+    for (round = 1U; round <= round_count; round++)
     {
         BallSequence_Round = round;
         BallSequence_State = BALL_SEQUENCE_WAITING_MAIXCAM;
@@ -87,7 +118,11 @@ BallSequenceStatus BallSequence_Run(void)
             return BallSequence_LastStatus;
         }
 
-        /* A STOP during gripping still runs the return group before aborting. */
+        /* Group 2 is the clamp action. Its real completion triggers exactly one turn. */
+        warehouse_status = WarehouseControl_HandleActionGroup2Completed();
+        cancel_after_return = (warehouse_status == WAREHOUSE_STATUS_CANCELED) ? 1U : 0U;
+
+        /* A STOP during clamp/turn still runs group 1 return before aborting. */
         BallSequence_State = BALL_SEQUENCE_RETURN_RUNNING;
         ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
         servo_status = ServoAction_RunGroup(SERVO_ACTION_RETURN_GROUP,
@@ -102,6 +137,19 @@ BallSequenceStatus BallSequence_Run(void)
         }
 
         ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
+        if ((warehouse_status != WAREHOUSE_STATUS_OK) &&
+            (warehouse_status != WAREHOUSE_STATUS_CANCELED))
+        {
+            BallSequence_State = BALL_SEQUENCE_ERROR;
+            BallSequence_LastStatus = BALL_SEQUENCE_ERROR_TURNTABLE;
+            return BallSequence_LastStatus;
+        }
+        if (cancel_after_return != 0U)
+        {
+            BallSequence_State = BALL_SEQUENCE_CANCELED;
+            BallSequence_LastStatus = BALL_SEQUENCE_CANCELED_BY_STOP;
+            return BallSequence_LastStatus;
+        }
         if (MotionControl_StopRequested != 0U)
         {
             BallSequence_State = BALL_SEQUENCE_CANCELED;
@@ -141,6 +189,7 @@ const char *BallSequence_StatusName(BallSequenceStatus status)
     case BALL_SEQUENCE_ERROR_MAIX_UART:    return "MAIX_UART";
     case BALL_SEQUENCE_ERROR_MAIX_TIMEOUT: return "MAIX_TIMEOUT";
     case BALL_SEQUENCE_ERROR_SERVO:        return "SERVO";
+    case BALL_SEQUENCE_ERROR_TURNTABLE:    return "TURNTABLE";
     default:                               return "UNKNOWN";
     }
 }

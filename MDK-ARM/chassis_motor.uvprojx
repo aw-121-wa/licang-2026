@@ -586,6 +586,26 @@
               <FileType>5</FileType>
               <FilePath>../App/ball_sequence.h</FilePath>
             </File>
+            <File>
+              <FileName>turntable_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/turntable_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>turntable_control.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/turntable_control.h</FilePath>
+            </File>
+            <File>
+              <FileName>warehouse_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/warehouse_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>warehouse_control.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/warehouse_control.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -600,6 +620,16 @@
               <FileName>motor_control.h</FileName>
               <FileType>5</FileType>
               <FilePath>../Motor/motor_control.h</FilePath>
+            </File>
+            <File>
+              <FileName>cangku_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Motor/cangku_motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>cangku_motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../Motor/cangku_motor.h</FilePath>
             </File>
             <File>
               <FileName>mecanum_kinematics.c</FileName>
