@@ -36,7 +36,6 @@ typedef uint8_t (*TurntableCancelCheck)(void);
 extern volatile TurntableState Turntable_State;
 extern volatile TurntableStatus Turntable_LastStatus;
 extern volatile uint32_t Turntable_LastExpectedMoveMs;
-extern volatile uint32_t Turntable_MoveCommandCount;
 
 TurntableStatus Turntable_Init(UART_HandleTypeDef *huart);
 TurntableStatus Turntable_Enable(void);

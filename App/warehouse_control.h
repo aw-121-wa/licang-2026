@@ -31,10 +31,6 @@ typedef enum
 /* Count means a processed group-2 (clamp) event and its successful one-slot turn. */
 extern volatile uint8_t Warehouse_BallCount;
 extern volatile uint8_t Warehouse_State;
-extern volatile uint32_t Warehouse_ActionGroup2DoneCount;
-extern volatile uint32_t Warehouse_TurntableMoveCount;
-extern volatile HAL_StatusTypeDef Warehouse_LastTurntableStatus;
-extern volatile uint32_t Warehouse_LastTurntablePulses;
 extern volatile WarehouseStatus Warehouse_LastStatus;
 
 WarehouseStatus WarehouseControl_Init(UART_HandleTypeDef *huart);

@@ -30,7 +30,6 @@ static BallSequenceStatus BallSequence_WaitForMaixCam(void)
         osDelay(BALL_SEQUENCE_WAIT_PERIOD_MS);
     }
 
-    MaixCamLink_RecordTimeout();
     return BALL_SEQUENCE_ERROR_MAIX_TIMEOUT;
 }
 

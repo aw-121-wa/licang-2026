@@ -29,7 +29,6 @@
 #include "usart.h"
 #include "motion_control.h"
 #include "ball_sequence.h"
-#include "competition_path.h"
 #include "uart_command.h"
 #include "servo_action.h"
 #include "warehouse_control.h"
@@ -174,9 +173,7 @@ void StartChassisTask(void *argument)
   (void)argument;
   ChassisCommand_Busy = 1U;
   ChassisTask_Ready = 0U;
-  ChassisCommand_Mode = CHASSIS_MODE_IDLE;
   ChassisCommand_LastStatus = MOTION_STATUS_IDLE;
-  ServoAction_MotionCompletedCount = 0U;
   ServoAction_SequenceState = SERVO_SEQUENCE_STARTING;
 
   MotionControl_Init(&huart3, &huart2);
@@ -202,7 +199,6 @@ void StartChassisTask(void *argument)
 
   result = MotionControl_PrepareForMove();
   ChassisCommand_LastStatus = result;
-  CompetitionPath_LastStatus = result;
   if (result < MOTION_ERROR_IMU_STARTUP)
   {
     ServoAction_SequenceState = SERVO_SEQUENCE_WAITING_MOTION;
@@ -227,13 +223,7 @@ void StartChassisTask(void *argument)
         continue;
       }
 
-      ChassisCommand_Mode = (command.type == CHASSIS_CMD_RUN_PATH) ?
-                            CHASSIS_MODE_PATH : CHASSIS_MODE_MANUAL;
-      if (command.type == CHASSIS_CMD_RUN_PATH)
-      {
-        result = CompetitionPath_RunUserPath();
-      }
-      else if (command.type == CHASSIS_CMD_ROTATE)
+      if (command.type == CHASSIS_CMD_ROTATE)
       {
         result = MotionControl_RotateDeg(command.angle_deg);
       }
@@ -327,22 +317,11 @@ void StartChassisTask(void *argument)
             command.distance_mm, angle_deg, 0.0f, cruise_rpm, 0.0f);
       }
       ChassisCommand_LastStatus = result;
-      CompetitionPath_LastStatus = result;
-      if ((result < MOTION_ERROR_IMU_STARTUP) &&
-          (MotionControl_WasStopped() == 0U) &&
-          (command.type != CHASSIS_CMD_GRAB) &&
-          (command.type != CHASSIS_CMD_BALL) &&
-          ((command.type != CHASSIS_CMD_RZ) ||
-           (rz_result == ROUND_PILLAR_OK)))
-      {
-        ServoAction_MotionCompletedCount++;
-      }
       if ((result < MOTION_ERROR_IMU_STARTUP) ||
           (MotionControl_WasStopped() != 0U))
       {
         MotionControl_State = MOTION_STATUS_IDLE;
       }
-      ChassisCommand_Mode = CHASSIS_MODE_IDLE;
       if (command.type != CHASSIS_CMD_GRAB)
       {
         ChassisCommand_Busy = 0U;
@@ -370,12 +349,10 @@ void StartChassisTask(void *argument)
                 (warehouse_result == WAREHOUSE_STATUS_CANCELED))
             {
               ChassisCommand_LastStatus = MOTION_STATUS_FINISHED;
-              CompetitionPath_LastStatus = MOTION_STATUS_FINISHED;
             }
             else
             {
               ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
-              CompetitionPath_LastStatus = MOTION_ERROR_MOTOR_UART;
             }
             ChassisTask_Ready = 1U;
           }
@@ -383,7 +360,6 @@ void StartChassisTask(void *argument)
           {
             ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
             ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
-            CompetitionPath_LastStatus = MOTION_ERROR_MOTOR_UART;
             ChassisTask_Ready = 0U;
           }
         }
@@ -391,10 +367,8 @@ void StartChassisTask(void *argument)
         {
           ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
           ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
-          CompetitionPath_LastStatus = MOTION_ERROR_MOTOR_UART;
           ChassisTask_Ready = 0U;
         }
-        ChassisCommand_Mode = CHASSIS_MODE_IDLE;
         ChassisCommand_Busy = 0U;
       }
     }

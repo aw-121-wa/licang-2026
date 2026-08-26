@@ -10,12 +10,6 @@ static uint8_t maixcam_rx_overflow = 0U;
 static volatile uint8_t maixcam_reply_pending = 0U;
 static volatile uint8_t maixcam_request_active = 0U;
 
-volatile uint32_t MaixCamLink_TxRequestCount = 0U;
-volatile uint32_t MaixCamLink_RxReplyCount = 0U;
-volatile uint32_t MaixCamLink_InvalidFrameCount = 0U;
-volatile uint32_t MaixCamLink_TimeoutCount = 0U;
-volatile uint32_t MaixCamLink_UartErrorCount = 0U;
-
 static void MaixCamLink_ResetLine(void)
 {
     maixcam_rx_length = 0U;
@@ -33,12 +27,7 @@ static void MaixCamLink_CompleteLine(void)
         {
             maixcam_reply_pending = 1U;
             maixcam_request_active = 0U;
-            MaixCamLink_RxReplyCount++;
         }
-    }
-    else if ((maixcam_rx_length != 0U) || (maixcam_rx_overflow != 0U))
-    {
-        MaixCamLink_InvalidFrameCount++;
     }
     MaixCamLink_ResetLine();
 }
@@ -49,11 +38,6 @@ void MaixCamLink_Init(UART_HandleTypeDef *huart)
     maixcam_rx_byte = 0U;
     maixcam_reply_pending = 0U;
     maixcam_request_active = 0U;
-    MaixCamLink_TxRequestCount = 0U;
-    MaixCamLink_RxReplyCount = 0U;
-    MaixCamLink_InvalidFrameCount = 0U;
-    MaixCamLink_TimeoutCount = 0U;
-    MaixCamLink_UartErrorCount = 0U;
     MaixCamLink_ResetLine();
     if (maixcam_uart != 0)
     {
@@ -92,11 +76,9 @@ MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color)
                           1U,
                           100U) != HAL_OK)
     {
-        MaixCamLink_UartErrorCount++;
         return MAIXCAM_LINK_ERROR_UART;
     }
 
-    MaixCamLink_TxRequestCount++;
     maixcam_request_active = 1U;
     return MAIXCAM_LINK_OK;
 }
@@ -114,11 +96,6 @@ uint8_t MaixCamLink_TakeReply(void)
         __enable_irq();
     }
     return reply;
-}
-
-void MaixCamLink_RecordTimeout(void)
-{
-    MaixCamLink_TimeoutCount++;
 }
 
 void MaixCamLink_UartRxCpltCallback(UART_HandleTypeDef *huart)
@@ -159,7 +136,6 @@ void MaixCamLink_UartErrorCallback(UART_HandleTypeDef *huart)
         return;
     }
 
-    MaixCamLink_UartErrorCount++;
     MaixCamLink_ResetLine();
     __HAL_UART_CLEAR_OREFLAG(maixcam_uart);
     maixcam_uart->ErrorCode = HAL_UART_ERROR_NONE;

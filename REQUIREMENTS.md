@@ -4,13 +4,13 @@
 
 1. 等待 JY60/JY61P 输出有效角度帧。
 2. 使能四个电机并建立当前车头航向基准。
-3. 以左前 `+30°` 方向斜线运行 1800 mm，起始速度为 0，最后软减速到 0。
-4. 运动过程中保持同一航向基准，实时执行锁头修正。
-5. 完成路径后保持停止。
+3. 等待 UART5 现场命令；普通平移、ROT、BALL、GRAB 和 RZ 均由 `ChassisTask` 顺序执行。
+4. 平移过程中保持同一航向基准，实时执行统一的航向 PD 修正。
+5. 完成动作后保持停止并返回可接收命令状态。
 
 ## 控制要求
 
-- 前进和横移均使用四麦轮运动学解算。
+- 前进、横移和斜线均使用四麦轮运动学解算。
 - 行走使用 `F6` 连续速度模式，每20 ms读取一次当前航向并更新四轮速度，实现运动途中实时锁头。
 - 指定距离按下发RPM、实际运行时间和75 mm轮径进行软件积分；保持开环，不读取电机位置、到位或其他返回值。
 - 起步和停车使用软件速度斜坡，不通过多条短 `FD` 位置命令实现距离。
@@ -18,7 +18,10 @@
 - 任一位置命令未成功进入发送队列时，不得触发该组运动。
 - IMU 无有效数据时禁止启动；运动中 IMU 丢失时立即停车，避免在“实时锁头”失效后继续运行。
 - 电机串口异常时进入错误状态并尝试停车。
-- `main.c` 不放置麦轮公式、PID、距离换算或驱动协议代码。
+- `main.c` 不放置麦轮公式、PID、距离换算或驱动协议代码；`gray_align.c` 和 `round_pillar.c` 不重复实现麦轮解算。
+- `MotionControl_SetBodySpeed()` 是唯一的 BodySpeed 到四轮速度发送入口；`MotionControl_ResetHeadingReference()` 和 `MotionControl_GetHeadingCorrection()` 是唯一的航向锁定入口。
+- 航向 PD 统一参数为 `KP=2.0`、`KD=0.15`、死区 `0.15°`、最大修正 `8 RPM`，并保留相对平移速度限幅。
+- 纯横移使用 `LATERAL_FORWARD_COMPENSATION` 增加前后方向补偿，初始值为 `0.0f`；该值必须通过 `L 2000`、`R 2000` 实车标定，不用四个轮子 gain 掩盖轨迹偏差。
 
 ## UART5 PC/VOFA 调试接口
 
@@ -30,37 +33,21 @@
 - 动态路径使用静态 RAM 表，最多 20 段；路径编辑只允许在底盘 IDLE 时进行。
 - 当前默认编译路径与用户 RAM 路径分离，`PATH LOAD DEFAULT` 负责载入默认路径。
 
-## FreeRTOS 比赛路径模块
+## FreeRTOS 命令执行
 
 - `main.c` 只负责硬件初始化（包括 UART5）、`osKernelInitialize()`、`MX_FREERTOS_Init()` 和 `osKernelStart()`。
-- `ChassisTask` 只初始化一次 `MotionControl`，在任务中完成 IMU 等待、四轮使能和锁头基准建立后等待命令队列；普通运动和 `CompetitionPath_RunUserPath()` 均只能由该任务执行，不得无限重复。
-- 比赛路径位于 `App/competition_path.c/.h`，只编排现有 `MotionControl` 公共接口；电机协议、麦轮解算、IMU 数据解析和距离积分继续由原模块负责。
-- 路径步骤之间使用 `osDelay()`，不在应用层直接发送电机命令或调用 UART HAL。
-- `MotionControl_PrepareForMove()` 仅复用原有 IMU 有效性检查、四轮使能和航向基准建立流程，由 `ChassisTask` 在调度器启动后调用；原 `MotionControl_RunDefaultSequence()` 仍保留用于底盘单独测试。
-- `MotionControl_MovePolarSegmentMm()` 和 `MotionControl_MovePolarBlendSegmentMm()` 只扩展连续段速度/方向轨迹，原有单段运动 API 必须继续保留。
-
-## 任意角度斜线运动
-
-- `MotionControl_MovePolarMm(distance_mm, angle_deg)` 支持 -180°～+180° 的任意平移角度。
-- 角度定义为：0°前进，+45°左前，+90°左移，+135°左后，180°后退，-45°右前，-90°右移，-135°右后。
-- `distance_mm` 表示沿该方向的实际轨迹长度，不是前进和横移分量的简单相加。
-- `MotionControl_MoveMm(forward_mm, left_mm)` 保留原接口，并允许两个分量同时非零；目标距离按二维向量长度计算。
-- 四个包装接口接收 0°～90° 的相对角度：`MoveLeftFrontMm`、`MoveRightFrontMm`、`MoveLeftRearMm`、`MoveRightRearMm`。
-- 斜线运动使用 `MOTION_DIAGONAL_CRUISE_RPM`，当前为 85 RPM；纯轴向运动继续使用 100 RPM。
-- 麦轮限幅后的比例必须进入距离积分，避免 45° 或加入锁头修正后软件距离与实际下发速度不一致。
-
-## 独立底盘测试流程
-
-- `DIAGONAL_TEST_ENABLE=1` 时，上电流程为：等待 IMU、使能四轮、等待 500 ms、建立航向基准、等待 100 ms、执行一次测试平移、停车。
-- `DIAGONAL_TEST_DISTANCE_MM`、`DIAGONAL_TEST_ANGLE_DEG` 和 `DIAGONAL_TEST_DIRECTION` 位于 `Motor/motion_control.h`，用于现场快速切换测试距离、角度和左前/右前/左后/右后方向。
-- `DIAGONAL_TEST_ENABLE` 只影响 `MotionControl_RunDefaultSequence()` 独立测试，不影响正式 `CompetitionPath_RunOnce()` 路径。
+- `ChassisTask` 只初始化一次 `MotionControl`，完成 IMU 等待、四轮使能和锁头基准建立后等待命令队列；所有运动函数只能由该任务在任务上下文执行。
+- `MotionControl_PrepareForMove()` 负责启动时 IMU 有效性检查、四轮使能和统一航向基准建立；不再保留独立上电运动测试。
+- 正式平移只保留 `MotionControl_MovePolarSegmentMm()`；起步、停车、距离积分和轮速限幅均由 `motion_control` 负责。
+- 角度定义为：0°前进，+45°左前，+90°左移，+135°左后，180°后退，-45°右前，-90°右移，-135°右后；距离表示沿归一化轨迹方向的目标长度。
 
 ## VOFA 命令
 
 - 运动：`F <mm>`、`B <mm>`、`L <mm>`、`R <mm>`、`LF <mm> <deg>`、`RF <mm> <deg>`、`LR <mm> <deg>`、`RR <mm> <deg>`。
+- 旋转：`ROT CCW <deg>`、`ROT CW <deg>`。
+- 动作：`BALL`、`GRAB`、`RZ`。
 - 控制和查询：`STOP`、`STATUS`、`HELP`。
-- 动态路径：`PATH CLEAR`、`PATH ADD ...`、`PATH SHOW`、`PATH RUN`、`PATH LOAD DEFAULT`。
-- 当路径首段为斜线、第二段为前进时，执行器复用现有非零末速度和 150 ms 方向 Blend 接口，不在两段之间人为停到 0。
+- 已删除动态 PATH 编辑器、PATH LOAD DEFAULT、旧独立测试和未引用的运动包装接口。
 
 ## 构建验收
 
@@ -72,7 +59,7 @@
 ## 尚需实车验收
 
 - 左移时轮向应为：1号反、2号正、3号正、4号反。
-- 校准实际轮径、每转脉冲数、前进增益、横移增益和四轮独立增益。
+- 校准实际轮径、每转脉冲数、前进增益、横移增益和唯一的 `LATERAL_FORWARD_COMPENSATION`。
 - 确认航向修正符号；若偏差被放大，应翻转 `HEADING_CORRECTION_SIGN`。
 - 标定开环速度时间积分与实际地面距离的误差，尤其是麦轮横移滑移误差。
 - 观察 `MotionControl_PeriodOverrunCount`；正常应保持为0，否则需要降低控制频率或优化串口发送。
@@ -89,7 +76,7 @@
 
 - UART4 uses PC10=TX, PC11=RX, 115200-8-N-1, no flow control and IRQ reception. MaixCAM must use 3.3 V TTL, crossed TX/RX and common ground.
 - `BALL` first runs group 1 (return/recognition posture). Each of its six possible rounds then sends the configured one-byte color request (`1` for red; the current no-argument BALL path selects red), waits no more than 10 s for MaixCAM's valid ASCII line `1`, runs group 2 (clamp), turns the warehouse one slot, then runs group 1 (return). MaixCAM may reply only after a new request, 150 ms of visual settling, a qualified target inside its configured trigger zone, and three consecutive frames; one frame of colour-threshold noise must not trigger a clamp. If manual `GRAB` cycles already consumed slots, `BALL` runs only the remaining count.
-- `STATUS` reports `BALL_STATE`, `BALL_STATUS`, `BALL_ROUND`, `MAIX_TX`, `MAIX_RX`, `MAIX_INVALID`, `MAIX_TIMEOUT` and `MAIX_UART_ERR`.
+- `STATUS` reports the compact fields `STATE`, `IMU`, `YAW`, `HEAD_ERR`, `HEAD_CORR`, `DIST`, `TARGET`, `LAST`, `BALL_STATE`, `BALL_ROUND`, `WAREHOUSE_BALL` and `STOP`; MaixCAM/servo/turntable error handling remains active but its debug counters are not exposed.
 - A MaixCAM timeout or UART4 send failure does not move the arm and allows retrying `BALL`; action-group failures retain arm error lock. `STOP` ends a waiting round immediately; a STOP during group 2/turntable still waits for group 1 return to complete, then cancels the rest of the batch.
 
 ## BALL 灰度校准（2026-08-25）
@@ -126,4 +113,4 @@
 - 四轮速度必须继续通过 `MecanumKinematics_Solve(0, 0, omega)` 和 `MotorControl_SetWheelSpeeds()` 发送，保持原有四轮同步触发；不改动电机协议、安装方向、麦轮公式、JY61P解析或 FreeRTOS 配置。
 - 默认参数：巡航 50 RPM、接近 15 RPM、最小有效 8 RPM；剩余 30 度开始减速、10 度进入低速区；进入 ±0.8 度后发送 0 RPM，连续稳定 5 个控制周期（约100 ms）才算完成。
 - 成功完成后调用 `Jy61P_ResetContinuousYaw()`，使后续前进/横移/斜线以旋转后的车头作为新的锁头参考。
-- UART5：`ROT CCW <deg>`、`ROT CW <deg>`；路径：`PATH ADD ROT CCW <deg>`、`PATH ADD ROT CW <deg>`。`PATH SHOW` 将显示友好的 CW/CCW 方向；旋转段不参与速度 Blend。
+- UART5：`ROT CCW <deg>`、`ROT CW <deg>`；旋转直接由 `ChassisTask` 执行，不再经过路径编辑器。

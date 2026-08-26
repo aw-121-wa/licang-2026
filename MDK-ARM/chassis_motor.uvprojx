@@ -537,16 +537,6 @@
           <GroupName>App</GroupName>
           <Files>
             <File>
-              <FileName>competition_path.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../App/competition_path.c</FilePath>
-            </File>
-            <File>
-              <FileName>competition_path.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>../App/competition_path.h</FilePath>
-            </File>
-            <File>
               <FileName>uart_command.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/uart_command.c</FilePath>

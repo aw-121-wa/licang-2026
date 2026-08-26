@@ -4,10 +4,6 @@
 
 volatile uint8_t Warehouse_BallCount = 0U;
 volatile uint8_t Warehouse_State = WAREHOUSE_STATE_IDLE;
-volatile uint32_t Warehouse_ActionGroup2DoneCount = 0U;
-volatile uint32_t Warehouse_TurntableMoveCount = 0U;
-volatile HAL_StatusTypeDef Warehouse_LastTurntableStatus = HAL_ERROR;
-volatile uint32_t Warehouse_LastTurntablePulses = 0U;
 volatile WarehouseStatus Warehouse_LastStatus = WAREHOUSE_STATUS_ERROR_INIT;
 
 static uint8_t WarehouseControl_StopRequested(void)
@@ -37,9 +33,6 @@ WarehouseStatus WarehouseControl_Init(UART_HandleTypeDef *huart)
     TurntableStatus turntable_status;
 
     Warehouse_BallCount = 0U;
-    Warehouse_ActionGroup2DoneCount = 0U;
-    Warehouse_TurntableMoveCount = 0U;
-    Warehouse_LastTurntablePulses = 0U;
     Warehouse_State = WAREHOUSE_STATE_IDLE;
     Warehouse_LastStatus = WAREHOUSE_STATUS_ERROR_INIT;
 
@@ -48,7 +41,6 @@ WarehouseStatus WarehouseControl_Init(UART_HandleTypeDef *huart)
     {
         turntable_status = Turntable_Enable();
     }
-    Warehouse_LastTurntableStatus = ZdtMotor_LastUartStatus;
     Warehouse_LastStatus = WarehouseControl_FromTurntableStatus(turntable_status);
     if (Warehouse_LastStatus != WAREHOUSE_STATUS_OK)
     {
@@ -80,7 +72,6 @@ WarehouseStatus WarehouseControl_HandleActionGroup2Completed(void)
     }
 
     /* The caller reaches here only after ServoAction_RunGroup(2) has received 0x08/2. */
-    Warehouse_ActionGroup2DoneCount++;
     if (WarehouseControl_StopRequested() != 0U)
     {
         Warehouse_State = WAREHOUSE_STATE_CANCELED;
@@ -97,18 +88,14 @@ WarehouseStatus WarehouseControl_HandleActionGroup2Completed(void)
     }
     Warehouse_State = WAREHOUSE_STATE_TURNTABLE_MOVING;
     turntable_status = Turntable_MoveOneSlot();
-    Warehouse_LastTurntableStatus = ZdtMotor_LastUartStatus;
     if (turntable_status == TURNTABLE_STATUS_OK)
     {
         turntable_status = Turntable_WaitComplete(WarehouseControl_StopRequested);
-        Warehouse_LastTurntableStatus = ZdtMotor_LastUartStatus;
     }
     Warehouse_LastStatus = WarehouseControl_FromTurntableStatus(turntable_status);
 
     if (Warehouse_LastStatus == WAREHOUSE_STATUS_OK)
     {
-        Warehouse_TurntableMoveCount++;
-        Warehouse_LastTurntablePulses = TURNTABLE_ONE_SLOT_PULSES;
         Warehouse_BallCount++;
         Warehouse_State = (Warehouse_BallCount >= WAREHOUSE_TOTAL_BALLS) ?
                           WAREHOUSE_STATE_FINISHED : WAREHOUSE_STATE_WAIT_NEXT_BALL;
@@ -121,7 +108,6 @@ WarehouseStatus WarehouseControl_HandleActionGroup2Completed(void)
     }
 
     (void)Turntable_Stop();
-    Warehouse_LastTurntableStatus = ZdtMotor_LastUartStatus;
     Warehouse_State = WAREHOUSE_STATE_ERROR;
     return Warehouse_LastStatus;
 }

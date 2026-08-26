@@ -6,7 +6,6 @@
 volatile TurntableState Turntable_State = TURNTABLE_STATE_UNINITIALIZED;
 volatile TurntableStatus Turntable_LastStatus = TURNTABLE_STATUS_ERROR_ARGUMENT;
 volatile uint32_t Turntable_LastExpectedMoveMs = 0U;
-volatile uint32_t Turntable_MoveCommandCount = 0U;
 
 static TurntableStatus Turntable_FromHalStatus(HAL_StatusTypeDef status)
 {
@@ -39,7 +38,6 @@ TurntableStatus Turntable_Init(UART_HandleTypeDef *huart)
     ZDT_Init(huart);
     Turntable_LastExpectedMoveMs = Turntable_EstimateMoveTimeMs(
         TURNTABLE_ONE_SLOT_PULSES);
-    Turntable_MoveCommandCount = 0U;
     Turntable_State = TURNTABLE_STATE_UNINITIALIZED;
     Turntable_LastStatus = TURNTABLE_STATUS_OK;
     return Turntable_LastStatus;
@@ -68,7 +66,6 @@ TurntableStatus Turntable_MoveOneSlot(void)
                          TURNTABLE_ONE_SLOT_PULSES));
     if (Turntable_LastStatus == TURNTABLE_STATUS_OK)
     {
-        Turntable_MoveCommandCount++;
         Turntable_State = TURNTABLE_STATE_MOVING;
     }
     else

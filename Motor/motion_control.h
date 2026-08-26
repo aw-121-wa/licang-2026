@@ -3,8 +3,11 @@
 
 #include "main.h"
 
-#define MOTION_CRUISE_RPM          150.0f
-#define MOTION_DIAGONAL_CRUISE_RPM 135.0f
+#define MOTION_CRUISE_RPM          100.0f
+#define MOTION_DIAGONAL_CRUISE_RPM  85.0f
+
+/* Positive value adds a forward component to pure lateral motion. */
+#define LATERAL_FORWARD_COMPENSATION 0.0f
 
 typedef enum
 {
@@ -27,50 +30,25 @@ typedef enum
     MOTION_ERROR_RZ_TIMEOUT = 0xE8
 } MotionControlStatus;
 
-/* Select the one-shot movement used by MotionControl_RunDefaultSequence(). */
-#define DIAGONAL_TEST_ENABLE       1U
-#define DIAGONAL_TEST_DISTANCE_MM  500U
-#define DIAGONAL_TEST_ANGLE_DEG    45.0f
-#define DIAGONAL_TEST_LEFT_FRONT   0U
-#define DIAGONAL_TEST_RIGHT_FRONT  1U
-#define DIAGONAL_TEST_LEFT_REAR    2U
-#define DIAGONAL_TEST_RIGHT_REAR   3U
-#define DIAGONAL_TEST_DIRECTION    DIAGONAL_TEST_LEFT_FRONT
-
 void MotionControl_Init(UART_HandleTypeDef *motor_uart,
                         UART_HandleTypeDef *imu_uart);
+HAL_StatusTypeDef MotionControl_SetBodySpeed(float forward_rpm,
+                                              float left_rpm,
+                                              float omega_rpm);
+void MotionControl_ResetHeadingReference(void);
+float MotionControl_GetHeadingCorrection(float translation_rpm);
 void MotionControl_RequestStop(void);
 void MotionControl_ClearStopRequest(void);
 uint8_t MotionControl_WasStopped(void);
 MotionControlStatus MotionControl_PrepareForMove(void);
-MotionControlStatus MotionControl_MoveMm(int32_t forward_mm, int32_t left_mm);
-MotionControlStatus MotionControl_MovePolarMm(uint32_t distance_mm,
-                                               float angle_deg);
 MotionControlStatus MotionControl_MovePolarSegmentMm(
     uint32_t distance_mm,
     float angle_deg,
     float start_rpm,
     float cruise_rpm,
     float end_rpm);
-MotionControlStatus MotionControl_MovePolarBlendSegmentMm(
-    uint32_t distance_mm,
-    float start_angle_deg,
-    float end_angle_deg,
-    uint32_t blend_time_ms,
-    float start_rpm,
-    float cruise_rpm,
-    float end_rpm);
-MotionControlStatus MotionControl_MoveLeftFrontMm(uint32_t distance_mm,
-                                                   float angle_deg);
-MotionControlStatus MotionControl_MoveRightFrontMm(uint32_t distance_mm,
-                                                    float angle_deg);
-MotionControlStatus MotionControl_MoveLeftRearMm(uint32_t distance_mm,
-                                                  float angle_deg);
-MotionControlStatus MotionControl_MoveRightRearMm(uint32_t distance_mm,
-                                                   float angle_deg);
 /* Positive angle = counter-clockwise (left); negative = clockwise (right). */
 MotionControlStatus MotionControl_RotateDeg(float angle_deg);
-MotionControlStatus MotionControl_RunDefaultSequence(void);
 
 extern volatile MotionControlStatus MotionControl_State;
 extern volatile uint8_t MotionControl_StopRequested;

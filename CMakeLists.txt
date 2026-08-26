@@ -19,7 +19,6 @@ set(CHASSIS_SOURCES
     Core/Src/stm32f7xx_hal_timebase_tim.c
     Core/Src/system_stm32f7xx.c
 
-    App/competition_path.c
     App/uart_command.c
     App/servo_action.c
     App/maixcam_link.c

@@ -32,8 +32,6 @@ typedef enum
 
 extern volatile ServoActionStatus ServoAction_LastStatus;
 extern volatile ServoActionSequenceState ServoAction_SequenceState;
-extern volatile uint8_t ServoAction_MotionCompletedCount;
-extern volatile uint8_t ServoAction_LastCompletedGroup;
 
 void ServoAction_Init(UART_HandleTypeDef *huart);
 /* Send an action-group request without waiting for a completion frame. */

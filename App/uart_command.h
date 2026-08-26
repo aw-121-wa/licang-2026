@@ -2,9 +2,9 @@
 #define UART_COMMAND_H
 
 #include "main.h"
+#include "motion_control.h"
 #include "FreeRTOS.h"
 #include "queue.h"
-#include "competition_path.h"
 
 #define UART_CMD_BUFFER_SIZE 96U
 #define UART_CMD_LINE_QUEUE_LENGTH 4U
@@ -24,8 +24,7 @@ typedef enum
     CHASSIS_CMD_ROTATE,
     CHASSIS_CMD_GRAB,
     CHASSIS_CMD_BALL,
-    CHASSIS_CMD_RZ,
-    CHASSIS_CMD_RUN_PATH
+    CHASSIS_CMD_RZ
 } ChassisCommandType;
 
 typedef struct
@@ -35,20 +34,12 @@ typedef struct
     float angle_deg;
 } ChassisCommand;
 
-typedef enum
-{
-    CHASSIS_MODE_IDLE = 0,
-    CHASSIS_MODE_MANUAL,
-    CHASSIS_MODE_PATH
-} ChassisCommandMode;
-
 extern QueueHandle_t ChassisCommandQueue;
 extern volatile uint32_t UartCommand_RxByteCount;
 extern volatile uint32_t UartCommand_LineCount;
 extern volatile uint32_t UartCommand_ParseErrorCount;
 extern volatile uint8_t ChassisCommand_Busy;
 extern volatile uint8_t ChassisTask_Ready;
-extern volatile ChassisCommandMode ChassisCommand_Mode;
 extern volatile MotionControlStatus ChassisCommand_LastStatus;
 
 void UartCommand_CreateQueues(void);

@@ -4,8 +4,6 @@
 #include "motor_control.h"
 #include <math.h>
 
-#define DEFAULT_MOVE_DISTANCE_MM          1000
-#define DEFAULT_PAUSE_MS                  500U
 #define GYRO_STARTUP_TIMEOUT_MS           2000U
 #define GYRO_ONLINE_TIMEOUT_MS            500U
 
@@ -31,15 +29,11 @@
 
 #define FORWARD_DISTANCE_GAIN              1.000f
 #define LEFT_DISTANCE_GAIN                 1.000f
-#define FRONT_LEFT_GAIN                    1.000f
-#define FRONT_RIGHT_GAIN                   1.000f
-#define REAR_LEFT_GAIN                     1.000f
-#define REAR_RIGHT_GAIN                    1.000f
 
 #define HEADING_KP_RPM_PER_DEG             2.0f
-#define HEADING_KD_RPM_PER_DEG             0.20f
+#define HEADING_KD_RPM_PER_DEG             0.15f
 #define HEADING_DEADBAND_DEG                0.15f
-#define HEADING_MAX_CORRECTION_RPM         20.0f
+#define HEADING_MAX_CORRECTION_RPM          8.0f
 #define HEADING_MAX_TRANSLATION_RATIO       0.25f
 #define HEADING_CORRECTION_SIGN             1.0f
 
@@ -82,7 +76,7 @@ static int32_t Motion_RoundToInt(float value)
                              (int32_t)(value - 0.5f);
 }
 
-static float Motion_HeadingCorrectionRpm(float translation_rpm)
+float MotionControl_GetHeadingCorrection(float translation_rpm)
 {
     float error = -Jy61P_GetContinuousYaw();
     float correction;
@@ -109,25 +103,17 @@ static float Motion_HeadingCorrectionRpm(float translation_rpm)
     return correction;
 }
 
-static void Motion_ApplyWheelCalibration(MecanumWheelValues *wheels)
-{
-    wheels->front_left *= FRONT_LEFT_GAIN;
-    wheels->front_right *= FRONT_RIGHT_GAIN;
-    wheels->rear_left *= REAR_LEFT_GAIN;
-    wheels->rear_right *= REAR_RIGHT_GAIN;
-}
-
-static HAL_StatusTypeDef Motion_SendChassisSpeed(float forward_rpm,
-                                                  float left_rpm,
-                                                  float correction_rpm,
-                                                  float *wheel_scale)
+static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
+    float forward_rpm,
+    float left_rpm,
+    float omega_rpm,
+    float *wheel_scale)
 {
     MecanumWheelValues wheel_values;
     MotorWheelSpeedsRpmX10 wheel_speeds;
 
-    MecanumKinematics_Solve(forward_rpm, left_rpm, correction_rpm,
+    MecanumKinematics_Solve(forward_rpm, left_rpm, omega_rpm,
                             &wheel_values);
-    Motion_ApplyWheelCalibration(&wheel_values);
     if (wheel_scale != 0)
     {
         *wheel_scale = MecanumKinematics_DesaturateWithScale(
@@ -155,6 +141,22 @@ static HAL_StatusTypeDef Motion_SendChassisSpeed(float forward_rpm,
     return MotorControl_SetWheelSpeeds(&wheel_speeds);
 }
 
+HAL_StatusTypeDef MotionControl_SetBodySpeed(float forward_rpm,
+                                              float left_rpm,
+                                              float omega_rpm)
+{
+    return MotionControl_SetBodySpeedWithScale(
+        forward_rpm, left_rpm, omega_rpm, 0);
+}
+
+void MotionControl_ResetHeadingReference(void)
+{
+    Jy61P_ResetContinuousYaw();
+    previous_heading_error = 0.0f;
+    MotionControl_HeadingErrorDeg = 0.0f;
+    MotionControl_HeadingCorrectionRpm = 0.0f;
+}
+
 /* Returns 0 when no request is pending, 1 when stopped, and 2 on UART error. */
 static uint8_t MotionControl_HandleStopRequest(void)
 {
@@ -164,7 +166,7 @@ static uint8_t MotionControl_HandleStopRequest(void)
     }
 
     MotionControl_StopRequested = 0U;
-    if (Motion_SendChassisSpeed(0.0f, 0.0f, 0.0f, 0) != HAL_OK)
+    if (MotionControl_SetBodySpeedWithScale(0.0f, 0.0f, 0.0f, 0) != HAL_OK)
     {
         (void)MotorControl_StopAll();
         MotionControl_State = MOTION_ERROR_MOTOR_UART;
@@ -246,207 +248,14 @@ uint8_t MotionControl_WasStopped(void)
     return MotionControl_StoppedByRequest;
 }
 
-static MotionControlStatus MotionControl_MoveVectorMm(float forward_mm,
-                                                       float left_mm,
-                                                       float target_angle_deg,
-                                                       MotionControlStatus move_status)
-{
-    float target_mm;
-    float corrected_forward_mm;
-    float corrected_left_mm;
-    float corrected_length_mm;
-    float forward_unit;
-    float left_unit;
-    float peak_rpm;
-    float wheel_mm_per_rpm_ms;
-    float full_ramp_distance;
-    float decel_distance;
-    float previous_effective_base_rpm = 0.0f;
-    float previous_wheel_scale = 1.0f;
-    uint32_t stage_start;
-    uint32_t last_integral_tick;
-    uint32_t next_tick;
-    uint8_t stage = 0U; /* 0 accelerate, 1 cruise, 2 decelerate. */
-
-    if ((forward_mm == 0.0f) && (left_mm == 0.0f))
-    {
-        return MotionControl_State;
-    }
-
-    corrected_forward_mm = forward_mm * FORWARD_DISTANCE_GAIN;
-    corrected_left_mm = left_mm * LEFT_DISTANCE_GAIN;
-    corrected_length_mm = sqrtf((corrected_forward_mm * corrected_forward_mm) +
-                                (corrected_left_mm * corrected_left_mm));
-    if (corrected_length_mm <= 0.0f)
-    {
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        return MotionControl_State;
-    }
-
-    target_mm = corrected_length_mm;
-    forward_unit = corrected_forward_mm / corrected_length_mm;
-    left_unit = corrected_left_mm / corrected_length_mm;
-    MotionControl_State = move_status;
-    MotionControl_TargetAngleDeg = target_angle_deg;
-    MotionControl_ForwardUnit = forward_unit;
-    MotionControl_LeftUnit = left_unit;
-    MotionControl_BaseRpm = 0.0f;
-    MotionControl_EffectiveBaseRpm = 0.0f;
-    MotionControl_WheelScale = 1.0f;
-    MotionControl_TraveledMm = 0.0f;
-    MotionControl_TargetDistanceMm = target_mm;
-
-    peak_rpm = ((Motion_Absolute(forward_unit) > 0.0001f) &&
-                (Motion_Absolute(left_unit) > 0.0001f)) ?
-               MOTION_DIAGONAL_CRUISE_RPM : MOTION_CRUISE_RPM;
-
-    wheel_mm_per_rpm_ms = MOTION_PI * (float)MOTOR_WHEEL_DIAMETER_MM /
-                          60000.0f;
-    full_ramp_distance = peak_rpm * wheel_mm_per_rpm_ms *
-                         (float)MOTION_RAMP_TIME_MS;
-    if (target_mm < full_ramp_distance)
-    {
-        peak_rpm = target_mm /
-                   (wheel_mm_per_rpm_ms * (float)MOTION_RAMP_TIME_MS);
-    }
-    decel_distance = peak_rpm * wheel_mm_per_rpm_ms *
-                     (float)MOTION_RAMP_TIME_MS * 0.5f;
-
-    stage_start = HAL_GetTick();
-    last_integral_tick = stage_start;
-    next_tick = stage_start;
-
-    while (stage < 3U)
-    {
-        uint32_t now = HAL_GetTick();
-        uint32_t elapsed_ms = now - last_integral_tick;
-        uint32_t stage_elapsed = now - stage_start;
-        float base_rpm;
-        float correction_rpm = 0.0f;
-        float wheel_scale = 1.0f;
-        uint8_t stop_result;
-
-        stop_result = MotionControl_HandleStopRequest();
-        if (stop_result != 0U)
-        {
-            return MotionControl_State;
-        }
-
-        MotionControl_TraveledMm += Motion_Absolute(previous_effective_base_rpm) *
-                       wheel_mm_per_rpm_ms * (float)elapsed_ms;
-        last_integral_tick = now;
-
-        if (stage == 0U)
-        {
-            if (stage_elapsed >= MOTION_RAMP_TIME_MS)
-            {
-                base_rpm = peak_rpm;
-                stage = 1U;
-            }
-            else
-            {
-                base_rpm = peak_rpm * (float)stage_elapsed /
-                           (float)MOTION_RAMP_TIME_MS;
-            }
-        }
-        else if (stage == 1U)
-        {
-            base_rpm = peak_rpm;
-            if (MotionControl_TraveledMm >= (target_mm - decel_distance))
-            {
-                stage = 2U;
-                stage_start = now;
-            }
-        }
-        else
-        {
-            if ((stage_elapsed >= MOTION_RAMP_TIME_MS) ||
-                (MotionControl_TraveledMm >= target_mm))
-            {
-                stage = 3U;
-                break;
-            }
-            base_rpm = peak_rpm *
-                       (1.0f - ((float)stage_elapsed /
-                                (float)MOTION_RAMP_TIME_MS));
-        }
-
-        if ((MotionControl_ImuHeadingHoldActive != 0U) &&
-            (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U))
-        {
-#if MOTION_STOP_IF_IMU_LOST
-            (void)Motion_SendChassisSpeed(0.0f, 0.0f, 0.0f, 0);
-            MotionControl_State = MOTION_ERROR_IMU_LOST;
-            return MotionControl_State;
-#else
-            MotionControl_ImuHeadingHoldActive = 0U;
-#endif
-        }
-        if (MotionControl_ImuHeadingHoldActive != 0U)
-        {
-            correction_rpm = Motion_HeadingCorrectionRpm(base_rpm);
-        }
-
-        if (Motion_SendChassisSpeed(forward_unit * base_rpm,
-                                    left_unit * base_rpm,
-                                    correction_rpm,
-                                    &wheel_scale) != HAL_OK)
-        {
-            (void)Motion_SendChassisSpeed(0.0f, 0.0f, 0.0f, 0);
-            (void)MotorControl_StopAll();
-            MotionControl_State = MOTION_ERROR_MOTOR_UART;
-            return MotionControl_State;
-        }
-        previous_wheel_scale = wheel_scale;
-        previous_effective_base_rpm = base_rpm * previous_wheel_scale;
-        MotionControl_BaseRpm = base_rpm;
-        MotionControl_WheelScale = wheel_scale;
-        MotionControl_EffectiveBaseRpm = previous_effective_base_rpm;
-        Motion_WaitControlPeriod(&next_tick);
-    }
-
-    if (MotionControl_HandleStopRequest() != 0U)
-    {
-        return MotionControl_State;
-    }
-    if (Motion_SendChassisSpeed(0.0f, 0.0f, 0.0f, 0) != HAL_OK)
-    {
-        (void)MotorControl_StopAll();
-        MotionControl_State = MOTION_ERROR_MOTOR_UART;
-    }
-    MotionControl_BaseRpm = 0.0f;
-    MotionControl_EffectiveBaseRpm = 0.0f;
-    return MotionControl_State;
-}
-
 static uint8_t Motion_SegmentAngleValid(float angle_deg)
 {
     return ((angle_deg >= -180.0f) && (angle_deg <= 180.0f)) ? 1U : 0U;
 }
 
-static float Motion_SegmentAngle(float start_angle_deg,
-                                 float end_angle_deg,
-                                 uint32_t elapsed_ms,
-                                 uint32_t blend_time_ms)
-{
-    float progress;
-
-    if (blend_time_ms == 0U)
-    {
-        return end_angle_deg;
-    }
-    if (elapsed_ms >= blend_time_ms)
-    {
-        return end_angle_deg;
-    }
-    progress = (float)elapsed_ms / (float)blend_time_ms;
-    return start_angle_deg +
-           ((end_angle_deg - start_angle_deg) * progress);
-}
-
 static MotionControlStatus Motion_SegmentFail(MotionControlStatus error)
 {
-    (void)Motion_SendChassisSpeed(0.0f, 0.0f, 0.0f, 0);
+    (void)MotionControl_SetBodySpeedWithScale(0.0f, 0.0f, 0.0f, 0);
     (void)MotorControl_StopAll();
     MotionControl_State = error;
     MotionControl_BaseRpm = 0.0f;
@@ -455,10 +264,9 @@ static MotionControlStatus Motion_SegmentFail(MotionControlStatus error)
 }
 
 static MotionControlStatus MotionControl_RunPolarSegment(
-    uint32_t distance_mm,
-    float start_angle_deg,
-    float end_angle_deg,
-    uint32_t blend_time_ms,
+    float distance_mm,
+    float forward_unit,
+    float left_unit,
     float start_rpm,
     float cruise_rpm,
     float end_rpm,
@@ -474,26 +282,23 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     float deceleration_distance;
     float previous_effective_base_rpm = 0.0f;
     float final_scale = 1.0f;
-    uint32_t segment_start;
     uint32_t stage_start;
     uint32_t last_integral_tick;
     uint32_t next_tick;
         uint8_t stage = 0U; /* 0 accelerate, 1 cruise, 2 decelerate. */
 
-    if ((distance_mm == 0U) ||
-        (Motion_SegmentAngleValid(start_angle_deg) == 0U) ||
-        (Motion_SegmentAngleValid(end_angle_deg) == 0U) ||
+    if (!(distance_mm > 0.0f) ||
+        ((forward_unit * forward_unit) +
+         (left_unit * left_unit) <= 0.0001f) ||
         !(start_rpm >= 0.0f) || !(cruise_rpm > 0.0f) ||
         !(end_rpm >= 0.0f) || (cruise_rpm < start_rpm) ||
-        (cruise_rpm < end_rpm) ||
-        ((blend_time_ms == 0U) &&
-         (Motion_Absolute(start_angle_deg - end_angle_deg) > 0.0001f)))
+        (cruise_rpm < end_rpm))
     {
         MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
         return MotionControl_State;
     }
 
-    target_mm = (float)distance_mm;
+    target_mm = distance_mm;
     peak_rpm = cruise_rpm;
     acceleration_time_ms = (peak_rpm > start_rpm) ?
                            (float)MOTION_RAMP_TIME_MS : 0.0f;
@@ -526,29 +331,26 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     }
 
     MotionControl_State = move_status;
-    MotionControl_TargetAngleDeg = start_angle_deg;
-    MotionControl_ForwardUnit = cosf(start_angle_deg * MOTION_PI / 180.0f);
-    MotionControl_LeftUnit = sinf(start_angle_deg * MOTION_PI / 180.0f);
+    MotionControl_TargetAngleDeg = atan2f(left_unit, forward_unit) *
+                                   180.0f / MOTION_PI;
+    MotionControl_ForwardUnit = forward_unit;
+    MotionControl_LeftUnit = left_unit;
     MotionControl_BaseRpm = start_rpm;
     MotionControl_EffectiveBaseRpm = start_rpm;
     MotionControl_WheelScale = 1.0f;
     MotionControl_TraveledMm = 0.0f;
     MotionControl_TargetDistanceMm = target_mm;
 
-    segment_start = HAL_GetTick();
-    stage_start = segment_start;
-    last_integral_tick = segment_start;
-    next_tick = segment_start;
+    stage_start = HAL_GetTick();
+    last_integral_tick = stage_start;
+    next_tick = stage_start;
 
     while (stage < 3U)
     {
         uint32_t now = HAL_GetTick();
         uint32_t elapsed_ms = now - last_integral_tick;
         uint32_t stage_elapsed_ms = now - stage_start;
-        uint32_t segment_elapsed_ms = now - segment_start;
         float base_rpm;
-        float current_angle_deg;
-        float radians;
         float correction_rpm = 0.0f;
         float wheel_scale = 1.0f;
         uint8_t stop_result;
@@ -610,21 +412,14 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         }
         if (MotionControl_ImuHeadingHoldActive != 0U)
         {
-            correction_rpm = Motion_HeadingCorrectionRpm(base_rpm);
+            correction_rpm = MotionControl_GetHeadingCorrection(base_rpm);
         }
 
-        current_angle_deg = Motion_SegmentAngle(
-            start_angle_deg, end_angle_deg,
-            segment_elapsed_ms, blend_time_ms);
-        radians = current_angle_deg * MOTION_PI / 180.0f;
-        MotionControl_TargetAngleDeg = current_angle_deg;
-        MotionControl_ForwardUnit = cosf(radians);
-        MotionControl_LeftUnit = sinf(radians);
-
-        if (Motion_SendChassisSpeed(base_rpm * MotionControl_ForwardUnit,
-                                    base_rpm * MotionControl_LeftUnit,
-                                    correction_rpm,
-                                    &wheel_scale) != HAL_OK)
+        if (MotionControl_SetBodySpeedWithScale(
+                base_rpm * MotionControl_ForwardUnit,
+                base_rpm * MotionControl_LeftUnit,
+                correction_rpm,
+                &wheel_scale) != HAL_OK)
         {
             return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
         }
@@ -643,7 +438,6 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     /* Publish the terminal speed without inserting a zero-speed gap. */
     {
         float final_correction_rpm = 0.0f;
-        float radians = end_angle_deg * MOTION_PI / 180.0f;
 
         if ((MotionControl_ImuHeadingHoldActive != 0U) &&
             (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U))
@@ -652,15 +446,13 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         }
         if (MotionControl_ImuHeadingHoldActive != 0U)
         {
-            final_correction_rpm = Motion_HeadingCorrectionRpm(end_rpm);
+            final_correction_rpm = MotionControl_GetHeadingCorrection(end_rpm);
         }
-        MotionControl_TargetAngleDeg = end_angle_deg;
-        MotionControl_ForwardUnit = cosf(radians);
-        MotionControl_LeftUnit = sinf(radians);
-        if (Motion_SendChassisSpeed(end_rpm * MotionControl_ForwardUnit,
-                                    end_rpm * MotionControl_LeftUnit,
-                                    final_correction_rpm,
-                                    &final_scale) != HAL_OK)
+        if (MotionControl_SetBodySpeedWithScale(
+                end_rpm * MotionControl_ForwardUnit,
+                end_rpm * MotionControl_LeftUnit,
+                final_correction_rpm,
+                &final_scale) != HAL_OK)
         {
             return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
         }
@@ -678,53 +470,26 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     return MotionControl_State;
 }
 
-MotionControlStatus MotionControl_MoveMm(int32_t forward_mm, int32_t left_mm)
+static void Motion_ApplyLateralCompensation(float *forward_unit,
+                                             float *left_unit)
 {
-    float forward = (float)forward_mm;
-    float left = (float)left_mm;
-    float angle_deg;
+    float magnitude;
 
-    if ((forward_mm == 0) && (left_mm == 0))
+    if ((Motion_Absolute(*forward_unit) > 0.0001f) ||
+        (Motion_Absolute(*left_unit) <= 0.0001f) ||
+        (Motion_Absolute(LATERAL_FORWARD_COMPENSATION) <= 0.0001f))
     {
-        return MotionControl_State;
+        return;
     }
-    angle_deg = (180.0f / MOTION_PI) * atan2f(left, forward);
-    return MotionControl_MoveVectorMm(
-        forward, left, angle_deg,
-        ((forward_mm != 0) && (left_mm != 0)) ?
-            MOTION_STATUS_DIAGONAL :
-            ((forward_mm != 0) ? MOTION_STATUS_FORWARD : MOTION_STATUS_LEFT));
-}
 
-MotionControlStatus MotionControl_MovePolarMm(uint32_t distance_mm,
-                                               float angle_deg)
-{
-    float radians;
-    float distance;
-    float forward_mm;
-    float left_mm;
-    MotionControlStatus move_status;
-
-    if (distance_mm == 0U)
+    *forward_unit = LATERAL_FORWARD_COMPENSATION * (*left_unit);
+    magnitude = sqrtf((*forward_unit * *forward_unit) +
+                      (*left_unit * *left_unit));
+    if (magnitude > 0.0001f)
     {
-        return MotionControl_State;
+        *forward_unit /= magnitude;
+        *left_unit /= magnitude;
     }
-    if (!(angle_deg >= -180.0f) || !(angle_deg <= 180.0f))
-    {
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        return MotionControl_State;
-    }
-    distance = (float)distance_mm;
-    radians = angle_deg * MOTION_PI / 180.0f;
-    forward_mm = distance * cosf(radians);
-    left_mm = distance * sinf(radians);
-    move_status = ((Motion_Absolute(forward_mm) > 0.0001f) &&
-                   (Motion_Absolute(left_mm) > 0.0001f)) ?
-                  MOTION_STATUS_DIAGONAL : MOTION_STATUS_POLAR_MOVE;
-    return MotionControl_MoveVectorMm(forward_mm,
-                                      left_mm,
-                                      angle_deg,
-                                      move_status);
 }
 
 MotionControlStatus MotionControl_MovePolarSegmentMm(
@@ -735,6 +500,9 @@ MotionControlStatus MotionControl_MovePolarSegmentMm(
     float end_rpm)
 {
     float radians;
+    float corrected_forward;
+    float corrected_left;
+    float corrected_distance;
     float forward_unit;
     float left_unit;
     MotionControlStatus move_status;
@@ -747,100 +515,25 @@ MotionControlStatus MotionControl_MovePolarSegmentMm(
     radians = angle_deg * MOTION_PI / 180.0f;
     forward_unit = cosf(radians);
     left_unit = sinf(radians);
+    Motion_ApplyLateralCompensation(&forward_unit, &left_unit);
+    corrected_forward = forward_unit * (float)distance_mm *
+                        FORWARD_DISTANCE_GAIN;
+    corrected_left = left_unit * (float)distance_mm * LEFT_DISTANCE_GAIN;
+    corrected_distance = sqrtf((corrected_forward * corrected_forward) +
+                               (corrected_left * corrected_left));
+    if (corrected_distance <= 0.0f)
+    {
+        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
+        return MotionControl_State;
+    }
+    forward_unit = corrected_forward / corrected_distance;
+    left_unit = corrected_left / corrected_distance;
     move_status = ((Motion_Absolute(forward_unit) > 0.0001f) &&
                    (Motion_Absolute(left_unit) > 0.0001f)) ?
                   MOTION_STATUS_DIAGONAL : MOTION_STATUS_POLAR_MOVE;
     return MotionControl_RunPolarSegment(
-        distance_mm, angle_deg, angle_deg, 0U,
+        corrected_distance, forward_unit, left_unit,
         start_rpm, cruise_rpm, end_rpm, move_status);
-}
-
-MotionControlStatus MotionControl_MovePolarBlendSegmentMm(
-    uint32_t distance_mm,
-    float start_angle_deg,
-    float end_angle_deg,
-    uint32_t blend_time_ms,
-    float start_rpm,
-    float cruise_rpm,
-    float end_rpm)
-{
-    float start_radians;
-    float end_radians;
-    float start_forward_unit;
-    float start_left_unit;
-    float end_forward_unit;
-    float end_left_unit;
-    MotionControlStatus move_status;
-
-    if ((Motion_SegmentAngleValid(start_angle_deg) == 0U) ||
-        (Motion_SegmentAngleValid(end_angle_deg) == 0U))
-    {
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        return MotionControl_State;
-    }
-    start_radians = start_angle_deg * MOTION_PI / 180.0f;
-    end_radians = end_angle_deg * MOTION_PI / 180.0f;
-    start_forward_unit = cosf(start_radians);
-    start_left_unit = sinf(start_radians);
-    end_forward_unit = cosf(end_radians);
-    end_left_unit = sinf(end_radians);
-    move_status = (((Motion_Absolute(start_forward_unit) > 0.0001f) &&
-                    (Motion_Absolute(start_left_unit) > 0.0001f)) ||
-                   ((Motion_Absolute(end_forward_unit) > 0.0001f) &&
-                    (Motion_Absolute(end_left_unit) > 0.0001f))) ?
-                  MOTION_STATUS_DIAGONAL : MOTION_STATUS_POLAR_MOVE;
-    return MotionControl_RunPolarSegment(
-        distance_mm, start_angle_deg, end_angle_deg, blend_time_ms,
-        start_rpm, cruise_rpm, end_rpm, move_status);
-}
-
-static uint8_t Motion_IsWrapperAngleValid(float angle_deg)
-{
-    return ((angle_deg >= 0.0f) && (angle_deg <= 90.0f)) ? 1U : 0U;
-}
-
-MotionControlStatus MotionControl_MoveLeftFrontMm(uint32_t distance_mm,
-                                                   float angle_deg)
-{
-    if (!Motion_IsWrapperAngleValid(angle_deg))
-    {
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        return MotionControl_State;
-    }
-    return MotionControl_MovePolarMm(distance_mm, angle_deg);
-}
-
-MotionControlStatus MotionControl_MoveRightFrontMm(uint32_t distance_mm,
-                                                    float angle_deg)
-{
-    if (!Motion_IsWrapperAngleValid(angle_deg))
-    {
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        return MotionControl_State;
-    }
-    return MotionControl_MovePolarMm(distance_mm, -angle_deg);
-}
-
-MotionControlStatus MotionControl_MoveLeftRearMm(uint32_t distance_mm,
-                                                  float angle_deg)
-{
-    if (!Motion_IsWrapperAngleValid(angle_deg))
-    {
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        return MotionControl_State;
-    }
-    return MotionControl_MovePolarMm(distance_mm, 180.0f - angle_deg);
-}
-
-MotionControlStatus MotionControl_MoveRightRearMm(uint32_t distance_mm,
-                                                   float angle_deg)
-{
-    if (!Motion_IsWrapperAngleValid(angle_deg))
-    {
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        return MotionControl_State;
-    }
-    return MotionControl_MovePolarMm(distance_mm, -(180.0f - angle_deg));
 }
 
 MotionControlStatus MotionControl_RotateDeg(float angle_deg)
@@ -861,7 +554,6 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
     }
 
     /* Each rotation is measured relative to the heading at its start. */
-    Jy61P_ResetContinuousYaw();
     MotionControl_State = MOTION_STATUS_ROTATING;
     MotionControl_RotateTargetDeg = angle_deg;
     MotionControl_RotateCurrentDeg = 0.0f;
@@ -869,9 +561,7 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
     MotionControl_RotateCommandRpm = 0.0f;
     MotionControl_RotateSettleCount = 0U;
     MotionControl_RotateElapsedMs = 0U;
-    MotionControl_HeadingErrorDeg = 0.0f;
-    MotionControl_HeadingCorrectionRpm = 0.0f;
-    previous_heading_error = 0.0f;
+    MotionControl_ResetHeadingReference();
     MotionControl_BaseRpm = 0.0f;
     MotionControl_EffectiveBaseRpm = 0.0f;
     MotionControl_WheelScale = 1.0f;
@@ -915,8 +605,8 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
         if (absolute_error_deg <= ROTATE_TOLERANCE_DEG)
         {
             MotionControl_RotateCommandRpm = 0.0f;
-            if (Motion_SendChassisSpeed(0.0f, 0.0f, 0.0f,
-                                        &wheel_scale) != HAL_OK)
+            if (MotionControl_SetBodySpeedWithScale(0.0f, 0.0f, 0.0f,
+                                                    &wheel_scale) != HAL_OK)
             {
                 return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
             }
@@ -925,10 +615,9 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
             if (MotionControl_RotateSettleCount >= ROTATE_SETTLE_CYCLES)
             {
                 /* The settled heading becomes the reference for the next move. */
-                Jy61P_ResetContinuousYaw();
+                MotionControl_ResetHeadingReference();
                 MotionControl_RotateCurrentDeg = MotionControl_RotateTargetDeg;
                 MotionControl_RotateErrorDeg = 0.0f;
-                previous_heading_error = 0.0f;
                 MotionControl_State = MOTION_STATUS_FINISHED;
                 return MotionControl_State;
             }
@@ -975,9 +664,9 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
 
             MotionControl_RotateCommandRpm = (error_deg > 0.0f) ?
                                               magnitude_rpm : -magnitude_rpm;
-            if (Motion_SendChassisSpeed(0.0f, 0.0f,
-                                        MotionControl_RotateCommandRpm,
-                                        &wheel_scale) != HAL_OK)
+            if (MotionControl_SetBodySpeedWithScale(
+                    0.0f, 0.0f, MotionControl_RotateCommandRpm,
+                    &wheel_scale) != HAL_OK)
             {
                 MotionControl_RotateCommandRpm = 0.0f;
                 return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
@@ -1015,70 +704,14 @@ MotionControlStatus MotionControl_PrepareForMove(void)
 
     if (MotionControl_ImuHeadingHoldActive != 0U)
     {
-        Jy61P_ResetContinuousYaw();
+        MotionControl_ResetHeadingReference();
     }
-    previous_heading_error = 0.0f;
+    else
+    {
+        previous_heading_error = 0.0f;
+    }
     HAL_Delay(100U);
 
     return MotionControl_State;
 }
 
-MotionControlStatus MotionControl_RunDefaultSequence(void)
-{
-    if (MotionControl_PrepareForMove() >= MOTION_ERROR_IMU_STARTUP)
-    {
-        return MotionControl_State;
-    }
-
-#if DIAGONAL_TEST_ENABLE
-    {
-        MotionControlStatus status;
-
-#if DIAGONAL_TEST_DIRECTION == DIAGONAL_TEST_LEFT_FRONT
-        status = MotionControl_MoveLeftFrontMm(
-            DIAGONAL_TEST_DISTANCE_MM, DIAGONAL_TEST_ANGLE_DEG);
-#elif DIAGONAL_TEST_DIRECTION == DIAGONAL_TEST_RIGHT_FRONT
-        status = MotionControl_MoveRightFrontMm(
-            DIAGONAL_TEST_DISTANCE_MM, DIAGONAL_TEST_ANGLE_DEG);
-#elif DIAGONAL_TEST_DIRECTION == DIAGONAL_TEST_LEFT_REAR
-        status = MotionControl_MoveLeftRearMm(
-            DIAGONAL_TEST_DISTANCE_MM, DIAGONAL_TEST_ANGLE_DEG);
-#elif DIAGONAL_TEST_DIRECTION == DIAGONAL_TEST_RIGHT_REAR
-        status = MotionControl_MoveRightRearMm(
-            DIAGONAL_TEST_DISTANCE_MM, DIAGONAL_TEST_ANGLE_DEG);
-#else
-        MotionControl_State = MOTION_ERROR_INVALID_ARGUMENT;
-        status = MotionControl_State;
-#endif
-        if (status >= MOTION_ERROR_IMU_STARTUP)
-        {
-            return MotionControl_State;
-        }
-    }
-#else
-    MotionControl_State = MOTION_STATUS_FORWARD;
-    if (MotionControl_MoveMm(DEFAULT_MOVE_DISTANCE_MM, 0) >=
-        MOTION_ERROR_IMU_STARTUP)
-    {
-        return MotionControl_State;
-    }
-
-    MotionControl_State = MOTION_STATUS_PAUSE;
-    HAL_Delay(DEFAULT_PAUSE_MS);
-
-    MotionControl_State = MOTION_STATUS_LEFT;
-    if (MotionControl_MoveMm(0, DEFAULT_MOVE_DISTANCE_MM) >=
-        MOTION_ERROR_IMU_STARTUP)
-    {
-        return MotionControl_State;
-    }
-#endif
-
-    if (MotorControl_StopAll() != HAL_OK)
-    {
-        MotionControl_State = MOTION_ERROR_MOTOR_UART;
-        return MotionControl_State;
-    }
-    MotionControl_State = MOTION_STATUS_FINISHED;
-    return MotionControl_State;
-}

@@ -24,8 +24,6 @@ static volatile uint8_t servo_completed_group = 0xFFU;
 
 volatile ServoActionStatus ServoAction_LastStatus = SERVO_ACTION_ERROR_UART;
 volatile ServoActionSequenceState ServoAction_SequenceState = SERVO_SEQUENCE_STARTING;
-volatile uint8_t ServoAction_MotionCompletedCount = 0U;
-volatile uint8_t ServoAction_LastCompletedGroup = 0xFFU;
 
 static void ServoAction_ResetParser(void)
 {
@@ -78,7 +76,6 @@ static void ServoAction_ParseByte(uint8_t value)
                 (servo_rx_data[0] == SERVO_ACTION_CMD_COMPLETE))
             {
                 servo_completed_group = servo_rx_data[1];
-                ServoAction_LastCompletedGroup = servo_rx_data[1];
             }
             ServoAction_ResetParser();
         }
@@ -94,10 +91,8 @@ void ServoAction_Init(UART_HandleTypeDef *huart)
 {
     servo_uart = huart;
     servo_completed_group = 0xFFU;
-    ServoAction_LastCompletedGroup = 0xFFU;
     ServoAction_LastStatus = SERVO_ACTION_ERROR_UART;
     ServoAction_SequenceState = SERVO_SEQUENCE_STARTING;
-    ServoAction_MotionCompletedCount = 0U;
     ServoAction_ResetParser();
     if (servo_uart != 0)
     {

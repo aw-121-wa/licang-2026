@@ -9,10 +9,6 @@
 #define GRAY_ALIGN_PERIOD_MS            20U
 #define GRAY_ALIGN_APPROACH_RPM         25.0f
 #define GRAY_ALIGN_RETREAT_RPM          25.0f
-#define GRAY_ALIGN_HEADING_KP           2.0f
-#define GRAY_ALIGN_HEADING_KD           0.15f
-#define GRAY_ALIGN_HEADING_DEADBAND_DEG 0.15f
-#define GRAY_ALIGN_HEADING_MAX_RPM      8.0f
 
 typedef enum
 {

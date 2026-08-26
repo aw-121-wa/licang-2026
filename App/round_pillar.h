@@ -16,12 +16,6 @@
 #define RZ_IR_STABLE_MS            30U
 #define RZ_APPROACH_TIMEOUT_MS     5000U
 
-/* Heading hold while approaching the pillar. */
-#define RZ_HEADING_KP              2.0f
-#define RZ_HEADING_KD              0.15f
-#define RZ_HEADING_DEADBAND_DEG    0.15f
-#define RZ_HEADING_MAX_RPM         8.0f
-
 /* The two orbit stages use exactly opposite body velocity vectors. */
 #define RZ_ORBIT_FORWARD_RPM       55.0f
 #define RZ_ORBIT_OMEGA_RPM         45.0f

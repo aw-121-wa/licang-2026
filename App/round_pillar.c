@@ -1,7 +1,6 @@
 #include "round_pillar.h"
 #include "cmsis_os.h"
 #include "jy61p.h"
-#include "mecanum_kinematics.h"
 #include "motor_control.h"
 #include "motion_control.h"
 
@@ -11,57 +10,15 @@ static uint8_t RoundPillar_IrDetected(void)
             RZ_IR_DETECTED_LEVEL) ? 1U : 0U;
 }
 
-static HAL_StatusTypeDef RoundPillar_SendBodySpeed(float forward,
-                                                    float left,
-                                                    float counter_clockwise)
-{
-    MecanumWheelValues wheels;
-    MotorWheelSpeedsRpmX10 speeds;
-
-    MecanumKinematics_Solve(forward, left, counter_clockwise, &wheels);
-    MecanumKinematics_DesaturateWithScale(&wheels, MOTOR_SPEED_LIMIT_RPM);
-    speeds.front_left = (int16_t)(wheels.front_left *
-                                  MOTOR_SPEED_COMMAND_SCALE);
-    speeds.front_right = (int16_t)(wheels.front_right *
-                                   MOTOR_SPEED_COMMAND_SCALE);
-    speeds.rear_left = (int16_t)(wheels.rear_left *
-                                 MOTOR_SPEED_COMMAND_SCALE);
-    speeds.rear_right = (int16_t)(wheels.rear_right *
-                                  MOTOR_SPEED_COMMAND_SCALE);
-    return MotorControl_SetWheelSpeeds(&speeds);
-}
-
 static HAL_StatusTypeDef RoundPillar_Stop(void)
 {
-    return MotorControl_StopAll();
-}
+    HAL_StatusTypeDef status = MotionControl_SetBodySpeed(0.0f, 0.0f, 0.0f);
 
-static float RoundPillar_HeadingCorrection(float locked_yaw,
-                                            float *previous_error)
-{
-    float current_yaw = Jy61P_GetContinuousYaw();
-    float error = locked_yaw - current_yaw;
-    float correction;
-
-    correction = (RZ_HEADING_KP * error) +
-                 (RZ_HEADING_KD * (error - *previous_error));
-    *previous_error = error;
-
-    if ((error <= RZ_HEADING_DEADBAND_DEG) &&
-        (error >= -RZ_HEADING_DEADBAND_DEG))
+    if (status != HAL_OK)
     {
-        correction = 0.0f;
+        (void)MotorControl_StopAll();
     }
-    else if (correction > RZ_HEADING_MAX_RPM)
-    {
-        correction = RZ_HEADING_MAX_RPM;
-    }
-    else if (correction < -RZ_HEADING_MAX_RPM)
-    {
-        correction = -RZ_HEADING_MAX_RPM;
-    }
-
-    return correction;
+    return status;
 }
 
 static RoundPillarStatus RoundPillar_CheckStopAndImu(void)
@@ -115,11 +72,10 @@ static RoundPillarStatus RoundPillar_MapMotionStatus(
     return ROUND_PILLAR_ERROR_MOTOR;
 }
 
-static RoundPillarStatus RoundPillar_Approach(float locked_yaw)
+static RoundPillarStatus RoundPillar_Approach(void)
 {
     uint32_t start_tick = HAL_GetTick();
     uint32_t ir_detect_since = 0U;
-    float previous_error = 0.0f;
     uint8_t ir_stable = 0U;
 
     for (;;)
@@ -156,11 +112,10 @@ static RoundPillarStatus RoundPillar_Approach(float locked_yaw)
             ir_stable = 0U;
         }
 
-        correction = RoundPillar_HeadingCorrection(locked_yaw,
-                                                    &previous_error);
-        if (RoundPillar_SendBodySpeed(0.0f,
-                                      -RZ_APPROACH_RPM,
-                                      correction) != HAL_OK)
+        correction = MotionControl_GetHeadingCorrection(RZ_APPROACH_RPM);
+        if (MotionControl_SetBodySpeed(0.0f,
+                                       -RZ_APPROACH_RPM,
+                                       correction) != HAL_OK)
         {
             (void)RoundPillar_Stop();
             return ROUND_PILLAR_ERROR_MOTOR;
@@ -176,7 +131,7 @@ static RoundPillarStatus RoundPillar_Orbit(void)
     float reverse_target_yaw;
     RoundPillarStatus status;
 
-    Jy61P_ResetContinuousYaw();
+    MotionControl_ResetHeadingReference();
     orbit_start_tick = HAL_GetTick();
     MotionControl_State = MOTION_STATUS_ROTATING;
 
@@ -201,9 +156,9 @@ static RoundPillarStatus RoundPillar_Orbit(void)
         {
             break;
         }
-        if (RoundPillar_SendBodySpeed(RZ_ORBIT_FORWARD_RPM,
-                                      0.0f,
-                                      -RZ_ORBIT_OMEGA_RPM) != HAL_OK)
+        if (MotionControl_SetBodySpeed(RZ_ORBIT_FORWARD_RPM,
+                                       0.0f,
+                                       -RZ_ORBIT_OMEGA_RPM) != HAL_OK)
         {
             (void)RoundPillar_Stop();
             return ROUND_PILLAR_ERROR_MOTOR;
@@ -247,9 +202,9 @@ static RoundPillarStatus RoundPillar_Orbit(void)
         {
             break;
         }
-        if (RoundPillar_SendBodySpeed(-RZ_ORBIT_FORWARD_RPM,
-                                      0.0f,
-                                      RZ_ORBIT_OMEGA_RPM) != HAL_OK)
+        if (MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,
+                                       0.0f,
+                                       RZ_ORBIT_OMEGA_RPM) != HAL_OK)
         {
             (void)RoundPillar_Stop();
             return ROUND_PILLAR_ERROR_MOTOR;
@@ -266,7 +221,7 @@ static RoundPillarStatus RoundPillar_Orbit(void)
     {
         return status;
     }
-    Jy61P_ResetContinuousYaw();
+    MotionControl_ResetHeadingReference();
     MotionControl_State = MOTION_STATUS_FINISHED;
     return ROUND_PILLAR_OK;
 }
@@ -275,16 +230,14 @@ RoundPillarStatus RoundPillar_Run(void)
 {
     MotionControlStatus move_status;
     RoundPillarStatus status;
-    const float locked_yaw = 0.0f;
-
     if (Jy61P_IsOnline(500U) == 0U)
     {
         (void)RoundPillar_Stop();
         return ROUND_PILLAR_ERROR_IMU;
     }
 
-    Jy61P_ResetContinuousYaw();
-    status = RoundPillar_Approach(locked_yaw);
+    MotionControl_ResetHeadingReference();
+    status = RoundPillar_Approach();
     if (status != ROUND_PILLAR_OK)
     {
         (void)RoundPillar_Stop();

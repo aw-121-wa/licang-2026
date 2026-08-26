@@ -1,7 +1,6 @@
 #include "gray_align.h"
 #include "cmsis_os.h"
 #include "jy61p.h"
-#include "mecanum_kinematics.h"
 #include "motor_control.h"
 #include "motion_control.h"
 
@@ -30,61 +29,21 @@ static GrayAlignSample GrayAlign_ReadSensors(void)
     return sample;
 }
 
-static HAL_StatusTypeDef GrayAlign_SendVelocity(float forward,
-                                                 float left,
-                                                 float counter_clockwise)
-{
-    MecanumWheelValues wheels;
-    MotorWheelSpeedsRpmX10 speeds;
-
-    MecanumKinematics_Solve(forward, left, counter_clockwise, &wheels);
-    MecanumKinematics_DesaturateWithScale(&wheels, MOTOR_SPEED_LIMIT_RPM);
-    speeds.front_left = (int16_t)(wheels.front_left * MOTOR_SPEED_COMMAND_SCALE);
-    speeds.front_right = (int16_t)(wheels.front_right * MOTOR_SPEED_COMMAND_SCALE);
-    speeds.rear_left = (int16_t)(wheels.rear_left * MOTOR_SPEED_COMMAND_SCALE);
-    speeds.rear_right = (int16_t)(wheels.rear_right * MOTOR_SPEED_COMMAND_SCALE);
-    return MotorControl_SetWheelSpeeds(&speeds);
-}
-
 static HAL_StatusTypeDef GrayAlign_Stop(void)
 {
-    return MotorControl_StopAll();
-}
+    HAL_StatusTypeDef status = MotionControl_SetBodySpeed(0.0f, 0.0f, 0.0f);
 
-static float GrayAlign_HeadingCorrection(float locked_yaw,
-                                          float *previous_error)
-{
-    float current_yaw = Jy61P_GetContinuousYaw();
-    float error = locked_yaw - current_yaw;
-    float correction;
-
-    correction = (GRAY_ALIGN_HEADING_KP * error) +
-                 (GRAY_ALIGN_HEADING_KD * (error - *previous_error));
-    *previous_error = error;
-
-    if ((error <= GRAY_ALIGN_HEADING_DEADBAND_DEG) &&
-        (error >= -GRAY_ALIGN_HEADING_DEADBAND_DEG))
+    if (status != HAL_OK)
     {
-        correction = 0.0f;
+        (void)MotorControl_StopAll();
     }
-    else if (correction > GRAY_ALIGN_HEADING_MAX_RPM)
-    {
-        correction = GRAY_ALIGN_HEADING_MAX_RPM;
-    }
-    else if (correction < -GRAY_ALIGN_HEADING_MAX_RPM)
-    {
-        correction = -GRAY_ALIGN_HEADING_MAX_RPM;
-    }
-
-    return correction;
+    return status;
 }
 
 GrayAlignStatus GrayAlign_Run(void)
 {
     uint32_t start_tick = HAL_GetTick();
     uint32_t stable_since = 0U;
-    float locked_yaw;
-    float previous_error = 0.0f;
     uint8_t stable = 0U;
 
     if (Jy61P_IsOnline(500U) == 0U)
@@ -92,7 +51,7 @@ GrayAlignStatus GrayAlign_Run(void)
         (void)GrayAlign_Stop();
         return GRAY_ALIGN_ERROR_IMU;
     }
-    locked_yaw = Jy61P_GetContinuousYaw();
+    MotionControl_ResetHeadingReference();
 
     for (;;)
     {
@@ -136,7 +95,7 @@ GrayAlignStatus GrayAlign_Run(void)
             }
             if ((uint32_t)(now - stable_since) >= GRAY_ALIGN_STABLE_MS)
             {
-                Jy61P_ResetContinuousYaw();
+                MotionControl_ResetHeadingReference();
                 return GRAY_ALIGN_OK;
             }
         }
@@ -145,10 +104,10 @@ GrayAlignStatus GrayAlign_Run(void)
             stable = 0U;
             left = ((sample.mid2 != 0U) || (sample.mid1 != 0U)) ?
                    GRAY_ALIGN_RETREAT_RPM : -GRAY_ALIGN_APPROACH_RPM;
-            heading_correction = GrayAlign_HeadingCorrection(
-                locked_yaw, &previous_error);
-            if (GrayAlign_SendVelocity(0.0f, left,
-                                       heading_correction) != HAL_OK)
+            heading_correction = MotionControl_GetHeadingCorrection(
+                GRAY_ALIGN_APPROACH_RPM);
+            if (MotionControl_SetBodySpeed(0.0f, left,
+                                           heading_correction) != HAL_OK)
             {
                 return GRAY_ALIGN_ERROR_MOTOR_UART;
             }
