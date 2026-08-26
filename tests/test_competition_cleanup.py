@@ -45,6 +45,44 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("MotionControl_GetHeadingCorrection", rz_c)
         self.assertNotIn("MecanumKinematics_Solve", gray_c + rz_c)
 
+    def test_rz_keeps_orbit_before_four_fresh_red_requests(self):
+        rz_h = self.read("App/round_pillar.h")
+        rz_c = self.read("App/round_pillar.c")
+        servo_h = self.read("App/servo_action.h")
+
+        self.assertIn("SERVO_ACTION_PILLAR_CAMERA_GROUP", servo_h)
+        self.assertIn("SERVO_ACTION_PILLAR_GRAB_GROUP", servo_h)
+        self.assertIn("SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS", servo_h)
+        self.assertIn("SERVO_ACTION_PILLAR_GRAB_TIMEOUT_MS", servo_h)
+        self.assertRegex(rz_h, r"#define\s+RZ_GRAB_COUNT\s+4U")
+        self.assertIn("RoundPillar_Orbit", rz_c)
+        for token in (
+            "WarehouseControl_",
+            "SERVO_ACTION_RETURN_GROUP",
+            "SERVO_ACTION_GRAB_GROUP",
+        ):
+            self.assertNotIn(token, rz_h + rz_c)
+        for token in (
+            "RZ_ORBIT_FORWARD_RPM",
+            "RZ_ORBIT_OMEGA_RPM",
+            "RZ_CW_TARGET_DEG",
+            "RZ_CCW_REVERSE_DEG",
+            "RZ_ORBIT_TIMEOUT_MS",
+            "ROUND_PILLAR_ERROR_ORBIT_TIMEOUT",
+        ):
+            self.assertIn(token, rz_h + rz_c)
+        self.assertIn("#include \"maixcam_link.h\"", rz_c)
+        self.assertIn("MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)", rz_c)
+        self.assertIn("MaixCamLink_TakeReply()", rz_c)
+        self.assertIn("for (round = 0U; round < RZ_GRAB_COUNT; round++)", rz_c)
+
+        self.assertEqual(
+            rz_c.count("SERVO_ACTION_PILLAR_CAMERA_GROUP"), 1
+        )
+        self.assertEqual(
+            rz_c.count("SERVO_ACTION_PILLAR_GRAB_GROUP"), 1
+        )
+
     def test_uart5_keeps_only_competition_commands_in_help_and_status(self):
         uart_c = self.read("App/uart_command.c")
         self.assertIn('"F <mm>', uart_c)

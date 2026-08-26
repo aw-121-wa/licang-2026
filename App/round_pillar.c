@@ -1,8 +1,10 @@
 #include "round_pillar.h"
 #include "cmsis_os.h"
 #include "jy61p.h"
+#include "maixcam_link.h"
 #include "motor_control.h"
 #include "motion_control.h"
+#include "servo_action.h"
 
 static uint8_t RoundPillar_IrDetected(void)
 {
@@ -51,6 +53,27 @@ static RoundPillarStatus RoundPillar_WaitSettled(uint32_t duration_ms)
         osDelay(RZ_PERIOD_MS);
     }
     return ROUND_PILLAR_OK;
+}
+
+static RoundPillarStatus RoundPillar_WaitForMaixCam(void)
+{
+    uint32_t start_tick = HAL_GetTick();
+
+    while ((uint32_t)(HAL_GetTick() - start_tick) <
+           MAIXCAM_REQUEST_TIMEOUT_MS)
+    {
+        if (MotionControl_StopRequested != 0U)
+        {
+            return ROUND_PILLAR_CANCELED;
+        }
+        if (MaixCamLink_TakeReply() != 0U)
+        {
+            return ROUND_PILLAR_OK;
+        }
+        osDelay(10U);
+    }
+
+    return ROUND_PILLAR_ERROR_MAIX_TIMEOUT;
 }
 
 static RoundPillarStatus RoundPillar_MapMotionStatus(
@@ -170,14 +193,13 @@ static RoundPillarStatus RoundPillar_Orbit(void)
     {
         return ROUND_PILLAR_ERROR_MOTOR;
     }
-    status = RoundPillar_WaitSettled(RZ_DIRECTION_SETTLE_MS);
+    status = RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS);
     if (status != ROUND_PILLAR_OK)
     {
         return status;
     }
 
-    /* Do not reset here.  The reverse target is measured from the actual
-     * settled yaw so inertia cannot turn the requested 90 degrees into 93. */
+    /* Keep the continuous yaw so the return follows the same orbit backwards. */
     reverse_start_yaw = Jy61P_GetContinuousYaw();
     reverse_target_yaw = reverse_start_yaw + RZ_CCW_REVERSE_DEG;
 
@@ -216,7 +238,7 @@ static RoundPillarStatus RoundPillar_Orbit(void)
     {
         return ROUND_PILLAR_ERROR_MOTOR;
     }
-    status = RoundPillar_WaitSettled(RZ_DIRECTION_SETTLE_MS);
+    status = RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS);
     if (status != ROUND_PILLAR_OK)
     {
         return status;
@@ -228,8 +250,11 @@ static RoundPillarStatus RoundPillar_Orbit(void)
 
 RoundPillarStatus RoundPillar_Run(void)
 {
+    uint8_t round;
     MotionControlStatus move_status;
     RoundPillarStatus status;
+    ServoActionStatus servo_status;
+
     if (Jy61P_IsOnline(500U) == 0U)
     {
         (void)RoundPillar_Stop();
@@ -248,7 +273,7 @@ RoundPillarStatus RoundPillar_Run(void)
     {
         return ROUND_PILLAR_ERROR_MOTOR;
     }
-    status = RoundPillar_WaitSettled(RZ_DIRECTION_SETTLE_MS);
+    status = RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS);
     if (status != ROUND_PILLAR_OK)
     {
         return status;
@@ -275,11 +300,67 @@ RoundPillarStatus RoundPillar_Run(void)
     {
         return ROUND_PILLAR_ERROR_MOTOR;
     }
-    status = RoundPillar_WaitSettled(RZ_DIRECTION_SETTLE_MS);
+    status = RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS);
     if (status != ROUND_PILLAR_OK)
     {
         return status;
     }
 
-    return RoundPillar_Orbit();
+    status = RoundPillar_Orbit();
+    if (status != ROUND_PILLAR_OK)
+    {
+        return status;
+    }
+
+    ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
+    servo_status = ServoAction_RunGroup(
+        SERVO_ACTION_PILLAR_CAMERA_GROUP,
+        1U,
+        SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS);
+    if (servo_status != SERVO_ACTION_OK)
+    {
+        ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
+        return ROUND_PILLAR_ERROR_SERVO;
+    }
+    ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
+    if (MotionControl_StopRequested != 0U)
+    {
+        return ROUND_PILLAR_CANCELED;
+    }
+
+    for (round = 0U; round < RZ_GRAB_COUNT; round++)
+    {
+        if (MotionControl_StopRequested != 0U)
+        {
+            return ROUND_PILLAR_CANCELED;
+        }
+
+        if (MaixCamLink_SendRequest(MAIXCAM_COLOR_RED) != MAIXCAM_LINK_OK)
+        {
+            return ROUND_PILLAR_ERROR_MAIX_UART;
+        }
+        status = RoundPillar_WaitForMaixCam();
+        if (status != ROUND_PILLAR_OK)
+        {
+            return status;
+        }
+
+        ServoAction_SequenceState = SERVO_SEQUENCE_GRAB_RUNNING;
+        servo_status = ServoAction_RunGroup(
+            SERVO_ACTION_PILLAR_GRAB_GROUP,
+            1U,
+            SERVO_ACTION_PILLAR_GRAB_TIMEOUT_MS);
+        if (servo_status != SERVO_ACTION_OK)
+        {
+            ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
+            return ROUND_PILLAR_ERROR_SERVO;
+        }
+        ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
+        if (MotionControl_StopRequested != 0U)
+        {
+            return ROUND_PILLAR_CANCELED;
+        }
+    }
+
+    return ROUND_PILLAR_OK;
 }

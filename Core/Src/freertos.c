@@ -281,6 +281,31 @@ void StartChassisTask(void *argument)
           result = MOTION_ERROR_MOTOR_UART;
           ChassisTask_Ready = 1U;
         }
+        else if (rz_result == ROUND_PILLAR_ERROR_SERVO)
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+          ChassisTask_Ready = 1U;
+        }
+        else if (rz_result == ROUND_PILLAR_ERROR_MAIX_UART)
+        {
+          result = MOTION_ERROR_MAIX_UART;
+          ChassisTask_Ready = 1U;
+        }
+        else if (rz_result == ROUND_PILLAR_ERROR_MAIX_TIMEOUT)
+        {
+          result = MOTION_ERROR_MAIX_TIMEOUT;
+          ChassisTask_Ready = 1U;
+        }
+        else if (rz_result == ROUND_PILLAR_ERROR_APPROACH_TIMEOUT)
+        {
+          result = MOTION_ERROR_RZ_TIMEOUT;
+          ChassisTask_Ready = 1U;
+        }
+        else if (rz_result == ROUND_PILLAR_ERROR_ORBIT_TIMEOUT)
+        {
+          result = MOTION_ERROR_RZ_TIMEOUT;
+          ChassisTask_Ready = 1U;
+        }
         else
         {
           result = MOTION_ERROR_RZ_TIMEOUT;

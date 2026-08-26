@@ -87,15 +87,15 @@
 - `MID1/MID2` 均离线且未达到目标时以 25 RPM 靠近；任一外侧传感器在线时以 25 RPM 反向退出。IN1/IN2 先后在线只影响是否达到目标，不改变航向。5 s 内未达到稳定目标返回灰度校准错误；IMU 失联立即停车并返回 IMU 错误，不降级为纯灰度控制。
 - 校准成功后停车并清零 JY61P 连续航向，再进入已有的动作组 1 → MaixCAM → 动作组 2 → 转盘流程。
 
-## RZ 绕桩动作（2026-08-25）
+## RZ 靠桩抓球动作（2026-08-26）
 
-- UART5 新增无参数命令 `RZ`，必须经 `ChassisCommandQueue` 投递并由 `ChassisTask` 执行；不得触发机械臂、BALL、MaixCAM 或转盘。
-- RZ 使用 PD10 单红外输入。第一版配置为 GPIO 输入、无上下拉、低电平有效；有效电平必须集中在 `RZ_IR_DETECTED_LEVEL`，实车若相反只允许修改该定义。
-- RZ 开始时检查 JY61P 在线并清零 ContinuousYaw，随后锁定 0°，只向左横移寻找 PD10；PD10 连续检测 30 ms 才确认，找桩超时为 5 s。找桩阶段使用 `KP=2.0`、`KD=0.15`、死区 0.15°、最大航向修正 8 RPM。
-- 红外触发后不重新找桩，使用 `MotionControl_MovePolarSegmentMm(30, -90°, 0, 20, 0)` 继续右移 30 mm；该阶段不得重置 Yaw，且必须响应 STOP 与 IMU 失联。
-- 绕桩开始前仅再清零一次 ContinuousYaw。顺时针 360°固定发送 `forward=+55 RPM`、`left=0`、`omega=-45 RPM`，以 ContinuousYaw `<= -360°` 为完成条件；绕桩总超时为 15 s。
-- 顺时针 360°后必须停车并等待稳定，但禁止清零 Yaw。读取实际稳定角 `reverse_start_yaw`，反向目标为 `reverse_start_yaw + 90°`，随后发送 `forward=-55 RPM`、`left=0`、`omega=+45 RPM`，达到目标后停车、等待稳定、清零 Yaw 并完成。禁止用 `MotionControl_RotateDeg(90°)` 替代。
-- RZ 取消或失败不永久锁死 `ChassisTask`；RZ 完成按一次独立底盘动作统计，取消不计入动作完成计数。
+- UART5 无参数命令 `RZ` 必须经 `ChassisCommandQueue` 投递并由 `ChassisTask` 执行。RZ 先完成 PD10 靠桩、锁角、红外稳定确认、现有红外后的极坐标靠近和停车稳定；底盘定位后不再运动。
+- RZ 使用 PD10 单红外输入；第一版配置为 GPIO 输入、无上下拉、低电平有效，实际有效电平只允许修改 `RZ_IR_DETECTED_LEVEL`。靠桩阶段保留 30 ms 稳定判断、5 s 超时、STOP 响应和 IMU 在线检查。
+- 底盘定位完成后保留两阶段绕桩：顺时针 360°使用 `forward=+55 RPM`、`omega=-43 RPM`，再沿同一轨迹反向 90°同时反号；最终停车并清零航向后，才运行 `SERVO_ACTION_PILLAR_CAMERA_GROUP`（动作组 3）一次，并等待真实 UART7 完成回复。Group3 发送失败或超时返回 `ROUND_PILLAR_ERROR_SERVO`，不得发送 MaixCAM 请求。
+- 视觉阶段固定使用 `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`。每轮必须重新发送请求并等待 `MaixCamLink_TakeReply()` 的当前请求有效回复；不能复用旧回复或一次请求等待四次回复。
+- `RZ_GRAB_COUNT` 固定为 4。每轮顺序为“红球请求 → 有效 `1` 回复 → `SERVO_ACTION_PILLAR_GRAB_GROUP`（动作组 4）”；Group4 完整包含夹球、放球和重新架摄像头，Group4 完成后才允许下一轮请求。
+- RZ 不调用 `BALL`、`WarehouseControl`、转盘、动作组 1 或动作组 2，不增加 `Warehouse_BallCount`。Group4 一旦开始必须完整执行；Group3 完成后、MaixCAM 等待期间和 Group4 完成后均检查 STOP，取消时不进入下一轮。
+- RZ 结果映射为：靠桩超时 `MOTION_ERROR_RZ_TIMEOUT`、舵机错误 `MOTION_ERROR_MOTOR_UART`、MaixCAM UART 错误 `MOTION_ERROR_MAIX_UART`、MaixCAM 超时 `MOTION_ERROR_MAIX_TIMEOUT`；不再保留旧 Orbit 状态。
 
 ## 仓库转盘协同（2026-08-25）
 

@@ -85,12 +85,13 @@
 - `App/gray_align.*` runs before BALL action group 1. It locks the current continuous JY61P yaw at entry, moves only along the left/right axis at 25 RPM, and applies a small heading PD correction (`KP=2.0`, `KD=0.15`, limit 8 RPM) during the lateral move. It holds the exact target for 50 ms, stops all wheels, and resets the continuous JY61P yaw before returning success. The alignment timeout is 5 s.
 - `MID1`/`MID2` are overshoot protection sensors, not completion sensors. If either is on, the chassis retreats while maintaining the locked yaw; otherwise it approaches. IN1/IN2 appearing in sequence never commands a chassis rotation. IMU loss during alignment stops the chassis and returns an alignment error.
 
-## RZ round-pillar motion (2026-08-25)
+## RZ pillar ball sequence (2026-08-26)
 
-- UART5 command `RZ` enters the existing `ChassisCommandQueue` and is executed by `ChassisTask`; it does not start the servo, MaixCAM, BALL or warehouse-turntable flows.
-- `App/round_pillar.*` owns the complete RZ sequence. It uses only the PD10 digital infrared input (configured as active-low for the first hardware test), locks the yaw at RZ entry, moves right until PD10 is continuously detected for 30 ms, then uses `MotionControl_MovePolarSegmentMm(30, -90, 0, 20, 0)` for the additional 30 mm while preserving the same yaw reference.
-- Before orbiting, RZ resets ContinuousYaw once. The clockwise stage sends `forward=+55 RPM`, `left=0`, `omega=-45 RPM` until ContinuousYaw reaches -360 degrees. It stops and settles without resetting yaw, then measures the actual settled yaw and sends `forward=-55 RPM`, `left=0`, `omega=+45 RPM` until 90 degrees of reverse travel is complete. Only after the final stop and settle is ContinuousYaw reset.
-- RZ has independent approach/orbit timeouts, checks STOP and IMU loss during every stage, and returns to the ready state after cancellation or RZ failure. The generic `ROT` command remains an in-place rotation and is unchanged.
+- UART5 command `RZ` enters the existing `ChassisCommandQueue` and is executed by `ChassisTask`; it first uses PD10 to approach the pillar, locks the yaw during chassis positioning, performs the existing post-IR polar move, then stops and settles before any arm or vision action.
+- After the chassis is positioned, RZ preserves the two-stage pillar orbit: clockwise 360 degrees with `forward=+55 RPM`, `omega=-43 RPM`, then the same path backwards for 90 degrees with both signs reversed. Only after the final stop and heading reset does it run `SERVO_ACTION_PILLAR_CAMERA_GROUP` (group 3) once and wait for its real UART7 completion frame.
+- After Group3, RZ performs four independent red-ball transactions: `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`, waits for the current valid `1` reply, and runs `SERVO_ACTION_PILLAR_GRAB_GROUP` (group 4).
+- Group 4 contains clamp, release and camera re-positioning, so group 3 is never repeated. RZ does not call `BALL`, group 1, group 2, `WarehouseControl` or the turntable.
+- STOP during approach or MaixCAM waiting cancels before the next arm action. Once group 3 or group 4 starts, that group is allowed to finish; a pending STOP is handled before the next vision request. MaixCAM and servo failures map to their dedicated RZ result statuses and do not trigger later group 4 actions.
 
 ## Warehouse turntable coordination (2026-08-25)
 
