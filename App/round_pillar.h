@@ -18,7 +18,7 @@
 
 /* The two orbit stages use exactly opposite body velocity vectors. */
 #define RZ_ORBIT_FORWARD_RPM       55.0f
-#define RZ_ORBIT_OMEGA_RPM         44.0f
+#define RZ_ORBIT_OMEGA_RPM         43.0f
 #define RZ_CW_TARGET_DEG           (-360.0f)
 #define RZ_CCW_REVERSE_DEG         90.0f
 #define RZ_ORBIT_TIMEOUT_MS        15000U
