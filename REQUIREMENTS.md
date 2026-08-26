@@ -91,7 +91,7 @@
 
 - UART5 无参数命令 `RZ` 必须经 `ChassisCommandQueue` 投递并由 `ChassisTask` 执行。RZ 先完成 PD10 靠桩、锁角、红外稳定确认、现有红外后的极坐标靠近和停车稳定；底盘定位后不再运动。
 - RZ 使用 PD10 单红外输入；第一版配置为 GPIO 输入、无上下拉、低电平有效，实际有效电平只允许修改 `RZ_IR_DETECTED_LEVEL`。靠桩阶段保留 30 ms 稳定判断、5 s 超时、STOP 响应和 IMU 在线检查。
-- 底盘定位完成后先运行 `SERVO_ACTION_PILLAR_CAMERA_GROUP`（动作组 3）一次，并等待真实 UART7 完成回复。Group3 发送失败或超时返回 `ROUND_PILLAR_ERROR_SERVO`，不得发送 MaixCAM 请求；成功后进入 `RoundPillar_OrbitAndGrab()`。
+- 底盘定位完成后使用 `ServoAction_StartGroupNoWait()` 启动 `SERVO_ACTION_PILLAR_CAMERA_GROUP`（动作组 3）一次；发送失败返回 `ROUND_PILLAR_ERROR_SERVO`，不依赖完成回包，并固定等待 `RZ_CAMERA_RAISE_WAIT_MS=1000 ms` 的机械动作时间后进入 `RoundPillar_OrbitAndGrab()`。
 - `RoundPillar_OrbitAndGrab()` 先发送第一个红球请求，再在顺时针 360°（`forward=+55 RPM`、`omega=-43 RPM`）和同轨迹反向 90°（两个量同时反号）的 20 ms 控制循环中非阻塞轮询 `MaixCamLink_TakeReply()`。识别成功立即停车稳定，执行 Group4，完成后保持当前 ContinuousYaw 继续绕桩并发送下一次请求。
 - 视觉阶段固定使用 `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`。每轮必须重新发送请求并等待 `MaixCamLink_TakeReply()` 的当前请求有效回复；不能复用旧回复或一次请求等待四次回复。
 - `RZ_GRAB_COUNT` 固定为 4。每轮顺序为“红球请求 → 有效 `1` 回复 → `SERVO_ACTION_PILLAR_GRAB_GROUP`（动作组 4）”；Group4 完整包含夹球、放球和重新架摄像头，Group4 完成后才允许下一轮请求。

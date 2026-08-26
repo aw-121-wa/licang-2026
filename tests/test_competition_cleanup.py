@@ -54,6 +54,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("SERVO_ACTION_PILLAR_GRAB_GROUP", servo_h)
         self.assertIn("SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS", servo_h)
         self.assertIn("SERVO_ACTION_PILLAR_GRAB_TIMEOUT_MS", servo_h)
+        self.assertRegex(rz_h, r"#define\s+RZ_CAMERA_RAISE_WAIT_MS\s+1000U")
         self.assertRegex(rz_h, r"#define\s+RZ_GRAB_COUNT\s+4U")
         self.assertIn("RoundPillar_OrbitAndGrab", rz_c)
         self.assertIn("RoundPillar_HandleDetectedBall", rz_c)
@@ -85,6 +86,8 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             run_body.index("SERVO_ACTION_PILLAR_CAMERA_GROUP"),
             run_body.index("RoundPillar_OrbitAndGrab()"),
         )
+        self.assertIn("ServoAction_StartGroupNoWait", run_body)
+        self.assertNotIn("ServoAction_RunGroup", run_body)
         orbit_start = rz_c.index("RoundPillar_OrbitAndGrab")
         orbit_body = rz_c[orbit_start:]
         self.assertIn("MaixCamLink_TakeReply()", orbit_body)

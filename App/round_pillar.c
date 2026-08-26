@@ -55,6 +55,22 @@ static RoundPillarStatus RoundPillar_WaitSettled(uint32_t duration_ms)
     return ROUND_PILLAR_OK;
 }
 
+static RoundPillarStatus RoundPillar_WaitCameraRaise(void)
+{
+    uint32_t start_tick = HAL_GetTick();
+
+    while ((uint32_t)(HAL_GetTick() - start_tick) <
+           RZ_CAMERA_RAISE_WAIT_MS)
+    {
+        if (MotionControl_StopRequested != 0U)
+        {
+            return ROUND_PILLAR_CANCELED;
+        }
+        osDelay(RZ_PERIOD_MS);
+    }
+    return ROUND_PILLAR_OK;
+}
+
 static RoundPillarStatus RoundPillar_MapMotionStatus(
     MotionControlStatus status)
 {
@@ -361,19 +377,20 @@ RoundPillarStatus RoundPillar_Run(void)
     }
 
     ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
-    servo_status = ServoAction_RunGroup(
+    servo_status = ServoAction_StartGroupNoWait(
         SERVO_ACTION_PILLAR_CAMERA_GROUP,
-        1U,
-        SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS);
+        1U);
     if (servo_status != SERVO_ACTION_OK)
     {
         ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
         return ROUND_PILLAR_ERROR_SERVO;
     }
+
+    status = RoundPillar_WaitCameraRaise();
     ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
-    if (MotionControl_StopRequested != 0U)
+    if (status != ROUND_PILLAR_OK)
     {
-        return ROUND_PILLAR_CANCELED;
+        return status;
     }
 
     return RoundPillar_OrbitAndGrab();
