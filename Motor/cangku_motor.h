@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-/* The warehouse turntable is on USART1 only; chassis motors remain 1..4. */
+/* The warehouse turntable is on USART6 only; chassis motors remain 1..4. */
 #define ZDT_MOTOR_ADDR                 0x05U
 
 /* Emm V5.0/x42 direction encoding. Keep the direction choice in turntable_control.h. */

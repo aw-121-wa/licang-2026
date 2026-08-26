@@ -100,7 +100,7 @@
 
 ## 仓库转盘协同（2026-08-25）
 
-- 仓库电机固定使用 USART1：PA9=TX、PA10=RX、115200、8N1、无硬件流控；地址必须为 `ZDT_MOTOR_ADDR = 0x05`。UART5 仍只用于 VOFA，USART3 仍只用于底盘地址 1–4。
+- 仓库电机固定使用 USART6：PC6=TX、PC7=RX、115200、8N1、无硬件流控；地址必须为 `ZDT_MOTOR_ADDR = 0x05`。UART5 仍只用于 VOFA，USART3 仍只用于底盘地址 1–4。
 - `Turntable_MoveOneSlot()` 必须调用 `ZDT_MoveRelative(TURNTABLE_SLOT_DIRECTION, TURNTABLE_MOVE_SPEED_RPM, TURNTABLE_MOVE_ACCELERATION, 1280U)`，使用相对位置，不得自行拼接协议帧。
 - 只能在机械臂动作组 2（圆盘机夹）的真实 UART7 完成反馈之后转盘；动作组命令成功发送不是完成条件。动作组 1（圆盘机回位）或其他组完成不得触发转盘。
 - 现阶段未解析转盘驱动器到位反馈，`Turntable_WaitComplete()` 以 1280 脉冲、100 RPM、3200 脉冲/圈计算运行时间并加 600 ms 裕量，1500 ms 后超时。超时或 UART 错误必须执行停止、进入 `WAREHOUSE_STATE_ERROR`，且不得增加球计数。

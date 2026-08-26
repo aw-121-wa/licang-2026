@@ -75,6 +75,17 @@ TurntableStatus Turntable_MoveOneSlot(void)
     return Turntable_LastStatus;
 }
 
+TurntableStatus Turntable_MoveOneSlotAndWait(TurntableCancelCheck cancel_check)
+{
+    TurntableStatus status = Turntable_MoveOneSlot();
+
+    if (status != TURNTABLE_STATUS_OK)
+    {
+        return status;
+    }
+    return Turntable_WaitComplete(cancel_check);
+}
+
 TurntableStatus Turntable_WaitComplete(TurntableCancelCheck cancel_check)
 {
     uint32_t start_tick;

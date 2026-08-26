@@ -5,6 +5,7 @@
 #include "motor_control.h"
 #include "motion_control.h"
 #include "servo_action.h"
+#include "turntable_control.h"
 
 static uint8_t RoundPillar_IrDetected(void)
 {
@@ -69,6 +70,11 @@ static RoundPillarStatus RoundPillar_WaitCameraRaise(void)
         osDelay(RZ_PERIOD_MS);
     }
     return ROUND_PILLAR_OK;
+}
+
+static uint8_t RoundPillar_TurntableCancelCheck(void)
+{
+    return (MotionControl_StopRequested != 0U) ? 1U : 0U;
 }
 
 static RoundPillarStatus RoundPillar_MapMotionStatus(
@@ -146,6 +152,7 @@ static RoundPillarStatus RoundPillar_HandleDetectedBall(
     uint8_t *grab_count)
 {
     ServoActionStatus servo_status;
+    TurntableStatus turntable_status;
     RoundPillarStatus status;
 
     osDelay(920U);
@@ -168,6 +175,17 @@ static RoundPillarStatus RoundPillar_HandleDetectedBall(
     {
         ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
         return ROUND_PILLAR_ERROR_SERVO;
+    }
+
+    turntable_status = Turntable_MoveOneSlotAndWait(
+        RoundPillar_TurntableCancelCheck);
+    if (turntable_status == TURNTABLE_STATUS_CANCELED)
+    {
+        return ROUND_PILLAR_CANCELED;
+    }
+    if (turntable_status != TURNTABLE_STATUS_OK)
+    {
+        return ROUND_PILLAR_ERROR_TURNTABLE;
     }
 
     (*grab_count)++;

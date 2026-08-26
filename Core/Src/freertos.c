@@ -179,8 +179,8 @@ void StartChassisTask(void *argument)
   MotionControl_Init(&huart3, &huart2);
   osDelay(100);
 
-  /* Warehouse motor is isolated on USART1; an error must not disable the chassis. */
-  warehouse_result = WarehouseControl_Init(&huart1);
+  /* Warehouse motor is isolated on USART6; an error must not disable the chassis. */
+  warehouse_result = WarehouseControl_Init(&huart6);
   (void)warehouse_result;
 
   /* 发送出发姿态，但不依赖舵控板的完成回传；部分舵控板不提供该帧。 */
@@ -282,6 +282,11 @@ void StartChassisTask(void *argument)
           ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_SERVO)
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+          ChassisTask_Ready = 1U;
+        }
+        else if (rz_result == ROUND_PILLAR_ERROR_TURNTABLE)
         {
           result = MOTION_ERROR_MOTOR_UART;
           ChassisTask_Ready = 1U;

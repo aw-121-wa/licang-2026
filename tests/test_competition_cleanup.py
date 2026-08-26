@@ -128,6 +128,40 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         for token in ("HEAD_ERR", "HEAD_CORR", "DIST=", "TARGET=", "BALL_STATE", "WAREHOUSE_BALL"):
             self.assertIn(token, uart_c)
 
+    def test_turntable_uses_usart6_and_runs_after_ball_actions(self):
+        usart_h = self.read("Core/Inc/usart.h")
+        usart_c = self.read("Core/Src/usart.c")
+        main_c = self.read("Core/Src/main.c")
+        freertos_c = self.read("Core/Src/freertos.c")
+        turntable_h = self.read("App/turntable_control.h")
+        turntable_c = self.read("App/turntable_control.c")
+        warehouse_c = self.read("App/warehouse_control.c")
+        round_c = self.read("App/round_pillar.c")
+        cangku_h = self.read("Motor/cangku_motor.h")
+
+        self.assertIn("extern UART_HandleTypeDef huart6;", usart_h)
+        self.assertIn("void MX_USART6_UART_Init(void);", usart_h)
+        self.assertIn("void MX_USART6_UART_Init(void)", usart_c)
+        self.assertIn("huart6.Instance = USART6", usart_c)
+        self.assertIn("GPIO_PIN_6|GPIO_PIN_7", usart_c)
+        self.assertIn("GPIO_AF8_USART6", usart_c)
+        self.assertIn("MX_USART6_UART_Init();", main_c)
+        self.assertIn("WarehouseControl_Init(&huart6)", freertos_c)
+        self.assertNotIn("WarehouseControl_Init(&huart1)", freertos_c)
+
+        self.assertIn("ZDT_MOTOR_ADDR                 0x05U", cangku_h)
+        self.assertIn("TURNTABLE_ONE_SLOT_PULSES           1280U", turntable_h)
+        self.assertIn("Turntable_MoveOneSlotAndWait(", turntable_h)
+        self.assertIn("Turntable_MoveOneSlotAndWait(", turntable_c)
+        self.assertIn("Turntable_MoveOneSlotAndWait(", warehouse_c)
+        self.assertIn("Turntable_MoveOneSlotAndWait(", round_c)
+
+        group4 = round_c.index("ServoAction_RunGroup(")
+        turntable = round_c.index("Turntable_MoveOneSlotAndWait(", group4)
+        grab_count = round_c.index("(*grab_count)++", group4)
+        self.assertLess(group4, turntable)
+        self.assertLess(turntable, grab_count)
+
 
 if __name__ == "__main__":
     unittest.main()

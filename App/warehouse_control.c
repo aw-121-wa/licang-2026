@@ -87,11 +87,8 @@ WarehouseStatus WarehouseControl_HandleActionGroup2Completed(void)
         return Warehouse_LastStatus;
     }
     Warehouse_State = WAREHOUSE_STATE_TURNTABLE_MOVING;
-    turntable_status = Turntable_MoveOneSlot();
-    if (turntable_status == TURNTABLE_STATUS_OK)
-    {
-        turntable_status = Turntable_WaitComplete(WarehouseControl_StopRequested);
-    }
+    turntable_status = Turntable_MoveOneSlotAndWait(
+        WarehouseControl_StopRequested);
     Warehouse_LastStatus = WarehouseControl_FromTurntableStatus(turntable_status);
 
     if (Warehouse_LastStatus == WAREHOUSE_STATUS_OK)

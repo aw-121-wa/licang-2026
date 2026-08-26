@@ -3,7 +3,7 @@
 
 #include "cangku_motor.h"
 
-/* UART1 uses the standard Emm V5.0/x42 baud rate used by this project. */
+/* USART6 uses the standard Emm V5.0/x42 baud rate used by this project. */
 #define TURNTABLE_UART_BAUDRATE             115200U
 #define TURNTABLE_ONE_SLOT_PULSES           1280U
 #define TURNTABLE_MOVE_SPEED_RPM             100U
@@ -41,6 +41,7 @@ TurntableStatus Turntable_Init(UART_HandleTypeDef *huart);
 TurntableStatus Turntable_Enable(void);
 TurntableStatus Turntable_MoveOneSlot(void);
 TurntableStatus Turntable_WaitComplete(TurntableCancelCheck cancel_check);
+TurntableStatus Turntable_MoveOneSlotAndWait(TurntableCancelCheck cancel_check);
 TurntableStatus Turntable_Stop(void);
 uint8_t Turntable_IsReady(void);
 const char *Turntable_StateName(TurntableState state);
