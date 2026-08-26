@@ -45,7 +45,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("MotionControl_GetHeadingCorrection", rz_c)
         self.assertNotIn("MecanumKinematics_Solve", gray_c + rz_c)
 
-    def test_rz_keeps_orbit_before_four_fresh_red_requests(self):
+    def test_rz_integrates_vision_into_orbit(self):
         rz_h = self.read("App/round_pillar.h")
         rz_c = self.read("App/round_pillar.c")
         servo_h = self.read("App/servo_action.h")
@@ -55,7 +55,9 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS", servo_h)
         self.assertIn("SERVO_ACTION_PILLAR_GRAB_TIMEOUT_MS", servo_h)
         self.assertRegex(rz_h, r"#define\s+RZ_GRAB_COUNT\s+4U")
-        self.assertIn("RoundPillar_Orbit", rz_c)
+        self.assertIn("RoundPillar_OrbitAndGrab", rz_c)
+        self.assertIn("RoundPillar_HandleDetectedBall", rz_c)
+        self.assertNotIn("RoundPillar_WaitForMaixCam", rz_c)
         for token in (
             "WarehouseControl_",
             "SERVO_ACTION_RETURN_GROUP",
@@ -74,7 +76,20 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("#include \"maixcam_link.h\"", rz_c)
         self.assertIn("MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)", rz_c)
         self.assertIn("MaixCamLink_TakeReply()", rz_c)
-        self.assertIn("for (round = 0U; round < RZ_GRAB_COUNT; round++)", rz_c)
+        self.assertIn("while (current_yaw > RZ_CW_TARGET_DEG)", rz_c)
+        self.assertIn("while (current_yaw < reverse_target_yaw)", rz_c)
+
+        run_start = rz_c.index("RoundPillarStatus RoundPillar_Run")
+        run_body = rz_c[run_start:]
+        self.assertLess(
+            run_body.index("SERVO_ACTION_PILLAR_CAMERA_GROUP"),
+            run_body.index("RoundPillar_OrbitAndGrab()"),
+        )
+        orbit_start = rz_c.index("RoundPillar_OrbitAndGrab")
+        orbit_body = rz_c[orbit_start:]
+        self.assertIn("MaixCamLink_TakeReply()", orbit_body)
+        self.assertIn("RoundPillar_HandleDetectedBall(&grab_count)", orbit_body)
+        self.assertNotIn("MAIXCAM_REQUEST_TIMEOUT_MS", orbit_body)
 
         self.assertEqual(
             rz_c.count("SERVO_ACTION_PILLAR_CAMERA_GROUP"), 1

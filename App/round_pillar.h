@@ -12,7 +12,7 @@
 /* Approach */
 #define RZ_APPROACH_RPM            25.0f
 #define RZ_FINE_APPROACH_RPM       20.0f
-#define RZ_AFTER_IR_DISTANCE_MM    200U
+#define RZ_AFTER_IR_DISTANCE_MM    180U
 #define RZ_IR_STABLE_MS            30U
 #define RZ_APPROACH_TIMEOUT_MS     5000U
 #define RZ_STOP_SETTLE_MS          80U

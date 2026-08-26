@@ -88,8 +88,8 @@
 ## RZ pillar ball sequence (2026-08-26)
 
 - UART5 command `RZ` enters the existing `ChassisCommandQueue` and is executed by `ChassisTask`; it first uses PD10 to approach the pillar, locks the yaw during chassis positioning, performs the existing post-IR polar move, then stops and settles before any arm or vision action.
-- After the chassis is positioned, RZ preserves the two-stage pillar orbit: clockwise 360 degrees with `forward=+55 RPM`, `omega=-43 RPM`, then the same path backwards for 90 degrees with both signs reversed. Only after the final stop and heading reset does it run `SERVO_ACTION_PILLAR_CAMERA_GROUP` (group 3) once and wait for its real UART7 completion frame.
-- After Group3, RZ performs four independent red-ball transactions: `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`, waits for the current valid `1` reply, and runs `SERVO_ACTION_PILLAR_GRAB_GROUP` (group 4).
+- After the chassis is positioned, RZ runs `SERVO_ACTION_PILLAR_CAMERA_GROUP` (group 3) once and waits for its real UART7 completion frame. It then starts `RoundPillar_OrbitAndGrab()`, which sends the first red request and keeps the two-stage pillar orbit active while polling the MaixCAM reply.
+- A valid reply stops and settles the chassis before `SERVO_ACTION_PILLAR_GRAB_GROUP` (group 4); after Group4 completes, the next red request is sent and the orbit resumes from the current continuous yaw. The CW 360-degree stage and same-path reverse 90-degree stage both use this non-blocking vision loop, and RZ completes only after both the trajectory and four grabs finish.
 - Group 4 contains clamp, release and camera re-positioning, so group 3 is never repeated. RZ does not call `BALL`, group 1, group 2, `WarehouseControl` or the turntable.
 - STOP during approach or MaixCAM waiting cancels before the next arm action. Once group 3 or group 4 starts, that group is allowed to finish; a pending STOP is handled before the next vision request. MaixCAM and servo failures map to their dedicated RZ result statuses and do not trigger later group 4 actions.
 
