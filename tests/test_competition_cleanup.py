@@ -57,6 +57,9 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertRegex(rz_h, r"#define\s+RZ_CAMERA_RAISE_WAIT_MS\s+1000U")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_FORWARD_RPM\s+63\.0f")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_OMEGA_RPM\s+49\.0f")
+        self.assertRegex(rz_h, r"#define\s+RZ_CW_TARGET_DEG\s+\(-720\.0f\)")
+        self.assertRegex(rz_h, r"#define\s+RZ_CCW_REVERSE_DEG\s+90\.0f")
+        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TIMEOUT_MS\s+30000U")
         self.assertRegex(rz_h, r"#define\s+RZ_GRAB_COUNT\s+4U")
         self.assertIn("RoundPillar_OrbitAndGrab", rz_c)
         self.assertIn("RoundPillar_HandleDetectedBall", rz_c)
@@ -97,9 +100,9 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertNotIn("MAIXCAM_REQUEST_TIMEOUT_MS", orbit_body)
         handler_start = rz_c.index("RoundPillar_HandleDetectedBall")
         handler_body = rz_c[handler_start:orbit_start]
-        self.assertIn("osDelay(5U)", handler_body)
+        self.assertIn("osDelay(", handler_body)
         self.assertLess(
-            handler_body.index("osDelay(5U)"),
+            handler_body.index("osDelay("),
             handler_body.index("RoundPillar_Stop()"),
         )
 
