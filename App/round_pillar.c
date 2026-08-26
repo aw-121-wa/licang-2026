@@ -148,6 +148,7 @@ static RoundPillarStatus RoundPillar_HandleDetectedBall(
     ServoActionStatus servo_status;
     RoundPillarStatus status;
 
+    osDelay(890U);
     if (RoundPillar_Stop() != HAL_OK)
     {
         return ROUND_PILLAR_ERROR_MOTOR;

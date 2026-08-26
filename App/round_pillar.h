@@ -12,7 +12,7 @@
 /* Approach */
 #define RZ_APPROACH_RPM            25.0f
 #define RZ_FINE_APPROACH_RPM       20.0f
-#define RZ_AFTER_IR_DISTANCE_MM    180U
+#define RZ_AFTER_IR_DISTANCE_MM    170U
 #define RZ_IR_STABLE_MS            30U
 #define RZ_APPROACH_TIMEOUT_MS     5000U
 #define RZ_STOP_SETTLE_MS          80U
@@ -20,8 +20,8 @@
 #define RZ_GRAB_COUNT              4U
 
 /* Preserve the established two-stage pillar orbit before arm operation. */
-#define RZ_ORBIT_FORWARD_RPM       55.0f
-#define RZ_ORBIT_OMEGA_RPM         43.0f
+#define RZ_ORBIT_FORWARD_RPM       63.0f
+#define RZ_ORBIT_OMEGA_RPM         49.0f
 #define RZ_CW_TARGET_DEG           (-360.0f)
 #define RZ_CCW_REVERSE_DEG         90.0f
 #define RZ_ORBIT_TIMEOUT_MS        15000U
