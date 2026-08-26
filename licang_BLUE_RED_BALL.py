@@ -91,7 +91,10 @@ BUTTON_AUTO_ROI = [430, 405, 200, 60]
 TOUCH_DEBOUNCE_MS = 250
 MAIN_LOOP_SLEEP_MS = 1
 VISION_ARM_DELAY_MS = 150
-DETECT_CONFIRM_FRAMES = 3
+
+STATE_WAIT_CMD = 0
+STATE_WAIT_TARGET = 1
+STATE_WAIT_LEAVE = 2
 
 
 # ========================== Runtime State ==========================
@@ -101,7 +104,7 @@ display_mode = MODE_RED
 detected_latched = False
 recognition_armed = False
 recognition_armed_at_ms = 0
-detected_streak = 0
+recognition_state = STATE_WAIT_CMD
 last_touch_ms = 0
 illumination_gpio = None
 calibrating = False
@@ -298,7 +301,7 @@ def save_roi_config(path=None):
 def set_mode(mode, source):
     """Set task mode from UART or debug display mode from touch."""
     global current_mode, display_mode, detected_latched
-    global recognition_armed, recognition_armed_at_ms, detected_streak, calibrating
+    global recognition_armed, recognition_armed_at_ms, recognition_state, calibrating
     global calibration_samples, last_status_message
     if mode not in (MODE_RED, MODE_BLUE):
         return False
@@ -308,7 +311,7 @@ def set_mode(mode, source):
         detected_latched = False
         recognition_armed = True
         recognition_armed_at_ms = ticks_ms()
-        detected_streak = 0
+        recognition_state = STATE_WAIT_TARGET
         calibrating = False
         calibration_samples = []
         last_status_message = ""
@@ -318,7 +321,6 @@ def set_mode(mode, source):
         return True
     current_mode = mode
     display_mode = mode
-    detected_streak = 0
     return True
 
 
@@ -385,15 +387,22 @@ def filter_blob(blob):
 
 
 def is_blob_in_trigger_zone(blob):
-    if blob is None:
+    return rect_intersects_blob(blob, TRIGGER_ZONE)
+
+
+def rect_intersects_blob(blob, rect):
+    """Return whether any part of a blob rectangle overlaps a region."""
+    if blob is None or not isinstance(rect, (list, tuple)) or len(rect) != 4:
         return False
     x = _blob_value(blob, "x")
     y = _blob_value(blob, "y")
     width = _blob_value(blob, "w")
     height = _blob_value(blob, "h")
-    center_x = x + width // 2
-    center_y = y + height // 2
-    return point_in_rect(center_x, center_y, TRIGGER_ZONE)
+    rx, ry, region_width, region_height = rect
+    return (x < rx + region_width and
+            x + width > rx and
+            y < ry + region_height and
+            y + height > ry)
 
 
 def select_best_blob(blobs):
@@ -429,21 +438,25 @@ def detect_ball(img, mode=None):
 
 
 def update_detection(blob, serial):
-    """Report one valid ROI target for the currently armed UART task."""
-    global detected_latched, recognition_armed, detected_streak
+    """Report after a valid target has completely left the trigger zone."""
+    global detected_latched, recognition_armed, recognition_state
     global last_status_message, calibrating
     if calibrating or not recognition_armed or detected_latched:
         return
     if (ticks_ms() - recognition_armed_at_ms) < VISION_ARM_DELAY_MS:
-        detected_streak = 0
         return
     valid_blob = filter_blob(blob)
-    if (valid_blob is None) or (not is_blob_in_trigger_zone(valid_blob)):
-        detected_streak = 0
+    in_trigger_zone = (valid_blob is not None and
+                       rect_intersects_blob(valid_blob, TRIGGER_ZONE))
+
+    if recognition_state == STATE_WAIT_TARGET:
+        if not in_trigger_zone:
+            return
+        recognition_state = STATE_WAIT_LEAVE
+        last_status_message = "WAIT LEAVE"
         return
 
-    detected_streak += 1
-    if detected_streak < DETECT_CONFIRM_FRAMES:
+    if recognition_state != STATE_WAIT_LEAVE or in_trigger_zone:
         return
     if serial is None:
         return
@@ -453,7 +466,7 @@ def update_detection(blob, serial):
         return
     detected_latched = True
     recognition_armed = False
-    detected_streak = 0
+    recognition_state = STATE_WAIT_CMD
     last_status_message = "DONE"
 
 
@@ -638,6 +651,8 @@ def draw_ui(img, blob):
         if calibrating:
             status = "CALIBRATING {}/{}".format(
                 len(calibration_samples), CALIB_MIN_SAMPLES)
+        elif recognition_state == STATE_WAIT_LEAVE:
+            status = "WAIT LEAVE"
         elif recognition_armed:
             status = "SEARCHING"
         else:
@@ -779,15 +794,18 @@ def _selftest():
     global CALIBRATED_CENTER_X, GRAB_CENTER_Y, BALL_WIDTH, BALL_HEIGHT
     global current_mode, display_mode, detected_latched, recognition_armed
     global recognition_armed_at_ms
+    global recognition_state
     global calibrating, last_touch_ms
     valid = _FakeBlob(295, 195, 50, 50, 1800)
     outside_trigger = _FakeBlob(245, 195, 50, 50, 1800)
+    partial_trigger = _FakeBlob(270, 195, 40, 50, 1800)
     smaller = _FakeBlob(305, 205, 30, 30, 900)
     non_square = _FakeBlob(150, 90, 100, 20, 1800)
     assert filter_blob(non_square) is None
     assert select_best_blob([smaller, valid]) is valid
     assert is_blob_in_trigger_zone(outside_trigger) is False
     assert is_blob_in_trigger_zone(valid) is True
+    assert is_blob_in_trigger_zone(partial_trigger) is True
     assert median_int([190, 220, 203]) == 203
     assert median_int([190, 203, 220, 214]) == 208
     calibrated_roi, calibrated_trigger = build_calibrated_regions(350, 222, 50, 50)
@@ -824,9 +842,11 @@ def _selftest():
     update_detection(outside_trigger, serial)
     assert serial.sent == []
     update_detection(valid, serial)
+    assert serial.sent == []
+    assert recognition_state == STATE_WAIT_LEAVE
     update_detection(valid, serial)
     assert serial.sent == []
-    update_detection(valid, serial)
+    update_detection(outside_trigger, serial)
     assert serial.sent == [b"1\n"]
 
     assert recognition_armed is False
@@ -840,13 +860,13 @@ def _selftest():
     next_blue_image = _ColorFakeImage(valid, BLUE_THRESHOLD)
     next_blob = detect_ball(next_blue_image)
     assert next_blob is valid
+    sleep_ms(VISION_ARM_DELAY_MS)
     update_detection(next_blob, serial)
     assert serial.sent == [b"1\n"]
-    sleep_ms(VISION_ARM_DELAY_MS)
-    update_detection(valid, serial)
+    assert recognition_state == STATE_WAIT_LEAVE
     update_detection(valid, serial)
     assert serial.sent == [b"1\n"]
-    update_detection(valid, serial)
+    update_detection(outside_trigger, serial)
     assert serial.sent == [b"1\n", b"1\n"]
 
     process_command_bytes(b"1")
@@ -858,13 +878,11 @@ def _selftest():
     red_image = _ColorFakeImage(valid, RED_THRESHOLD)
     assert detect_ball(red_image) is valid
     assert red_image.thresholds == [RED_THRESHOLD]
-    update_detection(valid, serial)
-    assert serial.sent == [b"1\n", b"1\n"]
     sleep_ms(VISION_ARM_DELAY_MS)
     update_detection(valid, serial)
-    update_detection(valid, serial)
     assert serial.sent == [b"1\n", b"1\n"]
-    update_detection(valid, serial)
+    assert recognition_state == STATE_WAIT_LEAVE
+    update_detection(outside_trigger, serial)
     assert serial.sent == [b"1\n", b"1\n", b"1\n"]
 
     task_mode_before_touch = current_mode
@@ -940,13 +958,14 @@ def _selftest():
     detected_latched = False
     recognition_armed = False
     recognition_armed_at_ms = 0
+    recognition_state = STATE_WAIT_CMD
     calibrating = False
     with open(__file__, "r") as source_file:
         source = source_file.read()
     assert "while not app.need_exit()" in source
     assert "elif recognition_armed:" in source
     assert "VISION_ARM_DELAY_MS" in source
-    assert "DETECT_CONFIRM_FRAMES" in source
+    assert "STATE_WAIT_LEAVE" in source
     assert 'status = "WAIT CMD"' in source
     assert "finally:" in source
     assert "light_off()" in source

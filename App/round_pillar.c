@@ -155,7 +155,6 @@ static RoundPillarStatus RoundPillar_HandleDetectedBall(
     TurntableStatus turntable_status;
     RoundPillarStatus status;
 
-    osDelay(920U);
     if (RoundPillar_Stop() != HAL_OK)
     {
         return ROUND_PILLAR_ERROR_MOTOR;
