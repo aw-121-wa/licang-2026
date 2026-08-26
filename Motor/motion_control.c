@@ -582,7 +582,16 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
         stop_result = MotionControl_HandleStopRequest();
         if (stop_result != 0U)
         {
+            if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) != 0U)
+            {
+                MotionControl_ResetHeadingReference();
+            }
+            MotionControl_RotateTargetDeg = 0.0f;
+            MotionControl_RotateCurrentDeg = 0.0f;
+            MotionControl_RotateErrorDeg = 0.0f;
             MotionControl_RotateCommandRpm = 0.0f;
+            MotionControl_RotateSettleCount = 0U;
+            MotionControl_RotateElapsedMs = 0U;
             return MotionControl_State;
         }
         if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U)
@@ -593,7 +602,18 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
         if (MotionControl_RotateElapsedMs >= ROTATE_TIMEOUT_MS)
         {
             MotionControl_RotateCommandRpm = 0.0f;
-            return Motion_SegmentFail(MOTION_ERROR_ROTATE_TIMEOUT);
+            MotionControl_State = Motion_SegmentFail(MOTION_ERROR_ROTATE_TIMEOUT);
+            if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) != 0U)
+            {
+                MotionControl_ResetHeadingReference();
+            }
+            MotionControl_RotateTargetDeg = 0.0f;
+            MotionControl_RotateCurrentDeg = 0.0f;
+            MotionControl_RotateErrorDeg = 0.0f;
+            MotionControl_RotateCommandRpm = 0.0f;
+            MotionControl_RotateSettleCount = 0U;
+            MotionControl_RotateElapsedMs = 0U;
+            return MotionControl_State;
         }
 
         MotionControl_RotateCurrentDeg = Jy61P_GetContinuousYaw();
@@ -616,8 +636,12 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
             {
                 /* The settled heading becomes the reference for the next move. */
                 MotionControl_ResetHeadingReference();
-                MotionControl_RotateCurrentDeg = MotionControl_RotateTargetDeg;
+                MotionControl_RotateTargetDeg = 0.0f;
+                MotionControl_RotateCurrentDeg = 0.0f;
                 MotionControl_RotateErrorDeg = 0.0f;
+                MotionControl_RotateCommandRpm = 0.0f;
+                MotionControl_RotateSettleCount = 0U;
+                MotionControl_RotateElapsedMs = 0U;
                 MotionControl_State = MOTION_STATUS_FINISHED;
                 return MotionControl_State;
             }

@@ -12,13 +12,13 @@
 /* Approach */
 #define RZ_APPROACH_RPM            25.0f
 #define RZ_FINE_APPROACH_RPM       20.0f
-#define RZ_AFTER_IR_DISTANCE_MM    30U
+#define RZ_AFTER_IR_DISTANCE_MM    200U
 #define RZ_IR_STABLE_MS            30U
 #define RZ_APPROACH_TIMEOUT_MS     5000U
 
 /* The two orbit stages use exactly opposite body velocity vectors. */
 #define RZ_ORBIT_FORWARD_RPM       55.0f
-#define RZ_ORBIT_OMEGA_RPM         45.0f
+#define RZ_ORBIT_OMEGA_RPM         44.0f
 #define RZ_CW_TARGET_DEG           (-360.0f)
 #define RZ_CCW_REVERSE_DEG         90.0f
 #define RZ_ORBIT_TIMEOUT_MS        15000U
