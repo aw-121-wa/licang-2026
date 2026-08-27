@@ -57,7 +57,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertRegex(rz_h, r"#define\s+RZ_CAMERA_RAISE_WAIT_MS\s+1000U")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_FORWARD_RPM\s+63\.0f")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_OMEGA_RPM\s+49\.0f")
-        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TARGET_DEG\s+450\.0f")
+        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TARGET_DEG\s+\(-360\.0f\)")
         self.assertNotIn("RZ_CW_TARGET_DEG", rz_h)
         self.assertNotIn("RZ_CCW_REVERSE_DEG", rz_h)
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TIMEOUT_MS\s+15000U")
@@ -82,14 +82,19 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("#include \"maixcam_link.h\"", rz_c)
         self.assertIn("MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)", rz_c)
         self.assertIn("MaixCamLink_TakeReply()", rz_c)
-        self.assertIn("while (current_yaw < RZ_ORBIT_TARGET_DEG)", rz_c)
+        self.assertIn("while (current_yaw > RZ_ORBIT_TARGET_DEG)", rz_c)
         self.assertIn(
-            "MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,\n"
+            "MotionControl_SetBodySpeed(RZ_ORBIT_FORWARD_RPM,\n"
+            "                                       0.0f,\n"
+            "                                       -RZ_ORBIT_OMEGA_RPM)",
+            rz_c,
+        )
+        self.assertNotIn(
+            "MotionControl_SetBodySpeed(RZ_ORBIT_FORWARD_RPM,\n"
             "                                       0.0f,\n"
             "                                       RZ_ORBIT_OMEGA_RPM)",
             rz_c,
         )
-        self.assertNotIn("MotionControl_SetBodySpeed(RZ_ORBIT_FORWARD_RPM", rz_c)
         self.assertNotIn("reverse_start_yaw", rz_c)
         self.assertNotIn("reverse_target_yaw", rz_c)
         self.assertNotIn("RZ_CCW_REVERSE_DEG", rz_c)

@@ -201,7 +201,7 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
     }
     current_yaw = Jy61P_GetContinuousYaw();
 
-    while (current_yaw < RZ_ORBIT_TARGET_DEG)
+    while (current_yaw > RZ_ORBIT_TARGET_DEG)
     {
         status = RoundPillar_CheckStopAndImu();
         if (status != ROUND_PILLAR_OK)
@@ -228,13 +228,13 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
             }
             continue;
         }
-        if (current_yaw >= RZ_ORBIT_TARGET_DEG)
+        if (current_yaw <= RZ_ORBIT_TARGET_DEG)
         {
             break;
         }
-        if (MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,
+        if (MotionControl_SetBodySpeed(RZ_ORBIT_FORWARD_RPM,
                                        0.0f,
-                                       RZ_ORBIT_OMEGA_RPM) != HAL_OK)
+                                       -RZ_ORBIT_OMEGA_RPM) != HAL_OK)
         {
             (void)RoundPillar_Stop();
             return ROUND_PILLAR_ERROR_MOTOR;

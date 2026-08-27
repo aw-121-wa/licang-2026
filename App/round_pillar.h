@@ -17,10 +17,10 @@
 #define RZ_CAMERA_RAISE_WAIT_MS    1000U
 #define RZ_GRAB_COUNT              4U
 
-/* Orbit in the reversed direction for one continuous 450-degree path. */
+/* Orbit clockwise for one continuous 360-degree path. */
 #define RZ_ORBIT_FORWARD_RPM       63.0f
 #define RZ_ORBIT_OMEGA_RPM         49.0f
-#define RZ_ORBIT_TARGET_DEG        450.0f
+#define RZ_ORBIT_TARGET_DEG        (-360.0f)
 #define RZ_ORBIT_TIMEOUT_MS        15000U
 
 typedef enum
