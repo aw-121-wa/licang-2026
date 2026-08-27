@@ -55,7 +55,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS", servo_h)
         self.assertIn("SERVO_ACTION_PILLAR_GRAB_TIMEOUT_MS", servo_h)
         self.assertRegex(rz_h, r"#define\s+RZ_CAMERA_RAISE_WAIT_MS\s+1000U")
-        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_FORWARD_RPM\s+63\.0f")
+        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_FORWARD_RPM\s+62\.0f")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_OMEGA_RPM\s+49\.0f")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TARGET_DEG\s+\(-360\.0f\)")
         self.assertNotIn("RZ_CW_TARGET_DEG", rz_h)

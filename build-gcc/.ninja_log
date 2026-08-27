@@ -53,3 +53,6 @@
 4	190	8095282467430344	build.ninja	df8fbc74282a26a2
 4	190	8095282467407846	D:/stm32project/中国机器人大赛立体仓库/licang-2026/build-gcc/cmake_install.cmake	df8fbc74282a26a2
 3	177	8095281267966965	CMakeFiles/chassis_motor.elf.dir/App/round_pillar.c.obj	50620b17952af846
+3	140	8095287030503114	CMakeFiles/chassis_motor.elf.dir/Core/Src/freertos.c.obj	7c92a1abf7033bca
+9	152	8095287030571246	CMakeFiles/chassis_motor.elf.dir/App/round_pillar.c.obj	50620b17952af846
+152	390	8095287031986841	chassis_motor.elf	81069d00161e035a

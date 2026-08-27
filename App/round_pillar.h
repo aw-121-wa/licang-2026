@@ -18,7 +18,7 @@
 #define RZ_GRAB_COUNT              4U
 
 /* Orbit clockwise for one continuous 360-degree path. */
-#define RZ_ORBIT_FORWARD_RPM       63.0f
+#define RZ_ORBIT_FORWARD_RPM       62.0f
 #define RZ_ORBIT_OMEGA_RPM         49.0f
 #define RZ_ORBIT_TARGET_DEG        (-360.0f)
 #define RZ_ORBIT_TIMEOUT_MS        15000U
