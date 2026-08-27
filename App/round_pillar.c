@@ -77,25 +77,6 @@ static uint8_t RoundPillar_TurntableCancelCheck(void)
     return (MotionControl_StopRequested != 0U) ? 1U : 0U;
 }
 
-static RoundPillarStatus RoundPillar_MapMotionStatus(
-    MotionControlStatus status)
-{
-    if ((status == MOTION_ERROR_IMU_LOST) ||
-        (status == MOTION_ERROR_IMU_STARTUP))
-    {
-        return ROUND_PILLAR_ERROR_IMU;
-    }
-    if (status == MOTION_ERROR_MOTOR_UART)
-    {
-        return ROUND_PILLAR_ERROR_MOTOR;
-    }
-    if (MotionControl_WasStopped() != 0U)
-    {
-        return ROUND_PILLAR_CANCELED;
-    }
-    return ROUND_PILLAR_ERROR_MOTOR;
-}
-
 static RoundPillarStatus RoundPillar_Approach(void)
 {
     uint32_t start_tick = HAL_GetTick();
@@ -271,15 +252,6 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
         return status;
     }
 
-    if (RoundPillar_Stop() != HAL_OK)
-    {
-        return ROUND_PILLAR_ERROR_MOTOR;
-    }
-    status = RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS);
-    if (status != ROUND_PILLAR_OK)
-    {
-        return status;
-    }
     if (grab_count != RZ_GRAB_COUNT)
     {
         return ROUND_PILLAR_ERROR_MAIX_TIMEOUT;
@@ -291,7 +263,6 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
 
 RoundPillarStatus RoundPillar_Run(void)
 {
-    MotionControlStatus move_status;
     RoundPillarStatus status;
     ServoActionStatus servo_status;
 
@@ -307,33 +278,6 @@ RoundPillarStatus RoundPillar_Run(void)
     {
         (void)RoundPillar_Stop();
         return status;
-    }
-
-    if (RoundPillar_Stop() != HAL_OK)
-    {
-        return ROUND_PILLAR_ERROR_MOTOR;
-    }
-    status = RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS);
-    if (status != ROUND_PILLAR_OK)
-    {
-        return status;
-    }
-
-    /* Keep the RZ-start yaw reference.  This move is still locked to zero. */
-    move_status = MotionControl_MovePolarSegmentMm(
-        RZ_AFTER_IR_DISTANCE_MM,
-        -90.0f,
-        0.0f,
-        RZ_FINE_APPROACH_RPM,
-        0.0f);
-    if (move_status >= MOTION_ERROR_IMU_STARTUP)
-    {
-        return RoundPillar_MapMotionStatus(move_status);
-    }
-    if (MotionControl_WasStopped() != 0U)
-    {
-        (void)RoundPillar_Stop();
-        return ROUND_PILLAR_CANCELED;
     }
 
     if (RoundPillar_Stop() != HAL_OK)

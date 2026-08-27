@@ -104,10 +104,14 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("ServoAction_StartGroupNoWait", run_body)
         self.assertNotIn("ServoAction_RunGroup", run_body)
         orbit_start = rz_c.index("RoundPillar_OrbitAndGrab")
-        orbit_body = rz_c[orbit_start:]
+        orbit_end = rz_c.index("RoundPillarStatus RoundPillar_Run", orbit_start)
+        orbit_body = rz_c[orbit_start:orbit_end]
         self.assertIn("MaixCamLink_TakeReply()", orbit_body)
         self.assertIn("RoundPillar_HandleDetectedBall(&grab_count)", orbit_body)
         self.assertNotIn("MAIXCAM_REQUEST_TIMEOUT_MS", orbit_body)
+        self.assertEqual(
+            orbit_body.count("RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS)"), 1
+        )
         handler_start = rz_c.index("RoundPillar_HandleDetectedBall")
         handler_body = rz_c[handler_start:orbit_start]
         self.assertIn("RoundPillar_WaitSettled", handler_body)
