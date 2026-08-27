@@ -34,18 +34,16 @@ CAMERA_HEIGHT = 480
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
 
-# MaixCAM2 official UART4: TX=A21, RX=A22, device=/dev/ttyS4.
+# MaixCAM2 UART2: TX=B0, RX=B1, device=/dev/ttyS2.
 UART_DEVICE = "/dev/ttyS2"
 UART_BAUDRATE = 115200
 UART_READ_CHUNK = 64
 
 # Fixed grab window defaults. AUTO ROI may replace these at runtime and save
-# the result to ROI_CONFIG_PATH.
+# the measured ball rectangle to ROI_CONFIG_PATH.
 ROI_CONFIG_PATH = "/root/maixcam_ball_roi.json"
 DEFAULT_ROI = [240, 150, 160, 140]
-DEFAULT_TRIGGER_ZONE = [295, 180, 50, 90]
 ROI = DEFAULT_ROI[:]
-TRIGGER_ZONE = DEFAULT_TRIGGER_ZONE[:]
 
 CALIB_SEARCH_ROI = [0, 0, CAMERA_WIDTH, 380]
 # Calibration search center only; the final ROI uses the measured ball center.
@@ -54,17 +52,12 @@ GRAB_CENTER_Y = 220
 CALIBRATED_CENTER_X = GRAB_CENTER_X
 BALL_WIDTH = 50
 BALL_HEIGHT = 50
+BALL_X = GRAB_CENTER_X - BALL_WIDTH // 2
+BALL_Y = GRAB_CENTER_Y - BALL_HEIGHT // 2
 CALIB_X_TOLERANCE = 40
 CALIB_DURATION_MS = 5000
 CALIB_MIN_SAMPLES = 5
-ROI_WIDTH_SCALE = 3.0
-ROI_HEIGHT_SCALE = 3.0
-TRIGGER_WIDTH_SCALE = 1.2
-TRIGGER_HEIGHT_SCALE = 1.8
-ROI_MIN_WIDTH = 120
-ROI_MIN_HEIGHT = 110
-TRIGGER_MIN_WIDTH = 50
-TRIGGER_MIN_HEIGHT = 70
+ROI_MARGIN_PX = 5
 
 # TODO: Re-calibrate with the B25 illumination LED enabled in the real venue.
 RED_THRESHOLD = (0, 80, 40, 80, 10, 80)
@@ -84,6 +77,12 @@ MAX_WIDTH = 260
 MAX_HEIGHT = 260
 RATIO_MIN = 0.65
 RATIO_MAX = 1.35
+BALL_RATIO_MIN = 0.75
+BALL_RATIO_MAX = 1.30
+BALL_SIZE_MIN_SCALE = 0.65
+BALL_SIZE_MAX_SCALE = 1.40
+BALL_FILL_RATIO_MIN = 0.50
+BALL_FILL_RATIO_MAX = 0.90
 
 BUTTON_RED = [10, 405, 145, 60]
 BUTTON_BLUE = [165, 405, 145, 60]
@@ -95,7 +94,8 @@ VISION_ARM_DELAY_MS = 150
 
 STATE_WAIT_CMD = 0
 STATE_WAIT_TARGET = 1
-STATE_WAIT_LEAVE = 2
+ROI_MODE_AUTO = 0
+ROI_MODE_MANUAL = 1
 
 
 # ========================== Runtime State ==========================
@@ -106,6 +106,7 @@ detected_latched = False
 recognition_armed = False
 recognition_armed_at_ms = 0
 recognition_state = STATE_WAIT_CMD
+roi_detection_mode = ROI_MODE_AUTO
 manual_roi_mode = False
 manual_roi_step = 0
 manual_roi_p1 = None
@@ -115,7 +116,7 @@ calibrating = False
 calibration_started_ms = 0
 calibration_samples = []
 calibration_old_roi = None
-calibration_old_trigger_zone = None
+calibration_old_detection_mode = ROI_MODE_AUTO
 last_status_message = ""
 
 
@@ -224,40 +225,45 @@ def median_int(values):
     return int((ordered[middle - 1] + ordered[middle]) / 2)
 
 
-def build_calibrated_regions(center_x, center_y, ball_width, ball_height):
-    """Build regions centered on the measured ball position."""
-    roi_width = max(ROI_MIN_WIDTH, int(round(ball_width * ROI_WIDTH_SCALE)))
-    roi_height = max(ROI_MIN_HEIGHT, int(round(ball_height * ROI_HEIGHT_SCALE)))
-    trigger_width = max(TRIGGER_MIN_WIDTH,
-                        int(round(ball_width * TRIGGER_WIDTH_SCALE)))
-    trigger_height = max(TRIGGER_MIN_HEIGHT,
-                         int(round(ball_height * TRIGGER_HEIGHT_SCALE)))
-    roi = _clamp_rect(center_x - roi_width // 2,
-                      center_y - roi_height // 2,
-                      roi_width, roi_height)
-    trigger_zone = _clamp_rect(center_x - trigger_width // 2,
-                               center_y - trigger_height // 2,
-                               trigger_width, trigger_height)
-    return roi, trigger_zone
+def build_calibrated_regions(ball_x, ball_y, ball_width, ball_height):
+    """Build a yellow ROI from the measured ball bounding box plus 5 px."""
+    return _clamp_rect(
+        int(ball_x) - ROI_MARGIN_PX,
+        int(ball_y) - ROI_MARGIN_PX,
+        int(ball_width) + 2 * ROI_MARGIN_PX,
+        int(ball_height) + 2 * ROI_MARGIN_PX,
+    )
 
 
 def load_roi_config(path=None):
     """Load persisted regions without replacing valid runtime values on error."""
-    global ROI, TRIGGER_ZONE, GRAB_CENTER_Y, CALIBRATED_CENTER_X
+    global ROI, BALL_X, BALL_Y, GRAB_CENTER_Y, CALIBRATED_CENTER_X
     global BALL_WIDTH, BALL_HEIGHT
+    global roi_detection_mode
     if path is None:
         path = ROI_CONFIG_PATH
     try:
         with open(path, "r") as config_file:
             payload = json.load(config_file)
         loaded_roi = payload.get("roi")
-        loaded_trigger = payload.get("trigger_zone")
+        loaded_mode = payload.get("roi_mode", "auto")
+        if loaded_mode not in ("auto", "manual"):
+            return False
         loaded_center_x = int(payload.get(
             "calibrated_center_x", payload.get("grab_center_x", CALIBRATED_CENTER_X)))
-        loaded_center_y = int(payload.get("grab_center_y", GRAB_CENTER_Y))
+        loaded_center_y = int(payload.get(
+            "calibrated_center_y", payload.get("grab_center_y", GRAB_CENTER_Y)))
         loaded_width = int(payload.get("ball_width", BALL_WIDTH))
         loaded_height = int(payload.get("ball_height", BALL_HEIGHT))
-        if not _valid_rect(loaded_roi) or not _valid_rect(loaded_trigger):
+        loaded_ball_x = int(payload.get(
+            "ball_x", loaded_center_x - loaded_width // 2))
+        loaded_ball_y = int(payload.get(
+            "ball_y", loaded_center_y - loaded_height // 2))
+        loaded_ball = [loaded_ball_x, loaded_ball_y,
+                       loaded_width, loaded_height]
+        if not _valid_rect(loaded_ball):
+            return False
+        if loaded_mode == "manual" and not _valid_rect(loaded_roi):
             return False
         if not 0 <= loaded_center_x < CAMERA_WIDTH:
             return False
@@ -269,12 +275,18 @@ def load_roi_config(path=None):
             json.JSONDecodeError):
         return False
 
-    ROI = [int(value) for value in loaded_roi]
-    TRIGGER_ZONE = [int(value) for value in loaded_trigger]
-    CALIBRATED_CENTER_X = loaded_center_x
-    GRAB_CENTER_Y = loaded_center_y
+    BALL_X = loaded_ball_x
+    BALL_Y = loaded_ball_y
     BALL_WIDTH = loaded_width
     BALL_HEIGHT = loaded_height
+    CALIBRATED_CENTER_X = BALL_X + BALL_WIDTH // 2
+    GRAB_CENTER_Y = BALL_Y + BALL_HEIGHT // 2
+    if loaded_mode == "manual":
+        ROI = [int(value) for value in loaded_roi]
+        roi_detection_mode = ROI_MODE_MANUAL
+    else:
+        ROI = build_calibrated_regions(BALL_X, BALL_Y, BALL_WIDTH, BALL_HEIGHT)
+        roi_detection_mode = ROI_MODE_AUTO
     return True
 
 
@@ -283,14 +295,18 @@ def save_roi_config(path=None):
     if path is None:
         path = ROI_CONFIG_PATH
     payload = {
-        "version": 1,
+        "version": 3,
         "roi": ROI[:],
-        "trigger_zone": TRIGGER_ZONE[:],
-        "grab_center_x": CALIBRATED_CENTER_X,
-        "calibrated_center_x": CALIBRATED_CENTER_X,
-        "grab_center_y": GRAB_CENTER_Y,
+        "roi_mode": ("manual" if roi_detection_mode == ROI_MODE_MANUAL
+                     else "auto"),
+        "ball_x": BALL_X,
+        "ball_y": BALL_Y,
         "ball_width": BALL_WIDTH,
         "ball_height": BALL_HEIGHT,
+        "calibrated_center_x": CALIBRATED_CENTER_X,
+        "calibrated_center_y": GRAB_CENTER_Y,
+        "grab_center_x": CALIBRATED_CENTER_X,
+        "grab_center_y": GRAB_CENTER_Y,
     }
     try:
         with open(path, "w") as config_file:
@@ -307,11 +323,15 @@ def set_mode(mode, source):
     global current_mode, display_mode, detected_latched
     global recognition_armed, recognition_armed_at_ms, recognition_state, calibrating
     global calibration_samples, last_status_message
+    global manual_roi_mode, manual_roi_step, manual_roi_p1
     if mode not in (MODE_RED, MODE_BLUE):
         return False
     if source == "uart":
         current_mode = mode
         display_mode = mode
+        manual_roi_mode = False
+        manual_roi_step = 0
+        manual_roi_p1 = None
         detected_latched = False
         recognition_armed = True
         recognition_armed_at_ms = ticks_ms()
@@ -390,23 +410,46 @@ def filter_blob(blob):
     return blob
 
 
-def is_blob_in_trigger_zone(blob):
-    return rect_intersects_blob(blob, TRIGGER_ZONE)
-
-
-def rect_intersects_blob(blob, rect):
-    """Return whether any part of a blob rectangle overlaps a region."""
-    if blob is None or not isinstance(rect, (list, tuple)) or len(rect) != 4:
+def is_ball_fully_inside_roi(blob):
+    """Return whether the entire blob rectangle is inside the yellow ROI."""
+    if blob is None:
         return False
     x = _blob_value(blob, "x")
     y = _blob_value(blob, "y")
     width = _blob_value(blob, "w")
     height = _blob_value(blob, "h")
-    rx, ry, region_width, region_height = rect
-    return (x < rx + region_width and
-            x + width > rx and
-            y < ry + region_height and
-            y + height > ry)
+    rx, ry, roi_width, roi_height = ROI
+    return (x >= rx and
+            y >= ry and
+            x + width <= rx + roi_width and
+            y + height <= ry + roi_height)
+
+
+def is_complete_ball_in_roi(blob):
+    """Return a calibrated, complete target ball inside the yellow ROI."""
+    valid_blob = filter_blob(blob)
+    if valid_blob is None or not is_ball_fully_inside_roi(valid_blob):
+        return False
+
+    width = _blob_value(valid_blob, "w")
+    height = _blob_value(valid_blob, "h")
+    pixels = _blob_value(valid_blob, "pixels", width * height)
+    ratio = width / float(height)
+    fill_ratio = pixels / float(width * height)
+    if ratio < BALL_RATIO_MIN or ratio > BALL_RATIO_MAX:
+        return False
+    if roi_detection_mode == ROI_MODE_AUTO:
+        if width < BALL_WIDTH * BALL_SIZE_MIN_SCALE:
+            return False
+        if width > BALL_WIDTH * BALL_SIZE_MAX_SCALE:
+            return False
+        if height < BALL_HEIGHT * BALL_SIZE_MIN_SCALE:
+            return False
+        if height > BALL_HEIGHT * BALL_SIZE_MAX_SCALE:
+            return False
+    if fill_ratio < BALL_FILL_RATIO_MIN or fill_ratio > BALL_FILL_RATIO_MAX:
+        return False
+    return True
 
 
 def select_best_blob(blobs):
@@ -441,41 +484,63 @@ def detect_ball(img, mode=None):
     return select_best_blob(blobs)
 
 
-def update_detection(blob, serial):
-    """Report after a valid target has completely left the trigger zone."""
+def detect_target_ball(img, mode=None):
+    """Find the largest complete calibrated target ball only inside ROI."""
+    if img is None:
+        return None
+    selected_mode = current_mode if mode is None else mode
+    threshold = COLOR_THRESHOLDS[selected_mode]
+    try:
+        blobs = img.find_blobs(
+            [threshold],
+            roi=ROI,
+            pixels_threshold=PIXELS_THRESHOLD,
+            area_threshold=AREA_THRESHOLD,
+            merge=True,
+        )
+    except Exception:
+        return None
+    candidates = []
+    for blob in blobs or []:
+        if is_complete_ball_in_roi(blob):
+            candidates.append((
+                _blob_value(blob, "area", 0),
+                _blob_value(blob, "pixels", 0),
+                blob,
+            ))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: (item[0], item[1]))[2]
+
+
+def recognition_process(img, serial):
+    """Report the first frame containing a complete target ball in ROI."""
     global detected_latched, recognition_armed, recognition_state
-    global last_status_message, calibrating
-    if calibrating or not recognition_armed or detected_latched:
-        return
+    global last_status_message
+    if not recognition_armed or detected_latched:
+        return None
     if (ticks_ms() - recognition_armed_at_ms) < VISION_ARM_DELAY_MS:
-        return
-    valid_blob = filter_blob(blob)
-    in_trigger_zone = (valid_blob is not None and
-                       rect_intersects_blob(valid_blob, TRIGGER_ZONE))
+        return None
 
-    if recognition_state == STATE_WAIT_TARGET:
-        if not in_trigger_zone:
-            return
-        recognition_state = STATE_WAIT_LEAVE
-        last_status_message = "WAIT LEAVE"
-        return
-
-    if recognition_state != STATE_WAIT_LEAVE or in_trigger_zone:
-        return
+    target_blob = detect_target_ball(img)
+    if target_blob is None:
+        last_status_message = "WAIT FULL BALL"
+        return detect_ball(img)
     if serial is None:
-        return
+        return target_blob
     try:
         serial.write(b"1\n")
     except Exception:
-        return
+        return target_blob
     detected_latched = True
     recognition_armed = False
     recognition_state = STATE_WAIT_CMD
-    last_status_message = "DONE"
+    last_status_message = "BALL OK"
+    return target_blob
 
 
 def start_manual_roi():
-    """Enter two-point touch calibration for the green trigger zone."""
+    """Start two-point calibration of the actual ball bounding box."""
     global manual_roi_mode, manual_roi_step, manual_roi_p1
     global recognition_armed, recognition_state, detected_latched
     global calibrating, calibration_samples, last_status_message
@@ -487,12 +552,12 @@ def start_manual_roi():
     detected_latched = False
     calibrating = False
     calibration_samples = []
-    last_status_message = "TAP TOP-LEFT"
+    last_status_message = "TAP BALL TOP-LEFT"
 
 
 def manual_roi_process_point(x, y):
-    """Use two image points to set TRIGGER_ZONE and its enclosing ROI."""
-    global ROI, TRIGGER_ZONE
+    """Use two points to set the manual yellow search ROI directly."""
+    global ROI, roi_detection_mode
     global manual_roi_mode, manual_roi_step, manual_roi_p1
     global last_status_message
     if not manual_roi_mode:
@@ -503,29 +568,22 @@ def manual_roi_process_point(x, y):
     if manual_roi_step == 0:
         manual_roi_p1 = (x, y)
         manual_roi_step = 1
-        last_status_message = "TAP BOTTOM-RIGHT"
+        last_status_message = "TAP BALL BOTTOM-RIGHT"
         return True
 
     x1, y1 = manual_roi_p1
-    left = min(x1, x)
-    top = min(y1, y)
-    right = max(x1, x)
-    bottom = max(y1, y)
-    width = right - left
-    height = bottom - top
-    if width < 20 or height < 20:
+    ball_x = min(x1, x)
+    ball_y = min(y1, y)
+    ball_width = abs(x - x1)
+    ball_height = abs(y - y1)
+    if ball_width < MIN_WIDTH or ball_height < MIN_HEIGHT:
         manual_roi_step = 0
         manual_roi_p1 = None
         last_status_message = "MIN 20X20"
         return False
 
-    TRIGGER_ZONE = [left, top, width, height]
-    roi_left = max(0, left - 60)
-    roi_top = max(0, top - 40)
-    roi_right = min(CAMERA_WIDTH, right + 60)
-    roi_bottom = min(CAMERA_HEIGHT, bottom + 40)
-    ROI = [roi_left, roi_top, roi_right - roi_left, roi_bottom - roi_top]
-
+    ROI = _clamp_rect(ball_x, ball_y, ball_width, ball_height)
+    roi_detection_mode = ROI_MODE_MANUAL
     if save_roi_config():
         last_status_message = "ROI SAVED"
     else:
@@ -539,10 +597,10 @@ def manual_roi_process_point(x, y):
 def start_auto_roi():
     """Start a five-second trajectory calibration without reporting UART."""
     global calibrating, calibration_started_ms, calibration_samples
-    global calibration_old_roi
-    global calibration_old_trigger_zone, last_status_message
+    global calibration_old_roi, calibration_old_detection_mode
+    global last_status_message
     calibration_old_roi = ROI[:]
-    calibration_old_trigger_zone = TRIGGER_ZONE[:]
+    calibration_old_detection_mode = roi_detection_mode
     calibration_started_ms = ticks_ms()
     calibration_samples = []
     calibrating = True
@@ -568,24 +626,25 @@ def detect_calibration_blob(img):
 
 def finish_auto_roi(success):
     """Commit a successful calibration or restore its pre-calibration state."""
-    global ROI, TRIGGER_ZONE, GRAB_CENTER_Y, CALIBRATED_CENTER_X
+    global ROI, BALL_X, BALL_Y, GRAB_CENTER_Y, CALIBRATED_CENTER_X
     global BALL_WIDTH, BALL_HEIGHT
+    global roi_detection_mode
     global calibrating, calibration_samples
-    global calibration_old_roi, calibration_old_trigger_zone
+    global calibration_old_roi, calibration_old_detection_mode
     global last_status_message
     if success and len(calibration_samples) >= CALIB_MIN_SAMPLES:
-        center_x = median_int([sample[0] for sample in calibration_samples])
-        center_y = median_int([sample[1] for sample in calibration_samples])
+        ball_x = median_int([sample[0] for sample in calibration_samples])
+        ball_y = median_int([sample[1] for sample in calibration_samples])
         ball_width = median_int([sample[2] for sample in calibration_samples])
         ball_height = median_int([sample[3] for sample in calibration_samples])
-        new_roi, new_trigger_zone = build_calibrated_regions(
-            center_x, center_y, ball_width, ball_height)
-        ROI = new_roi
-        TRIGGER_ZONE = new_trigger_zone
-        CALIBRATED_CENTER_X = center_x
-        GRAB_CENTER_Y = center_y
+        BALL_X = ball_x
+        BALL_Y = ball_y
+        ROI = build_calibrated_regions(ball_x, ball_y, ball_width, ball_height)
+        CALIBRATED_CENTER_X = ball_x + ball_width // 2
+        GRAB_CENTER_Y = ball_y + ball_height // 2
         BALL_WIDTH = ball_width
         BALL_HEIGHT = ball_height
+        roi_detection_mode = ROI_MODE_AUTO
         if save_roi_config():
             last_status_message = "ROI SAVED"
         else:
@@ -593,13 +652,12 @@ def finish_auto_roi(success):
     else:
         if calibration_old_roi is not None:
             ROI = calibration_old_roi[:]
-        if calibration_old_trigger_zone is not None:
-            TRIGGER_ZONE = calibration_old_trigger_zone[:]
+        roi_detection_mode = calibration_old_detection_mode
         last_status_message = "CALIBRATION FAILED"
     calibrating = False
     calibration_samples = []
     calibration_old_roi = None
-    calibration_old_trigger_zone = None
+    calibration_old_detection_mode = ROI_MODE_AUTO
 
 
 def calibration_process(img, now_ms=None):
@@ -627,7 +685,7 @@ def calibration_process(img, now_ms=None):
     if not inside_target:
         calibration_samples = []
         return blob
-    calibration_samples.append((center_x, center_y, width, height))
+    calibration_samples.append((x, y, width, height))
     if len(calibration_samples) >= CALIB_MIN_SAMPLES:
         finish_auto_roi(True)
     return blob
@@ -648,7 +706,7 @@ def screen_to_image_point(x, y, image_width, image_height):
 
 
 def touch_process(touch, image_width=CAMERA_WIDTH, image_height=CAMERA_HEIGHT):
-    """Poll touch input for debug display selection or AUTO ROI."""
+    """Poll touch input for display selection or AUTO/MANUAL ROI."""
     global last_touch_ms
     if touch is None:
         return
@@ -697,7 +755,7 @@ def _draw_text(img, x, y, text, color):
 
 
 def draw_ui(img, blob):
-    """Draw ROI, target geometry, state text, and both touch buttons."""
+    """Draw the yellow ROI, target geometry, state text, and touch buttons."""
     if img is None:
         return
     white = _color("COLOR_WHITE", 0xFFFFFF)
@@ -707,8 +765,6 @@ def draw_ui(img, blob):
     green = _color("COLOR_GREEN", 0x00FF00)
     try:
         img.draw_rect(ROI[0], ROI[1], ROI[2], ROI[3], yellow)
-        img.draw_rect(TRIGGER_ZONE[0], TRIGGER_ZONE[1],
-                      TRIGGER_ZONE[2], TRIGGER_ZONE[3], green)
         if calibrating:
             img.draw_rect(CALIB_SEARCH_ROI[0], CALIB_SEARCH_ROI[1],
                           CALIB_SEARCH_ROI[2], CALIB_SEARCH_ROI[3], blue)
@@ -728,11 +784,9 @@ def draw_ui(img, blob):
             status = "CALIBRATING {}/{}".format(
                 len(calibration_samples), CALIB_MIN_SAMPLES)
         elif manual_roi_mode:
-            status = "MANUAL"
-        elif recognition_state == STATE_WAIT_LEAVE:
-            status = "WAIT LEAVE"
+            status = "MANUAL ROI"
         elif recognition_armed:
-            status = "SEARCHING"
+            status = last_status_message or "WAIT BALL"
         else:
             status = "WAIT CMD"
         _draw_text(img, 10, 10, "MODE: {}".format(mode_name), white)
@@ -755,13 +809,13 @@ def draw_ui(img, blob):
         auto_marker = "[X]" if calibrating else "[ ]"
         _draw_text(img, BUTTON_AUTO_ROI[0] + 12, BUTTON_AUTO_ROI[1] + 12,
                    "{} AUTO ROI".format(auto_marker), auto_outline)
-        manual_outline = green if manual_roi_mode else white
+        manual_outline = yellow if manual_roi_mode else white
         img.draw_rect(BUTTON_MANUAL_ROI[0], BUTTON_MANUAL_ROI[1],
                       BUTTON_MANUAL_ROI[2], BUTTON_MANUAL_ROI[3], manual_outline)
         manual_marker = "[X]" if manual_roi_mode else "[ ]"
         _draw_text(img, BUTTON_MANUAL_ROI[0] + 8,
                    BUTTON_MANUAL_ROI[1] + 12,
-                   "{} MANUAL".format(manual_marker), manual_outline)
+                   "{} MANUAL ROI".format(manual_marker), manual_outline)
     except Exception:
         pass
 
@@ -784,7 +838,7 @@ def main():
         load_roi_config()
 
         print("MaixCAM2 red/blue ball ROI recognizer started")
-        print("UART4 {} TX=A21 RX=A22".format(UART_DEVICE))
+        print("UART2 {} TX=B0 RX=B1".format(UART_DEVICE))
         while not app.need_exit():
             uart_process(serial)
             image_frame = cam.read()
@@ -794,8 +848,7 @@ def main():
             if calibrating:
                 blob = calibration_process(image_frame)
             elif recognition_armed:
-                blob = detect_ball(image_frame)
-                update_detection(blob, serial)
+                blob = recognition_process(image_frame, serial)
             else:
                 blob = None
             draw_ui(image_frame, blob)
@@ -875,29 +928,32 @@ class _FakeTouch:
 
 
 def _selftest():
-    global ROI, TRIGGER_ZONE, ROI_CONFIG_PATH, GRAB_CENTER_X
+    global ROI, ROI_CONFIG_PATH, GRAB_CENTER_X
     global CALIBRATED_CENTER_X, GRAB_CENTER_Y, BALL_WIDTH, BALL_HEIGHT
     global current_mode, display_mode, detected_latched, recognition_armed
     global recognition_armed_at_ms
     global recognition_state
+    global BALL_X, BALL_Y
     global manual_roi_mode, manual_roi_step, manual_roi_p1
+    global roi_detection_mode
     global calibrating, last_touch_ms
     valid = _FakeBlob(295, 195, 50, 50, 1800)
-    outside_trigger = _FakeBlob(245, 195, 50, 50, 1800)
-    partial_trigger = _FakeBlob(270, 195, 40, 50, 1800)
+    outside_trigger = _FakeBlob(210, 195, 50, 50, 1800)
     smaller = _FakeBlob(305, 205, 30, 30, 900)
     non_square = _FakeBlob(150, 90, 100, 20, 1800)
     assert filter_blob(non_square) is None
     assert select_best_blob([smaller, valid]) is valid
-    assert is_blob_in_trigger_zone(outside_trigger) is False
-    assert is_blob_in_trigger_zone(valid) is True
-    assert is_blob_in_trigger_zone(partial_trigger) is True
     assert median_int([190, 220, 203]) == 203
     assert median_int([190, 203, 220, 214]) == 208
-    calibrated_roi, calibrated_trigger = build_calibrated_regions(350, 222, 50, 50)
+    calibrated_roi = build_calibrated_regions(325, 197, 50, 50)
+    assert ROI_MARGIN_PX == 5
+    assert calibrated_roi == [320, 192, 60, 60]
     assert point_in_rect(350, 222, calibrated_roi)
-    assert point_in_rect(350, 222, calibrated_trigger)
-    assert not point_in_rect(315, 222, calibrated_trigger)
+    test_roi = ROI[:]
+    ROI = calibrated_roi[:]
+    assert is_complete_ball_in_roi(_FakeBlob(322, 194, 50, 50, 1800)) is True
+    assert is_complete_ball_in_roi(_FakeBlob(319, 194, 50, 50, 1800)) is False
+    ROI = test_roi
     fake_image = _FakeImage([valid])
     assert detect_ball(fake_image, MODE_RED) is valid
     assert fake_image.kwargs["roi"] == ROI
@@ -906,13 +962,16 @@ def _selftest():
     assert detect_calibration_blob(calibration_image) is valid
     assert len(calibration_image.thresholds) == 2
     assert calibration_image.kwargs["roi"] == CALIB_SEARCH_ROI
+    roi_image = _FakeImage([outside_trigger, valid])
+    assert detect_target_ball(roi_image, MODE_RED) is valid
+    assert roi_image.kwargs["roi"] == ROI
 
     serial = _FakeSerial()
     assert recognition_armed is False
     idle_blue_image = _ColorFakeImage(valid, BLUE_THRESHOLD)
     idle_blob = detect_ball(idle_blue_image, MODE_BLUE)
     assert idle_blob is valid
-    update_detection(idle_blob, serial)
+    recognition_process(idle_blue_image, serial)
     assert serial.sent == []
 
     process_command_bytes(b"2\r\n")
@@ -921,55 +980,37 @@ def _selftest():
     blue_image = _ColorFakeImage(valid, BLUE_THRESHOLD)
     assert detect_ball(blue_image) is valid
     assert blue_image.thresholds == [BLUE_THRESHOLD]
-    update_detection(valid, serial)
+    recognition_process(blue_image, serial)
     assert serial.sent == []
 
     sleep_ms(VISION_ARM_DELAY_MS)
-    update_detection(outside_trigger, serial)
+    empty_blue_image = _ColorFakeImage(None, BLUE_THRESHOLD)
+    recognition_process(empty_blue_image, serial)
     assert serial.sent == []
-    update_detection(valid, serial)
-    assert serial.sent == []
-    assert recognition_state == STATE_WAIT_LEAVE
-    update_detection(valid, serial)
-    assert serial.sent == []
-    update_detection(outside_trigger, serial)
+    outside_blue_image = _ColorFakeImage(valid, BLUE_THRESHOLD)
+    recognition_process(outside_blue_image, serial)
     assert serial.sent == [b"1\n"]
-
-    assert recognition_armed is False
-    assert detected_latched is True
-    for _ in range(100):
-        update_detection(valid, serial)
-    assert serial.sent == [b"1\n"]
+    assert last_status_message == "BALL OK"
 
     process_command_bytes(b"2")
-    assert recognition_armed is True
-    next_blue_image = _ColorFakeImage(valid, BLUE_THRESHOLD)
-    next_blob = detect_ball(next_blue_image)
-    assert next_blob is valid
     sleep_ms(VISION_ARM_DELAY_MS)
-    update_detection(next_blob, serial)
+    incomplete_blue_image = _ColorFakeImage(
+        _FakeBlob(235, 195, 50, 50, 1800), BLUE_THRESHOLD)
+    recognition_process(incomplete_blue_image, serial)
     assert serial.sent == [b"1\n"]
-    assert recognition_state == STATE_WAIT_LEAVE
-    update_detection(valid, serial)
-    assert serial.sent == [b"1\n"]
-    update_detection(outside_trigger, serial)
-    assert serial.sent == [b"1\n", b"1\n"]
+    assert last_status_message == "WAIT FULL BALL"
 
     process_command_bytes(b"1")
     assert current_mode == MODE_RED
     assert recognition_armed is True
-    wrong_blue_image = _ColorFakeImage(valid, BLUE_THRESHOLD)
-    assert detect_ball(wrong_blue_image) is None
-    assert wrong_blue_image.thresholds == [RED_THRESHOLD]
-    red_image = _ColorFakeImage(valid, RED_THRESHOLD)
-    assert detect_ball(red_image) is valid
-    assert red_image.thresholds == [RED_THRESHOLD]
     sleep_ms(VISION_ARM_DELAY_MS)
-    update_detection(valid, serial)
+    red_image = _ColorFakeImage(valid, RED_THRESHOLD)
+    recognition_process(red_image, serial)
     assert serial.sent == [b"1\n", b"1\n"]
-    assert recognition_state == STATE_WAIT_LEAVE
-    update_detection(outside_trigger, serial)
-    assert serial.sent == [b"1\n", b"1\n", b"1\n"]
+    assert recognition_armed is False
+    assert detected_latched is True
+    recognition_process(_ColorFakeImage(valid, RED_THRESHOLD), serial)
+    assert serial.sent == [b"1\n", b"1\n"]
 
     task_mode_before_touch = current_mode
     recognition_armed = False
@@ -981,54 +1022,56 @@ def _selftest():
 
     import os
     import tempfile
-    saved_state = (ROI[:], TRIGGER_ZONE[:], ROI_CONFIG_PATH,
+    saved_state = (ROI[:], ROI_CONFIG_PATH,
                    GRAB_CENTER_X, CALIBRATED_CENTER_X, GRAB_CENTER_Y,
-                   BALL_WIDTH, BALL_HEIGHT, manual_roi_mode,
-                   manual_roi_step, manual_roi_p1)
+                   BALL_WIDTH, BALL_HEIGHT, BALL_X, BALL_Y,
+                   manual_roi_mode, manual_roi_step, manual_roi_p1,
+                   roi_detection_mode)
     with tempfile.TemporaryDirectory() as temp_dir:
         config_path = os.path.join(temp_dir, "roi.json")
         ROI_CONFIG_PATH = config_path
-        calibrated_roi, calibrated_trigger = build_calibrated_regions(350, 222, 50, 50)
+        calibrated_roi = build_calibrated_regions(325, 197, 50, 50)
         ROI = calibrated_roi[:]
-        TRIGGER_ZONE = calibrated_trigger[:]
+        BALL_X = 325
+        BALL_Y = 197
         GRAB_CENTER_Y = 222
         BALL_WIDTH = 50
         BALL_HEIGHT = 50
         assert save_roi_config() is True
         ROI = DEFAULT_ROI[:]
-        TRIGGER_ZONE = DEFAULT_TRIGGER_ZONE[:]
         assert load_roi_config() is True
         assert ROI == calibrated_roi
-        assert TRIGGER_ZONE == calibrated_trigger
 
-        start_manual_roi()
-        assert manual_roi_mode is True
-        assert recognition_armed is False
-        assert manual_roi_process_point(200, 200) is True
-        assert manual_roi_step == 1
-        assert TRIGGER_ZONE == calibrated_trigger
-        assert manual_roi_process_point(100, 100) is True
-        assert manual_roi_mode is False
-        assert TRIGGER_ZONE == [100, 100, 100, 100]
-        assert ROI == [40, 60, 220, 180]
-
-        ROI = DEFAULT_ROI[:]
-        TRIGGER_ZONE = DEFAULT_TRIGGER_ZONE[:]
-        start_manual_roi()
+        detected_latched = True
+        recognition_armed = False
         last_touch_ms = 0
         touch_process(_FakeTouch((550, 430, 1)))
         assert manual_roi_mode is True
+        assert recognition_armed is False
+        assert detected_latched is False
+
         last_touch_ms = 0
-        touch_process(_FakeTouch((50, 50, 1)))
+        touch_process(_FakeTouch((300, 180, 1)))
         assert manual_roi_step == 1
         last_touch_ms = 0
-        touch_process(_FakeTouch((150, 150, 1)))
+        touch_process(_FakeTouch((410, 290, 1)))
         assert manual_roi_mode is False
-        assert TRIGGER_ZONE == [50, 50, 100, 100]
-        assert ROI == [0, 10, 210, 180]
+        assert ROI == [300, 180, 110, 110]
+        assert roi_detection_mode == ROI_MODE_MANUAL
+        assert os.path.exists(config_path)
+
+        ROI = DEFAULT_ROI[:]
+        roi_detection_mode = ROI_MODE_AUTO
         assert load_roi_config() is True
-        assert TRIGGER_ZONE == [50, 50, 100, 100]
-        assert ROI == [0, 10, 210, 180]
+        assert ROI == [300, 180, 110, 110]
+        assert roi_detection_mode == ROI_MODE_MANUAL
+
+        process_command_bytes(b"1")
+        sleep_ms(VISION_ARM_DELAY_MS)
+        manual_target = _ColorFakeImage(
+            _FakeBlob(330, 210, 30, 30, 700), RED_THRESHOLD)
+        recognition_process(manual_target, serial)
+        assert serial.sent == [b"1\n", b"1\n", b"1\n"]
 
         detected_latched = True
         last_touch_ms = 0
@@ -1049,29 +1092,27 @@ def _selftest():
         assert CALIBRATED_CENTER_X == 350
         assert last_status_message == "ROI SAVED"
         saved_roi = ROI[:]
-        saved_trigger = TRIGGER_ZONE[:]
         assert point_in_rect(350, 260, saved_roi)
-        assert point_in_rect(350, 260, saved_trigger)
         assert saved_roi != DEFAULT_ROI
-        assert saved_trigger != DEFAULT_TRIGGER_ZONE
 
         start_auto_roi()
         calibration_process(_FakeImage([]), calibration_started_ms + CALIB_DURATION_MS)
         assert calibrating is False
         assert ROI == saved_roi
-        assert TRIGGER_ZONE == saved_trigger
 
     ROI = saved_state[0]
-    TRIGGER_ZONE = saved_state[1]
-    ROI_CONFIG_PATH = saved_state[2]
-    GRAB_CENTER_X = saved_state[3]
-    CALIBRATED_CENTER_X = saved_state[4]
-    GRAB_CENTER_Y = saved_state[5]
-    BALL_WIDTH = saved_state[6]
-    BALL_HEIGHT = saved_state[7]
-    manual_roi_mode = saved_state[8]
-    manual_roi_step = saved_state[9]
-    manual_roi_p1 = saved_state[10]
+    ROI_CONFIG_PATH = saved_state[1]
+    GRAB_CENTER_X = saved_state[2]
+    CALIBRATED_CENTER_X = saved_state[3]
+    GRAB_CENTER_Y = saved_state[4]
+    BALL_WIDTH = saved_state[5]
+    BALL_HEIGHT = saved_state[6]
+    BALL_X = saved_state[7]
+    BALL_Y = saved_state[8]
+    manual_roi_mode = saved_state[9]
+    manual_roi_step = saved_state[10]
+    manual_roi_p1 = saved_state[11]
+    roi_detection_mode = saved_state[12]
     current_mode = MODE_RED
     display_mode = MODE_RED
     detected_latched = False
@@ -1084,9 +1125,18 @@ def _selftest():
     assert "while not app.need_exit()" in source
     assert "elif recognition_armed:" in source
     assert "VISION_ARM_DELAY_MS" in source
-    assert "STATE_WAIT_LEAVE" in source
-    assert "rect_intersects_blob" in source
-    assert "BUTTON_MANUAL_ROI" in source
+    assert "is_complete_ball_in_roi" in source
+    assert "ROI_MARGIN_PX" in source
+    assert "recognition_process" in source
+    assert "STATE_" + "WAIT_LEAVE" not in source
+    assert "target_" + "seen" not in source
+    assert "detect_target_" + "full_frame" not in source
+    assert "COMPLETE_" + "MARGIN_PX" not in source
+    assert "ROI_" + "WIDTH_SCALE" not in source
+    assert "TRIGGER_" + "ZONE" not in source
+    assert "BUTTON_" + "MANUAL_ROI" in source
+    assert "start_" + "manual_roi" in source
+    assert "ROI_MODE_MANUAL" in source
     assert 'status = "WAIT CMD"' in source
     assert "finally:" in source
     assert "light_off()" in source

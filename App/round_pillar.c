@@ -207,8 +207,6 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
 {
     uint32_t orbit_start_tick;
     uint32_t handling_start_tick;
-    float reverse_start_yaw;
-    float reverse_target_yaw;
     float current_yaw;
     uint8_t grab_count = 0U;
     RoundPillarStatus status;
@@ -222,7 +220,7 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
     }
     current_yaw = Jy61P_GetContinuousYaw();
 
-    while (current_yaw > RZ_CW_TARGET_DEG)
+    while (current_yaw < RZ_ORBIT_TARGET_DEG)
     {
         status = RoundPillar_CheckStopAndImu();
         if (status != ROUND_PILLAR_OK)
@@ -249,13 +247,13 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
             }
             continue;
         }
-        if (current_yaw <= RZ_CW_TARGET_DEG)
+        if (current_yaw >= RZ_ORBIT_TARGET_DEG)
         {
             break;
         }
-        if (MotionControl_SetBodySpeed(RZ_ORBIT_FORWARD_RPM,
+        if (MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,
                                        0.0f,
-                                       -RZ_ORBIT_OMEGA_RPM) != HAL_OK)
+                                       RZ_ORBIT_OMEGA_RPM) != HAL_OK)
         {
             (void)RoundPillar_Stop();
             return ROUND_PILLAR_ERROR_MOTOR;
@@ -271,52 +269,6 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
     if (status != ROUND_PILLAR_OK)
     {
         return status;
-    }
-
-    /* Keep the continuous yaw so the return follows the same orbit backwards. */
-    reverse_start_yaw = Jy61P_GetContinuousYaw();
-    reverse_target_yaw = reverse_start_yaw + RZ_CCW_REVERSE_DEG;
-    current_yaw = reverse_start_yaw;
-
-    while (current_yaw < reverse_target_yaw)
-    {
-        status = RoundPillar_CheckStopAndImu();
-        if (status != ROUND_PILLAR_OK)
-        {
-            return status;
-        }
-        if ((uint32_t)(HAL_GetTick() - orbit_start_tick) >=
-            RZ_ORBIT_TIMEOUT_MS)
-        {
-            (void)RoundPillar_Stop();
-            return ROUND_PILLAR_ERROR_ORBIT_TIMEOUT;
-        }
-
-        current_yaw = Jy61P_GetContinuousYaw();
-        if ((grab_count < RZ_GRAB_COUNT) &&
-            (MaixCamLink_TakeReply() != 0U))
-        {
-            handling_start_tick = HAL_GetTick();
-            status = RoundPillar_HandleDetectedBall(&grab_count);
-            orbit_start_tick += HAL_GetTick() - handling_start_tick;
-            if (status != ROUND_PILLAR_OK)
-            {
-                return status;
-            }
-            continue;
-        }
-        if (current_yaw >= reverse_target_yaw)
-        {
-            break;
-        }
-        if (MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,
-                                       0.0f,
-                                       RZ_ORBIT_OMEGA_RPM) != HAL_OK)
-        {
-            (void)RoundPillar_Stop();
-            return ROUND_PILLAR_ERROR_MOTOR;
-        }
-        osDelay(RZ_PERIOD_MS);
     }
 
     if (RoundPillar_Stop() != HAL_OK)

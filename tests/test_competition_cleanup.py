@@ -57,9 +57,10 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertRegex(rz_h, r"#define\s+RZ_CAMERA_RAISE_WAIT_MS\s+1000U")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_FORWARD_RPM\s+63\.0f")
         self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_OMEGA_RPM\s+49\.0f")
-        self.assertRegex(rz_h, r"#define\s+RZ_CW_TARGET_DEG\s+\(-720\.0f\)")
-        self.assertRegex(rz_h, r"#define\s+RZ_CCW_REVERSE_DEG\s+90\.0f")
-        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TIMEOUT_MS\s+30000U")
+        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TARGET_DEG\s+450\.0f")
+        self.assertNotIn("RZ_CW_TARGET_DEG", rz_h)
+        self.assertNotIn("RZ_CCW_REVERSE_DEG", rz_h)
+        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TIMEOUT_MS\s+15000U")
         self.assertRegex(rz_h, r"#define\s+RZ_GRAB_COUNT\s+4U")
         self.assertIn("RoundPillar_OrbitAndGrab", rz_c)
         self.assertIn("RoundPillar_HandleDetectedBall", rz_c)
@@ -73,8 +74,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         for token in (
             "RZ_ORBIT_FORWARD_RPM",
             "RZ_ORBIT_OMEGA_RPM",
-            "RZ_CW_TARGET_DEG",
-            "RZ_CCW_REVERSE_DEG",
+            "RZ_ORBIT_TARGET_DEG",
             "RZ_ORBIT_TIMEOUT_MS",
             "ROUND_PILLAR_ERROR_ORBIT_TIMEOUT",
         ):
@@ -82,8 +82,18 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("#include \"maixcam_link.h\"", rz_c)
         self.assertIn("MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)", rz_c)
         self.assertIn("MaixCamLink_TakeReply()", rz_c)
-        self.assertIn("while (current_yaw > RZ_CW_TARGET_DEG)", rz_c)
-        self.assertIn("while (current_yaw < reverse_target_yaw)", rz_c)
+        self.assertIn("while (current_yaw < RZ_ORBIT_TARGET_DEG)", rz_c)
+        self.assertIn(
+            "MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,\n"
+            "                                       0.0f,\n"
+            "                                       RZ_ORBIT_OMEGA_RPM)",
+            rz_c,
+        )
+        self.assertNotIn("MotionControl_SetBodySpeed(RZ_ORBIT_FORWARD_RPM", rz_c)
+        self.assertNotIn("reverse_start_yaw", rz_c)
+        self.assertNotIn("reverse_target_yaw", rz_c)
+        self.assertNotIn("RZ_CCW_REVERSE_DEG", rz_c)
+        self.assertNotIn("while (current_yaw < reverse_target_yaw)", rz_c)
 
         run_start = rz_c.index("RoundPillarStatus RoundPillar_Run")
         run_body = rz_c[run_start:]
@@ -100,10 +110,10 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertNotIn("MAIXCAM_REQUEST_TIMEOUT_MS", orbit_body)
         handler_start = rz_c.index("RoundPillar_HandleDetectedBall")
         handler_body = rz_c[handler_start:orbit_start]
-        self.assertIn("osDelay(", handler_body)
+        self.assertIn("RoundPillar_WaitSettled", handler_body)
         self.assertLess(
-            handler_body.index("osDelay("),
             handler_body.index("RoundPillar_Stop()"),
+            handler_body.index("RoundPillar_WaitSettled"),
         )
 
         self.assertEqual(
