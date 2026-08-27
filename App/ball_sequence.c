@@ -6,7 +6,7 @@
 #include "servo_action.h"
 #include "warehouse_control.h"
 
-#define BALL_SEQUENCE_WAIT_PERIOD_MS        10U
+#define BALL_SEQUENCE_WAIT_PERIOD_MS        1U
 #define BALL_SEQUENCE_TARGET_COLOR          MAIXCAM_COLOR_RED
 
 volatile BallSequenceState BallSequence_State = BALL_SEQUENCE_IDLE;

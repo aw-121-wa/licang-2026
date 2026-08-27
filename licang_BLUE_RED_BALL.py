@@ -85,9 +85,10 @@ MAX_HEIGHT = 260
 RATIO_MIN = 0.65
 RATIO_MAX = 1.35
 
-BUTTON_RED = [10, 405, 200, 60]
-BUTTON_BLUE = [220, 405, 200, 60]
-BUTTON_AUTO_ROI = [430, 405, 200, 60]
+BUTTON_RED = [10, 405, 145, 60]
+BUTTON_BLUE = [165, 405, 145, 60]
+BUTTON_AUTO_ROI = [320, 405, 145, 60]
+BUTTON_MANUAL_ROI = [475, 405, 155, 60]
 TOUCH_DEBOUNCE_MS = 250
 MAIN_LOOP_SLEEP_MS = 1
 VISION_ARM_DELAY_MS = 150
@@ -105,6 +106,9 @@ detected_latched = False
 recognition_armed = False
 recognition_armed_at_ms = 0
 recognition_state = STATE_WAIT_CMD
+manual_roi_mode = False
+manual_roi_step = 0
+manual_roi_p1 = None
 last_touch_ms = 0
 illumination_gpio = None
 calibrating = False
@@ -470,6 +474,68 @@ def update_detection(blob, serial):
     last_status_message = "DONE"
 
 
+def start_manual_roi():
+    """Enter two-point touch calibration for the green trigger zone."""
+    global manual_roi_mode, manual_roi_step, manual_roi_p1
+    global recognition_armed, recognition_state, detected_latched
+    global calibrating, calibration_samples, last_status_message
+    manual_roi_mode = True
+    manual_roi_step = 0
+    manual_roi_p1 = None
+    recognition_armed = False
+    recognition_state = STATE_WAIT_CMD
+    detected_latched = False
+    calibrating = False
+    calibration_samples = []
+    last_status_message = "TAP TOP-LEFT"
+
+
+def manual_roi_process_point(x, y):
+    """Use two image points to set TRIGGER_ZONE and its enclosing ROI."""
+    global ROI, TRIGGER_ZONE
+    global manual_roi_mode, manual_roi_step, manual_roi_p1
+    global last_status_message
+    if not manual_roi_mode:
+        return False
+
+    x = max(0, min(int(x), CAMERA_WIDTH - 1))
+    y = max(0, min(int(y), CAMERA_HEIGHT - 1))
+    if manual_roi_step == 0:
+        manual_roi_p1 = (x, y)
+        manual_roi_step = 1
+        last_status_message = "TAP BOTTOM-RIGHT"
+        return True
+
+    x1, y1 = manual_roi_p1
+    left = min(x1, x)
+    top = min(y1, y)
+    right = max(x1, x)
+    bottom = max(y1, y)
+    width = right - left
+    height = bottom - top
+    if width < 20 or height < 20:
+        manual_roi_step = 0
+        manual_roi_p1 = None
+        last_status_message = "MIN 20X20"
+        return False
+
+    TRIGGER_ZONE = [left, top, width, height]
+    roi_left = max(0, left - 60)
+    roi_top = max(0, top - 40)
+    roi_right = min(CAMERA_WIDTH, right + 60)
+    roi_bottom = min(CAMERA_HEIGHT, bottom + 40)
+    ROI = [roi_left, roi_top, roi_right - roi_left, roi_bottom - roi_top]
+
+    if save_roi_config():
+        last_status_message = "ROI SAVED"
+    else:
+        last_status_message = "ROI SAVE FAILED"
+    manual_roi_mode = False
+    manual_roi_step = 0
+    manual_roi_p1 = None
+    return True
+
+
 def start_auto_roi():
     """Start a five-second trajectory calibration without reporting UART."""
     global calibrating, calibration_started_ms, calibration_samples
@@ -596,6 +662,13 @@ def touch_process(touch, image_width=CAMERA_WIDTH, image_height=CAMERA_HEIGHT):
     if not point or len(point) < 3 or not point[2]:
         return
     x, y = screen_to_image_point(point[0], point[1], image_width, image_height)
+    if manual_roi_mode:
+        if point_in_rect(x, y, BUTTON_MANUAL_ROI):
+            start_manual_roi()
+        else:
+            manual_roi_process_point(x, y)
+        last_touch_ms = now
+        return
     if point_in_rect(x, y, BUTTON_RED):
         set_mode(MODE_RED, "touch")
         last_touch_ms = now
@@ -604,6 +677,9 @@ def touch_process(touch, image_width=CAMERA_WIDTH, image_height=CAMERA_HEIGHT):
         last_touch_ms = now
     elif point_in_rect(x, y, BUTTON_AUTO_ROI):
         start_auto_roi()
+        last_touch_ms = now
+    elif point_in_rect(x, y, BUTTON_MANUAL_ROI):
+        start_manual_roi()
         last_touch_ms = now
 
 
@@ -651,6 +727,8 @@ def draw_ui(img, blob):
         if calibrating:
             status = "CALIBRATING {}/{}".format(
                 len(calibration_samples), CALIB_MIN_SAMPLES)
+        elif manual_roi_mode:
+            status = "MANUAL"
         elif recognition_state == STATE_WAIT_LEAVE:
             status = "WAIT LEAVE"
         elif recognition_armed:
@@ -677,6 +755,13 @@ def draw_ui(img, blob):
         auto_marker = "[X]" if calibrating else "[ ]"
         _draw_text(img, BUTTON_AUTO_ROI[0] + 12, BUTTON_AUTO_ROI[1] + 12,
                    "{} AUTO ROI".format(auto_marker), auto_outline)
+        manual_outline = green if manual_roi_mode else white
+        img.draw_rect(BUTTON_MANUAL_ROI[0], BUTTON_MANUAL_ROI[1],
+                      BUTTON_MANUAL_ROI[2], BUTTON_MANUAL_ROI[3], manual_outline)
+        manual_marker = "[X]" if manual_roi_mode else "[ ]"
+        _draw_text(img, BUTTON_MANUAL_ROI[0] + 8,
+                   BUTTON_MANUAL_ROI[1] + 12,
+                   "{} MANUAL".format(manual_marker), manual_outline)
     except Exception:
         pass
 
@@ -795,6 +880,7 @@ def _selftest():
     global current_mode, display_mode, detected_latched, recognition_armed
     global recognition_armed_at_ms
     global recognition_state
+    global manual_roi_mode, manual_roi_step, manual_roi_p1
     global calibrating, last_touch_ms
     valid = _FakeBlob(295, 195, 50, 50, 1800)
     outside_trigger = _FakeBlob(245, 195, 50, 50, 1800)
@@ -897,7 +983,8 @@ def _selftest():
     import tempfile
     saved_state = (ROI[:], TRIGGER_ZONE[:], ROI_CONFIG_PATH,
                    GRAB_CENTER_X, CALIBRATED_CENTER_X, GRAB_CENTER_Y,
-                   BALL_WIDTH, BALL_HEIGHT)
+                   BALL_WIDTH, BALL_HEIGHT, manual_roi_mode,
+                   manual_roi_step, manual_roi_p1)
     with tempfile.TemporaryDirectory() as temp_dir:
         config_path = os.path.join(temp_dir, "roi.json")
         ROI_CONFIG_PATH = config_path
@@ -914,9 +1001,38 @@ def _selftest():
         assert ROI == calibrated_roi
         assert TRIGGER_ZONE == calibrated_trigger
 
+        start_manual_roi()
+        assert manual_roi_mode is True
+        assert recognition_armed is False
+        assert manual_roi_process_point(200, 200) is True
+        assert manual_roi_step == 1
+        assert TRIGGER_ZONE == calibrated_trigger
+        assert manual_roi_process_point(100, 100) is True
+        assert manual_roi_mode is False
+        assert TRIGGER_ZONE == [100, 100, 100, 100]
+        assert ROI == [40, 60, 220, 180]
+
+        ROI = DEFAULT_ROI[:]
+        TRIGGER_ZONE = DEFAULT_TRIGGER_ZONE[:]
+        start_manual_roi()
+        last_touch_ms = 0
+        touch_process(_FakeTouch((550, 430, 1)))
+        assert manual_roi_mode is True
+        last_touch_ms = 0
+        touch_process(_FakeTouch((50, 50, 1)))
+        assert manual_roi_step == 1
+        last_touch_ms = 0
+        touch_process(_FakeTouch((150, 150, 1)))
+        assert manual_roi_mode is False
+        assert TRIGGER_ZONE == [50, 50, 100, 100]
+        assert ROI == [0, 10, 210, 180]
+        assert load_roi_config() is True
+        assert TRIGGER_ZONE == [50, 50, 100, 100]
+        assert ROI == [0, 10, 210, 180]
+
         detected_latched = True
         last_touch_ms = 0
-        touch_process(_FakeTouch((500, 430, 1)))
+        touch_process(_FakeTouch((400, 430, 1)))
         assert calibrating is True
         assert detected_latched is True
         assert recognition_armed is False
@@ -953,6 +1069,9 @@ def _selftest():
     GRAB_CENTER_Y = saved_state[5]
     BALL_WIDTH = saved_state[6]
     BALL_HEIGHT = saved_state[7]
+    manual_roi_mode = saved_state[8]
+    manual_roi_step = saved_state[9]
+    manual_roi_p1 = saved_state[10]
     current_mode = MODE_RED
     display_mode = MODE_RED
     detected_latched = False
@@ -966,6 +1085,8 @@ def _selftest():
     assert "elif recognition_armed:" in source
     assert "VISION_ARM_DELAY_MS" in source
     assert "STATE_WAIT_LEAVE" in source
+    assert "rect_intersects_blob" in source
+    assert "BUTTON_MANUAL_ROI" in source
     assert 'status = "WAIT CMD"' in source
     assert "finally:" in source
     assert "light_off()" in source

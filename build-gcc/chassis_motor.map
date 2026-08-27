@@ -4122,7 +4122,7 @@ LOAD C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin/../lib
 LOAD C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+fp/hard\libm.a
 LOAD C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin/../lib/gcc/arm-none-eabi/14.2.1/thumb/v7e-m+fp/hard\libgcc.a
 
-.debug_line     0x00000000    0x20794
+.debug_line     0x00000000    0x20792
  .debug_line    0x00000000       0x7a CMakeFiles/chassis_motor.elf.dir/cmake/startup_stm32f750xx.s.obj
  .debug_line    0x0000007a      0x6a0 CMakeFiles/chassis_motor.elf.dir/Core/Src/main.c.obj
  .debug_line    0x0000071a      0x2f0 CMakeFiles/chassis_motor.elf.dir/Core/Src/gpio.c.obj
@@ -4137,31 +4137,31 @@ LOAD C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin/../lib
  .debug_line    0x00003e8d      0x572 CMakeFiles/chassis_motor.elf.dir/App/maixcam_link.c.obj
  .debug_line    0x000043ff      0x646 CMakeFiles/chassis_motor.elf.dir/App/ball_sequence.c.obj
  .debug_line    0x00004a45      0x586 CMakeFiles/chassis_motor.elf.dir/App/gray_align.c.obj
- .debug_line    0x00004fcb      0xa88 CMakeFiles/chassis_motor.elf.dir/App/round_pillar.c.obj
- .debug_line    0x00005a53      0x683 CMakeFiles/chassis_motor.elf.dir/App/turntable_control.c.obj
- .debug_line    0x000060d6      0x5ff CMakeFiles/chassis_motor.elf.dir/App/warehouse_control.c.obj
- .debug_line    0x000066d5      0x78a CMakeFiles/chassis_motor.elf.dir/Motor/motor_control.c.obj
- .debug_line    0x00006e5f      0x5b6 CMakeFiles/chassis_motor.elf.dir/Motor/cangku_motor.c.obj
- .debug_line    0x00007415      0x210 CMakeFiles/chassis_motor.elf.dir/Motor/mecanum_kinematics.c.obj
- .debug_line    0x00007625     0x11ec CMakeFiles/chassis_motor.elf.dir/Motor/motion_control.c.obj
- .debug_line    0x00008811      0x9c3 CMakeFiles/chassis_motor.elf.dir/IMU/jy61p.c.obj
- .debug_line    0x000091d4      0x6d2 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c.obj
- .debug_line    0x000098a6      0x92d CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c.obj
- .debug_line    0x0000a1d3      0xe1d CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c.obj
- .debug_line    0x0000aff0      0x7e7 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c.obj
- .debug_line    0x0000b7d7      0x73e CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c.obj
- .debug_line    0x0000bf15      0xe76 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c.obj
- .debug_line    0x0000cd8b      0xb9a CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c.obj
- .debug_line    0x0000d925     0x44a1 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c.obj
- .debug_line    0x00011dc6     0x1620 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c.obj
- .debug_line    0x000133e6     0x3e64 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c.obj
- .debug_line    0x0001724a      0x411 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/list.c.obj
- .debug_line    0x0001765b     0x1e9f CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/queue.c.obj
- .debug_line    0x000194fa     0x2804 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/tasks.c.obj
- .debug_line    0x0001bcfe      0xe36 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/timers.c.obj
- .debug_line    0x0001cb34     0x2e9c CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c.obj
- .debug_line    0x0001f9d0      0x6df CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c.obj
- .debug_line    0x000200af      0x6e5 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c.obj
+ .debug_line    0x00004fcb      0xa86 CMakeFiles/chassis_motor.elf.dir/App/round_pillar.c.obj
+ .debug_line    0x00005a51      0x683 CMakeFiles/chassis_motor.elf.dir/App/turntable_control.c.obj
+ .debug_line    0x000060d4      0x5ff CMakeFiles/chassis_motor.elf.dir/App/warehouse_control.c.obj
+ .debug_line    0x000066d3      0x78a CMakeFiles/chassis_motor.elf.dir/Motor/motor_control.c.obj
+ .debug_line    0x00006e5d      0x5b6 CMakeFiles/chassis_motor.elf.dir/Motor/cangku_motor.c.obj
+ .debug_line    0x00007413      0x210 CMakeFiles/chassis_motor.elf.dir/Motor/mecanum_kinematics.c.obj
+ .debug_line    0x00007623     0x11ec CMakeFiles/chassis_motor.elf.dir/Motor/motion_control.c.obj
+ .debug_line    0x0000880f      0x9c3 CMakeFiles/chassis_motor.elf.dir/IMU/jy61p.c.obj
+ .debug_line    0x000091d2      0x6d2 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c.obj
+ .debug_line    0x000098a4      0x92d CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c.obj
+ .debug_line    0x0000a1d1      0xe1d CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c.obj
+ .debug_line    0x0000afee      0x7e7 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c.obj
+ .debug_line    0x0000b7d5      0x73e CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c.obj
+ .debug_line    0x0000bf13      0xe76 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c.obj
+ .debug_line    0x0000cd89      0xb9a CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c.obj
+ .debug_line    0x0000d923     0x44a1 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c.obj
+ .debug_line    0x00011dc4     0x1620 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c.obj
+ .debug_line    0x000133e4     0x3e64 CMakeFiles/chassis_motor.elf.dir/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c.obj
+ .debug_line    0x00017248      0x411 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/list.c.obj
+ .debug_line    0x00017659     0x1e9f CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/queue.c.obj
+ .debug_line    0x000194f8     0x2804 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/tasks.c.obj
+ .debug_line    0x0001bcfc      0xe36 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/timers.c.obj
+ .debug_line    0x0001cb32     0x2e9c CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c.obj
+ .debug_line    0x0001f9ce      0x6df CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c.obj
+ .debug_line    0x000200ad      0x6e5 CMakeFiles/chassis_motor.elf.dir/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c.obj
 
 .debug_line_str
                 0x00000000      0x27f
