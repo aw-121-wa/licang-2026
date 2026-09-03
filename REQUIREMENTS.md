@@ -2,11 +2,16 @@
 
 ## 当前比赛动作
 
-1. 等待 JY60/JY61P 输出有效角度帧。
+1. 等待 JY60 输出有效角度帧（软件兼容 API 仍为 `Jy61P_*`）。
 2. 使能四个电机并建立当前车头航向基准。
-3. 等待 UART5 现场命令；普通平移、ROT、BALL、GRAB、RZ 和 STAIR 均由 `ChassisTask` 顺序执行。
+3. 等待 UART5 现场命令；普通平移、ROT、BALL、GRAB、RZ、STAIR 和固定比赛路线 PATH 均由 `ChassisTask` 顺序执行。
 4. 平移过程中保持同一航向基准，实时执行统一的航向 PD 修正。
 5. 完成动作后保持停止并返回可接收命令状态。
+
+## 当前 IMU 硬件
+
+- 当前硬件为 JY60，使用 USART2：PD5=TX、PD6=RX，9600、8N1、无硬件流控。
+- 软件继续保留 `IMU/jy61p.*` 和 `Jy61P_*` 作为兼容接口；解析器只消费标准 11 字节 `0x55 0x53` 角度帧，并保留校验和、连续航向角及在线超时语义。
 
 ## 控制要求
 
@@ -25,18 +30,18 @@
 
 ## UART5 PC/VOFA 调试接口
 
-- USART2（PD5/PD6）连接 JY60/JY61P，串口参数为 115200、8N1、无硬件流控。
 - UART5 使用 PC12=TX、PD2=RX，115200、8N1、无硬件流控、无 DMA，UART5 IRQ 优先级为 6。
 - UART5 只接收 ASCII 命令并返回文本，不得直接发送张大头电机协议。
 - UART5 中断只负责单字节接收、行缓冲和投递；所有运动函数只能由 `ChassisTask` 在任务上下文调用。
 - `STOP` 通过 `MotionControl_RequestStop()` 进入当前 20 ms 控制周期，不能依赖普通运动队列排队后才生效。
 - `BALL` 是无参数的 UART5 ASCII 命令；仅在底盘空闲、仓库转盘已准备好且尚有球位时接受，并运行当前六球批次的剩余 MaixCAM 握手流程。
-- `PATH` 使用编译期固定静态路径表；不恢复动态 PATH 编辑器，路径表只在 `App/path_sequence.c` 顶部修改。
+- `PATH` 是无参数的固定比赛命令；仅在底盘空闲、仓库转盘已准备好且舵机状态可用时接受，并由 `App/path_sequence.c` 的编译期静态指令表逐项执行。
+- PATH 通过 `ChassisCommandQueue` 只投递一条 `CHASSIS_CMD_PATH`；PATH 内部不向现有 FreeRTOS 队列追加七条命令，运行期间 `ChassisCommand_Busy` 保持为 1。
 
 ## FreeRTOS 命令执行
 
 - `main.c` 只负责硬件初始化（包括 UART5）、`osKernelInitialize()`、`MX_FREERTOS_Init()` 和 `osKernelStart()`。
-- `ChassisTask` 只初始化一次 `MotionControl`，完成 IMU 等待、四轮使能和锁头基准建立后等待命令队列；所有运动函数只能由该任务在任务上下文执行。
+- `ChassisTask` 只初始化一次 `MotionControl`，完成 IMU 等待、四轮使能和锁头基准建立后等待命令队列；所有运动函数只能由该任务在任务上下文执行，`CHASSIS_CMD_PATH` 由该任务同步调用 `PathSequence_Run()`。
 - `MotionControl_PrepareForMove()` 负责启动时 IMU 有效性检查、四轮使能和统一航向基准建立；不再保留独立上电运动测试。
 - 正式平移只保留 `MotionControl_MovePolarSegmentMm()`；起步、停车、距离积分和轮速限幅均由 `motion_control` 负责。
 - 角度定义为：0°前进，+45°左前，+90°左移，+135°左后，180°后退，-45°右前，-90°右移，-135°右后；距离表示沿归一化轨迹方向的目标长度。
@@ -47,15 +52,13 @@
 - 旋转：`ROT CCW <deg>`、`ROT CW <deg>`。
 - 动作：`BALL`、`GRAB`、`RZ`、`STAIR`、`PATH`。
 - 控制和查询：`STOP`、`STATUS`、`HELP`。
-- 不恢复动态 PATH 编辑器、PATH LOAD DEFAULT、旧独立测试和未引用的运动包装接口；UART5 `PATH` 只运行固定比赛路径表。
+- 已删除动态 PATH 编辑器、`PATH ADD`/`PATH CLEAR`/`PATH SHOW`/`PATH LOAD DEFAULT`/`PATH RUN` 等子命令；当前 PATH 仅运行固定编译期比赛表。
 
-## UART5 固定 PATH 比赛流程（2026-09-03）
+## 固定比赛路线 PATH
 
-- 发送无参数 `PATH\r\n` 后，整车按固定顺序同步执行：`LF +45° 1850 mm` → `F 2300 mm` → `ROT +178°` → `BallSequence_Run()` → `ROT +180°` → `B 1820 mm`（`angle=180°`）→ `RoundPillar_Run()` → 停车。
-- PATH 只向现有 `ChassisCommandQueue` 投递一条 `CHASSIS_CMD_PATH`，内部使用 `App/path_sequence.c` 的静态表，不恢复 `PATH CLEAR`、`PATH ADD`、`PATH SHOW`、`PATH LOAD DEFAULT` 或 `PATH RUN`。
-- PATH 开始前必须满足底盘、舵机和仓库可执行条件；不重置 `Warehouse_BallCount`、`Warehouse_State` 或转盘状态。BALL 按现有剩余球数执行，RZ 按现有完整流程执行。
-- PATH 期间 `ChassisCommand_Busy=1`，普通运动、ROT、BALL、RZ、STAIR、GRAB 和新的 PATH 不得插入。STOP 通过现有停止请求立即终止整条 PATH，后续步骤不得执行。
-- 任意步骤失败立即终止并停车；`PathSequenceStatus` 区分运动、IMU、旋转、BALL 和 RZ 的具体失败来源。只有 BALL 返回 `BALL_SEQUENCE_OK` 才允许进入第二次旋转。
+- 顺序必须为：`Move(1800, +20°)` → `Move(2300, 0°)` → `Rotate(+178°)` → `BallSequence_Run()` → `Rotate(+178°)` → `Move(1810, 180°)` → `RoundPillar_Run()` → `ServoAction_RunGroup(SERVO_ACTION_START_GROUP, 1U, SERVO_ACTION_START_TIMEOUT_MS)` → `Move(330, 0°)` → `StairSequence_Run(Part3 → Part2 → Part1)` → `ServoAction_RunGroup(SERVO_ACTION_START_GROUP, 1U, SERVO_ACTION_START_TIMEOUT_MS)` → `Move(2000, +90°, MOTION_CRUISE_RPM)` → 停车并进入 `DONE`。最终 PATH 共 12 个 step，最后一步为向左横移 2000 mm；按极坐标定义必须使用 +90°，不再执行左后斜向移动。
+- 每个同步 API 成功返回后才进入下一步；RZ 成功后必须等待第一次动作组 0 返回 `SERVO_ACTION_OK`，再执行前进 330 mm；STAIR 必须按第三、第二、第一部分完整返回 `STAIR_SEQUENCE_OK` 后，才允许等待第二次动作组 0，第二次动作组 0 成功后才允许执行最后的 2000 mm 移动。任一动作组失败映射为独立 `PATH_SEQUENCE_ERROR_SERVO` 并立即结束 PATH；任一步 STOP、运动错误、BALL/RZ/STAIR 错误都立即结束整条 PATH，不执行后续步骤；最后的 2000 mm 移动期间仍可由 STOP 立即取消并停车。
+- PATH 状态通过 `PATH_STATE`、`PATH_STEP`、`PATH_LAST` 和 `PATH_BALL_LAST` 暴露在 `STATUS` 中；同时输出 `WAREHOUSE_STATE`、`WAREHOUSE_BALL`、`STOP` 和 `STOPPED` 便于区分 BALL 完成、仓库 FINISHED 与真实 STOP。成功结束状态为 `DONE`，STOP 状态为 `CANCELED`，其他失败状态为 `ERROR`。
 
 ## 构建验收
 
@@ -74,13 +77,14 @@
 
 ## STAIR 阶梯测试验收（2026-08-29）
 
-- `STAIR` 必须首先调用现有 `GrayAlign_Run()`；只有 `GRAY_ALIGN_OK` 才允许发送 G5。灰度逻辑、BALL、RZ、GRAB、Group0–4 和普通移动行为不得被修改。
-- 搜索姿态为 G5/G8/G11，均使用 `ServoAction_StartGroupNoWait()` 后等待 `STAIR_CAMERA_POSE_WAIT_MS=1000 ms`，等待期间每 10 ms 检查 STOP；抓取 G6/G9/G12 及过渡 G7/G10 使用 `ServoAction_RunGroup()`，超时为 20000 ms。
-- 第一部分：G5 → 静止识别 P1；P1 找到则 G6 → 转盘 1280，随后仍搜索 P2。P2 由一次 90 mm 视觉辅助移动得到；成功后 G6 → 转盘 1280；之后 G7 → 117 mm 过渡。
-- 第二部分：G8 → 静止识别 P0；找到则 G9 → 转盘 1280，否则最多再执行 3 次 90 mm 搜索（P1/P2/P3），每个新点独立发送红球请求；最后统一 G10 → 117 mm 过渡。
-- 第三部分：G11 → 静止识别 P0；无论 P0 是否找到都继续一次 90 mm 搜索。P0 或第二点找到时分别执行 G12 → 转盘 1280；第二点完成后结束。
-- 所有静止红球识别超时固定为 3000 ms，每次检测必须重新 `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`；超时仅表示 `NOT_FOUND`，不映射为错误。
-- 90 mm 移动先发红球请求，再调用带可选 early-stop callback 的运动 API；视觉提前命中时立即停车，保留当前 `MotionControl_TraveledMm`，不补足剩余 90 mm。90 mm 完整走完后停车并重新发请求静止识别；117 mm 不使用视觉提前截断。
+- `STAIR` 必须首先调用 `GrayAlign_RunUnlimited()`；只有 `GRAY_ALIGN_OK` 才允许以极坐标 180°后退 20 mm，且该移动完整成功后才允许发送第一段动作组 G11。灰度成功后的实际顺序为后退 20 mm、第一段 G11、第二段 G8、第三段 G5。20 mm 移动期间 STOP、IMU 和电机错误必须按现有 STAIR 规则退出。无限找线仍按 20 ms 周期检查 STOP、IMU 在线和电机发送错误；灰度逻辑、BALL、RZ、GRAB、Group0–4 和普通移动行为不得被修改。
+- 通用 `GrayAlign_Run()` 仍保留 5000 ms 超时，BALL 继续使用该接口；只有 STAIR 使用无正常时间上限的 `GrayAlign_RunUnlimited()`。
+- 搜索姿态为 G11/G8/G5，均使用 `ServoAction_StartGroupNoWait()` 后等待 `STAIR_CAMERA_POSE_WAIT_MS=1000 ms`，等待期间每 10 ms 检查 STOP；抓取 G12/G9/G6、过渡 G10/G7 及第三段末尾 G0 使用 `ServoAction_RunGroup()`，超时为 20000 ms。
+- 第一部分：G11 → 静止识别；找到则 G12 → 转盘 1280，随后后退 90 mm，未找到则直接后退 90 mm；90 mm 完成后再次静止识别，找到则 G12 → 转盘 1280 → G10，未找到则直接 G10；最后后退 117 mm。
+- 第二部分：第一部分末尾后退 117 mm 的终点就是第 1 点；在该点执行 G8 后开始四个点位的逐点静止识别。第 1 点后退 90 mm 到第 2 点，第 2 点后退 90 mm 到第 3 点，第 3 点后退 90 mm 到第 4 点，总共只执行三次点间 90 mm 移动。命中点执行 G9 → 转盘 1280；第四点完成后，命中则在 G9 完成后执行 G7，未命中直接执行 G7，最后后退 117 mm。
+- 第三部分：G5 → 静止识别；找到则 G6 → 转盘 1280；无论是否找到都后退 90 mm，完成后再次静止识别；找到则 G6 → 转盘 1280 → G0，未找到直接 G0，第三部分结束。
+- 所有静止红球识别超时固定为 1000 ms，每次检测必须重新 `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`；超时仅表示 `NOT_FOUND`，不映射为错误。
+- 第二段的 90 mm 移动先发红球请求，再调用带可选 early-stop callback 的运动 API；视觉提前命中时立即停车，保留当前 `MotionControl_TraveledMm`，不补足剩余 90 mm。第一段和第三段的 90 mm 均以后退极坐标 180°完整走完后停车，再重新发请求静止识别；117 mm 过渡以后退 180°执行且不使用视觉提前截断。
 - STAIR 直接调用 `Turntable_MoveOneSlotAndWait()`，每个成功 G6/G9/G12 恰好转一次 1280 脉冲；不调用 `WarehouseControl_HandleActionGroup2Completed()`，不改变 `Warehouse_BallCount` 或 `Warehouse_State`。
 - `STATUS` 至少显示 `STAIR_STATE` 和 `STAIR_LAST`；STAIR 的 STOP、灰度、IMU、运动、电机、舵机、转盘和 MaixCAM UART 错误必须能从状态中区分。STAIR 联调失败后，在底层仍可用时保持 `ChassisTask_Ready=1` 以便重试。
 
@@ -96,7 +100,7 @@
 
 - UART4 uses PC10=TX, PC11=RX, 115200-8-N-1, no flow control and IRQ reception. MaixCAM must use 3.3 V TTL, crossed TX/RX and common ground.
 - `BALL` first runs group 1 (return/recognition posture). Each of its six possible rounds then sends the configured one-byte color request (`1` for red; the current no-argument BALL path selects red), waits no more than 10 s for MaixCAM's valid ASCII line `1`, runs group 2 (clamp), turns the warehouse one slot, then runs group 1 (return). MaixCAM recognizes only inside the yellow ROI and replies on the first frame containing a complete calibrated target ball; the ball bounding box must be fully inside the ROI, with no green trigger zone, disappearance trigger, extra inner margin, or multi-frame confirmation. AUTO calibration updates only the standard ball dimensions and center and leaves the ROI unchanged; MANUAL ROI uses two touch points to define the yellow search area directly. The AUTO-calibrated size limits apply regardless of whether the ROI is AUTO or MANUAL. If manual `GRAB` cycles already consumed slots, `BALL` runs only the remaining count.
-- `STATUS` reports the compact fields `STATE`, `IMU`, `YAW`, `HEAD_ERR`, `HEAD_CORR`, `DIST`, `TARGET`, `LAST`, `BALL_STATE`, `BALL_ROUND`, `WAREHOUSE_BALL` and `STOP`; MaixCAM/servo/turntable error handling remains active but its debug counters are not exposed.
+- `STATUS` reports the compact fields `STATE`, `IMU`, `YAW`, `HEAD_ERR`, `HEAD_CORR`, `DIST`, `TARGET`, `LAST`, `BALL_STATE`, `BALL_ROUND`, `PATH_STATE`, `PATH_STEP`, `PATH_LAST`, `PATH_BALL_LAST`, `WAREHOUSE_STATE`, `WAREHOUSE_BALL`, `STOP`, `STOPPED`, `STAIR_STATE`, `STAIR_LAST`, `TURNTABLE_STATE` and `TURNTABLE_LAST`; MaixCAM/servo/turntable error handling remains active but its debug counters are not exposed.
 - A MaixCAM timeout or UART4 send failure does not move the arm and allows retrying `BALL`; action-group failures retain arm error lock. `STOP` ends a waiting round immediately; a STOP during group 2/turntable still waits for group 1 return to complete, then cancels the rest of the batch.
 
 ## BALL 灰度校准（2026-08-25）
@@ -112,9 +116,9 @@
 - UART5 无参数命令 `RZ` 必须经 `ChassisCommandQueue` 投递并由 `ChassisTask` 执行。RZ 先完成 PD10 靠桩、锁角、红外稳定确认和停车稳定；红外稳定触发后不再额外靠近，直接进入相机动作组和绕桩流程。
 - RZ 使用 PD10 单红外输入；第一版配置为 GPIO 输入、无上下拉、低电平有效，实际有效电平只允许修改 `RZ_IR_DETECTED_LEVEL`。靠桩阶段保留 30 ms 稳定判断、5 s 超时、STOP 响应和 IMU 在线检查。
 - 底盘定位完成后使用 `ServoAction_StartGroupNoWait()` 启动 `SERVO_ACTION_PILLAR_CAMERA_GROUP`（动作组 3）一次；发送失败返回 `ROUND_PILLAR_ERROR_SERVO`，不依赖完成回包，并固定等待 `RZ_CAMERA_RAISE_WAIT_MS=1000 ms` 的机械动作时间后进入 `RoundPillar_OrbitAndGrab()`。
-- `RoundPillar_OrbitAndGrab()` 先发送第一个红球请求，再以顺时针方向（`forward=+62 RPM`、`omega=-49 RPM`）在 20 ms 控制循环中非阻塞轮询 `MaixCamLink_TakeReply()`；从当前航向基准连续绕行至 `-360°` 后直接结束。识别成功立即停车稳定，执行 Group4，完成后保持当前 ContinuousYaw 继续绕桩并发送下一次请求；单向 360°使用现有 15000 ms 绕桩保护时间。
+- `RoundPillar_OrbitAndGrab()` 先发送第一个红球请求，再以反向的逆时针方向（`forward=-62 RPM`、`omega=+49 RPM`）在 20 ms 控制循环中非阻塞轮询 `MaixCamLink_TakeReply()`；从当前航向基准连续绕行至配置的 `RZ_ORBIT_TARGET_DEG=+352°` 后直接结束。识别成功立即停车稳定，执行 Group4，完成后保持当前 ContinuousYaw 继续绕桩并发送下一次请求；单向绕桩使用现有 15000 ms 保护时间。
 - 视觉阶段固定使用 `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`。每轮必须重新发送请求并等待 `MaixCamLink_TakeReply()` 的当前请求有效回复；不能复用旧回复或一次请求等待四次回复。
-- `RZ_GRAB_COUNT` 固定为 4。每轮顺序为“红球请求 → 有效 `1` 回复 → `SERVO_ACTION_PILLAR_GRAB_GROUP`（动作组 4）”；Group4 完整包含夹球、放球和重新架摄像头，Group4 完成后才允许下一轮请求。
+- `RZ_GRAB_COUNT` 固定为 4，仅表示本次 RZ 最多处理 4 个识别到的球，不是 RZ 成功门槛。每轮顺序为“红球请求 → 有效 `1` 回复 → `SERVO_ACTION_PILLAR_GRAB_GROUP`（动作组 4）”；Group4 完整包含夹球、放球和重新架摄像头，Group4 完成后才允许下一轮请求。只要达到配置的 `RZ_ORBIT_TARGET_DEG` 且无真实错误，即使抓到 0–3 个球也返回 `ROUND_PILLAR_OK`。
 - RZ 不调用 `BALL`、`WarehouseControl`、转盘、动作组 1 或动作组 2，不增加 `Warehouse_BallCount`。Group4 一旦开始必须完整执行；Group3 完成后、MaixCAM 等待期间和 Group4 完成后均检查 STOP，取消时不进入下一轮。
 - RZ 结果映射为：靠桩超时 `MOTION_ERROR_RZ_TIMEOUT`、舵机错误 `MOTION_ERROR_MOTOR_UART`、MaixCAM UART 错误 `MOTION_ERROR_MAIX_UART`、MaixCAM 超时 `MOTION_ERROR_MAIX_TIMEOUT`；不再保留旧 Orbit 状态。
 

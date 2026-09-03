@@ -5,6 +5,7 @@
 #include "servo_action.h"
 #include "warehouse_control.h"
 #include "stair_sequence.h"
+#include "path_sequence.h"
 #include "turntable_control.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -234,7 +235,7 @@ static uint8_t UartCommand_SubmitMotion(const ChassisCommand *command)
 
 static void UartCommand_SendStatus(void)
 {
-    char response[448];
+    char response[560];
     const char *state;
 
     if (ChassisCommand_Busy != 0U)
@@ -255,7 +256,10 @@ static void UartCommand_SendStatus(void)
                    "HEAD_ERR=%.2f\r\nHEAD_CORR=%.2f\r\n"
                    "DIST=%.0f\r\nTARGET=%.0f\r\nLAST=%u\r\n"
                    "BALL_STATE=%s\r\nBALL_ROUND=%u\r\n"
-                   "WAREHOUSE_BALL=%u\r\nSTOP=%u\r\n"
+                   "PATH_STATE=%s\r\nPATH_STEP=%u\r\nPATH_LAST=%s\r\n"
+                   "PATH_BALL_LAST=%s\r\n"
+                   "WAREHOUSE_STATE=%s\r\nWAREHOUSE_BALL=%u\r\n"
+                   "STOP=%u\r\nSTOPPED=%u\r\n"
                    "STAIR_STATE=%s\r\nSTAIR_LAST=%s\r\n"
                    "TURNTABLE_STATE=%s\r\nTURNTABLE_LAST=%s\r\n",
                    state,
@@ -268,8 +272,14 @@ static void UartCommand_SendStatus(void)
                    (unsigned)ChassisCommand_LastStatus,
                    BallSequence_StateName(BallSequence_State),
                    BallSequence_Round,
+                   PathSequence_StateName(PathSequence_State),
+                   PathSequence_CurrentStep,
+                   PathSequence_StatusName(PathSequence_LastStatus),
+                   BallSequence_StatusName(PathSequence_LastBallStatus),
+                   WarehouseControl_StateName((WarehouseState)Warehouse_State),
                    Warehouse_BallCount,
                    MotionControl_StopRequested,
+                   MotionControl_WasStopped(),
                    StairSequence_StateName(StairSequence_State),
                    StairSequence_StatusName(StairSequence_LastStatus),
                    Turntable_StateName(Turntable_State),
@@ -284,8 +294,7 @@ static void UartCommand_SendHelp(void)
         "LF <mm> <deg>\r\nRF <mm> <deg>\r\n"
         "LR <mm> <deg>\r\nRR <mm> <deg>\r\n"
         "ROT CCW <deg>\r\nROT CW <deg>\r\n"
-        "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\n"
-        "PATH\r\n"
+        "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\nPATH\r\n"
         "STOP\r\nSTATUS\r\nHELP\r\n"
         "ARM: G0=start, G1=return, G2=clamp; GRAB=G2->turn->G1, BALL=max 6\r\n");
 }
@@ -400,37 +409,6 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         }
         return;
     }
-    if (strcmp(command, "PATH") == 0)
-    {
-        if (strtok(0, " \t") != 0)
-        {
-            UartCommand_ParseErrorCount++;
-            UartCommand_Send("ERR FORMAT\r\n");
-            return;
-        }
-        if (UartCommand_IsChassisAvailable() == 0U)
-        {
-            UartCommand_Send("ERR BUSY\r\n");
-            return;
-        }
-        if (WarehouseControl_IsReadyForAction() == 0U)
-        {
-            UartCommand_Send("ERR PATH_NOT_READY\r\n");
-            return;
-        }
-        chassis_command.type = CHASSIS_CMD_PATH;
-        chassis_command.distance_mm = 0U;
-        chassis_command.angle_deg = 0.0f;
-        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
-        {
-            UartCommand_Send("ERR BUSY\r\n");
-        }
-        else
-        {
-            UartCommand_Send("OK PATH\r\n");
-        }
-        return;
-    }
     if ((strcmp(command, "BALL") == 0) ||
         (strcmp(command, "RZ") == 0))
     {
@@ -452,6 +430,27 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         {
             UartCommand_Send((chassis_command.type == CHASSIS_CMD_BALL) ?
                              "OK BALL\r\n" : "OK RZ\r\n");
+        }
+        return;
+    }
+    if (strcmp(command, "PATH") == 0)
+    {
+        if (strtok(0, " \t") != 0)
+        {
+            UartCommand_ParseErrorCount++;
+            UartCommand_Send("ERR FORMAT\r\n");
+            return;
+        }
+        chassis_command.type = CHASSIS_CMD_PATH;
+        chassis_command.distance_mm = 0U;
+        chassis_command.angle_deg = 0.0f;
+        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
+        {
+            UartCommand_Send("ERR BUSY\r\n");
+        }
+        else
+        {
+            UartCommand_Send("OK PATH\r\n");
         }
         return;
     }

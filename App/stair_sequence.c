@@ -19,6 +19,16 @@ typedef enum
     STAIR_BALL_TURNTABLE_ERROR
 } StairBallResult;
 
+typedef enum
+{
+    STAIR_PART2_MOVE_DISTANCE_DONE = 0,
+    STAIR_PART2_MOVE_VISION_STOP,
+    STAIR_PART2_MOVE_CANCELED,
+    STAIR_PART2_MOVE_MOTOR_ERROR,
+    STAIR_PART2_MOVE_MAIX_UART_ERROR,
+    STAIR_PART2_MOVE_IMU_ERROR
+} StairPart2MoveResult;
+
 volatile StairSequenceState StairSequence_State = STAIR_STATE_IDLE;
 volatile StairSequenceStatus StairSequence_LastStatus = STAIR_SEQUENCE_OK;
 
@@ -141,34 +151,25 @@ static uint8_t StairSequence_VisionEarlyStopCheck(void)
 
 static StairSequenceStatus StairSequence_RunCameraPoseGroup(uint8_t group);
 
-static StairBallResult StairSequence_Move90WithVisionAssist(
+static StairBallResult StairSequence_Move90ThenCheck(
     StairSequenceState move_state,
-    StairSequenceState check_state,
-    uint8_t rearm_camera_before_static_check)
+    StairSequenceState check_state)
 {
     MotionControlStatus motion_status;
     StairSequenceStatus stair_status;
-    uint8_t early_stopped = 0U;
 
     StairSequence_State = move_state;
-    stair_move_visual_hit = 0U;
     if (MotionControl_StopRequested != 0U)
     {
         return STAIR_BALL_CANCELED;
     }
-    if (MaixCamLink_SendRequest(MAIXCAM_COLOR_RED) != MAIXCAM_LINK_OK)
-    {
-        return STAIR_BALL_MAIX_UART_ERROR;
-    }
 
-    motion_status = MotionControl_MovePolarSegmentMmUntil(
+    motion_status = MotionControl_MovePolarSegmentMm(
         90U,
-        0.0f,
+        180.0f,
         0.0f,
         STAIR_FORWARD_RPM,
-        0.0f,
-        StairSequence_VisionEarlyStopCheck,
-        &early_stopped);
+        0.0f);
     if (MotionControl_WasStopped() != 0U)
     {
         return STAIR_BALL_CANCELED;
@@ -182,24 +183,15 @@ static StairBallResult StairSequence_Move90WithVisionAssist(
     {
         return STAIR_BALL_MOTOR_ERROR;
     }
-    if ((early_stopped != 0U) || (stair_move_visual_hit != 0U))
+    if (StairSequence_StopChassis() != STAIR_SEQUENCE_OK)
     {
-        return STAIR_BALL_FOUND;
+        return STAIR_BALL_MOTOR_ERROR;
+    }
+    if (MotionControl_StopRequested != 0U)
+    {
+        return STAIR_BALL_CANCELED;
     }
 
-    if (rearm_camera_before_static_check != 0U)
-    {
-        StairSequence_State = STAIR_STATE_PART2_G8;
-        stair_status = StairSequence_RunCameraPoseGroup(STAIR_GROUP_8);
-        if (stair_status == STAIR_SEQUENCE_CANCELED_BY_STOP)
-        {
-            return STAIR_BALL_CANCELED;
-        }
-        if (stair_status != STAIR_SEQUENCE_OK)
-        {
-            return STAIR_BALL_SERVO_ERROR;
-        }
-    }
     StairSequence_State = check_state;
     switch (StairSequence_CheckRedBallStopped())
     {
@@ -210,6 +202,105 @@ static StairBallResult StairSequence_Move90WithVisionAssist(
     case STAIR_BALL_IMU_ERROR:      return STAIR_BALL_IMU_ERROR;
     case STAIR_BALL_MOTOR_ERROR:    return STAIR_BALL_MOTOR_ERROR;
     default:                        return STAIR_BALL_MOTOR_ERROR;
+    }
+}
+
+/*
+ * Part 2 uses the moving camera request only as a parking aid.  It must not
+ * be converted to a business-level FOUND result, and it must not start an
+ * action group while the chassis is moving.  The next loop iteration handles
+ * the point pose and sends a fresh request for the formal stationary check.
+ */
+static StairPart2MoveResult StairSequence_Part2MoveToNextPoint(void)
+{
+    MotionControlStatus motion_status;
+    StairSequenceStatus stair_status;
+    uint8_t early_stopped = 0U;
+
+    stair_move_visual_hit = 0U;
+    if (MotionControl_StopRequested != 0U)
+    {
+        return STAIR_PART2_MOVE_CANCELED;
+    }
+    if (MaixCamLink_SendRequest(MAIXCAM_COLOR_RED) != MAIXCAM_LINK_OK)
+    {
+        return STAIR_PART2_MOVE_MAIX_UART_ERROR;
+    }
+
+    motion_status = MotionControl_MovePolarSegmentMmUntil(
+        90U,
+        180.0f,
+        0.0f,
+        STAIR_FORWARD_RPM,
+        0.0f,
+        StairSequence_VisionEarlyStopCheck,
+        &early_stopped);
+    if (MotionControl_WasStopped() != 0U)
+    {
+        return STAIR_PART2_MOVE_CANCELED;
+    }
+    stair_status = StairSequence_FromMotionStatus(motion_status);
+    if (stair_status == STAIR_SEQUENCE_ERROR_IMU)
+    {
+        return STAIR_PART2_MOVE_IMU_ERROR;
+    }
+    if (stair_status != STAIR_SEQUENCE_OK)
+    {
+        return STAIR_PART2_MOVE_MOTOR_ERROR;
+    }
+
+    /* The motion API already sends zero at completion/early-stop.  Repeat it
+       here so the point-state transition always begins from a stopped base. */
+    stair_status = StairSequence_StopChassis();
+    if (stair_status != STAIR_SEQUENCE_OK)
+    {
+        return STAIR_PART2_MOVE_MOTOR_ERROR;
+    }
+    if (MotionControl_StopRequested != 0U)
+    {
+        return STAIR_PART2_MOVE_CANCELED;
+    }
+    return ((early_stopped != 0U) || (stair_move_visual_hit != 0U)) ?
+           STAIR_PART2_MOVE_VISION_STOP : STAIR_PART2_MOVE_DISTANCE_DONE;
+}
+
+static StairSequenceState StairSequence_Part2PointState(uint8_t point)
+{
+    switch (point)
+    {
+    case 0U: return STAIR_STATE_PART2_P1;
+    case 1U: return STAIR_STATE_PART2_P2;
+    case 2U: return STAIR_STATE_PART2_P3;
+    default:return STAIR_STATE_PART2_P4;
+    }
+}
+
+static StairSequenceState StairSequence_Part2MoveState(uint8_t point)
+{
+    switch (point)
+    {
+    case 1U: return STAIR_STATE_PART2_MOVE_TO_P2;
+    case 2U: return STAIR_STATE_PART2_MOVE_TO_P3;
+    default:return STAIR_STATE_PART2_MOVE_TO_P4;
+    }
+}
+
+static StairSequenceStatus StairSequence_MapPart2MoveResult(
+    StairPart2MoveResult result)
+{
+    switch (result)
+    {
+    case STAIR_PART2_MOVE_DISTANCE_DONE:
+    case STAIR_PART2_MOVE_VISION_STOP:
+        return STAIR_SEQUENCE_OK;
+    case STAIR_PART2_MOVE_CANCELED:
+        return STAIR_SEQUENCE_CANCELED_BY_STOP;
+    case STAIR_PART2_MOVE_IMU_ERROR:
+        return STAIR_SEQUENCE_ERROR_IMU;
+    case STAIR_PART2_MOVE_MAIX_UART_ERROR:
+        return STAIR_SEQUENCE_ERROR_MAIX_UART;
+    default:
+        return STAIR_SEQUENCE_ERROR_MOTOR;
     }
 }
 
@@ -309,7 +400,36 @@ static StairSequenceStatus StairSequence_Move117(
 
     StairSequence_State = state;
     motion_status = MotionControl_MovePolarSegmentMm(
-        117U, 0.0f, 0.0f, STAIR_FORWARD_RPM, 0.0f);
+        117U, 180.0f, 0.0f, STAIR_FORWARD_RPM, 0.0f);
+    if (MotionControl_WasStopped() != 0U)
+    {
+        return STAIR_SEQUENCE_CANCELED_BY_STOP;
+    }
+    stair_status = StairSequence_FromMotionStatus(motion_status);
+    if (stair_status != STAIR_SEQUENCE_OK)
+    {
+        return stair_status;
+    }
+    stair_status = StairSequence_StopChassis();
+    if (stair_status != STAIR_SEQUENCE_OK)
+    {
+        return stair_status;
+    }
+    return StairSequence_CheckStop();
+}
+
+static StairSequenceStatus StairSequence_Move20AfterAlign(void)
+{
+    MotionControlStatus motion_status;
+    StairSequenceStatus stair_status;
+
+    StairSequence_State = STAIR_STATE_MOVE20_AFTER_ALIGN;
+    motion_status = MotionControl_MovePolarSegmentMm(
+        STAIR_INITIAL_BACKWARD_MM,
+        180.0f,
+        0.0f,
+        STAIR_FORWARD_RPM,
+        0.0f);
     if (MotionControl_WasStopped() != 0U)
     {
         return STAIR_SEQUENCE_CANCELED_BY_STOP;
@@ -372,10 +492,9 @@ static StairSequenceStatus StairSequence_RunPart1(void)
         return StairSequence_MapBallError(ball_result);
     }
 
-    ball_result = StairSequence_Move90WithVisionAssist(
+    ball_result = StairSequence_Move90ThenCheck(
         STAIR_STATE_PART1_MOVE90,
-        STAIR_STATE_PART1_CHECK2,
-        0U);
+        STAIR_STATE_PART1_CHECK2);
     if (ball_result == STAIR_BALL_FOUND)
     {
         status = StairSequence_RunGrabAndTurn(
@@ -393,20 +512,24 @@ static StairSequenceStatus StairSequence_RunPart1(void)
     }
 
     status = StairSequence_RunTransitionGroup(
-        STAIR_GROUP_7, STAIR_STATE_PART1_G7);
+        STAIR_GROUP_0, STAIR_STATE_PART1_G0);
     if (status != STAIR_SEQUENCE_OK)
     {
         return status;
     }
-    return StairSequence_Move117(STAIR_STATE_PART1_MOVE117);
+    return STAIR_SEQUENCE_OK;
 }
 
 static StairSequenceStatus StairSequence_RunPart2(void)
 {
     StairSequenceStatus status;
     StairBallResult ball_result;
-    uint8_t search_move;
 
+    uint8_t point;
+    StairPart2MoveResult move_result;
+
+    /* The preceding Backward117 ends at P1.  G8 is the single setup action for the
+       complete Part 2 search; P2/P3/P4 keep the resulting search posture. */
     StairSequence_State = STAIR_STATE_PART2_G8;
     status = StairSequence_RunCameraPoseGroup(STAIR_GROUP_8);
     if (status != STAIR_SEQUENCE_OK)
@@ -414,53 +537,41 @@ static StairSequenceStatus StairSequence_RunPart2(void)
         return status;
     }
 
-    StairSequence_State = STAIR_STATE_PART2_CHECK;
-    ball_result = StairSequence_CheckRedBallStopped();
-    if (ball_result == STAIR_BALL_FOUND)
+    /* P1 is already reached; P2/P3/P4 each begin with one 90 mm move. */
+    for (point = 0U; point < 4U; point++)
     {
-        status = StairSequence_RunGrabAndTurn(
-            STAIR_GROUP_9,
-            STAIR_STATE_PART2_G9,
-            STAIR_STATE_PART2_TURN);
-        if (status != STAIR_SEQUENCE_OK)
+        if (point > 0U)
         {
-            return status;
+            StairSequence_State = StairSequence_Part2MoveState(point);
+            move_result = StairSequence_Part2MoveToNextPoint();
+            status = StairSequence_MapPart2MoveResult(move_result);
+            if (status != STAIR_SEQUENCE_OK)
+            {
+                return status;
+            }
         }
-    }
-    else if (ball_result != STAIR_BALL_NOT_FOUND)
-    {
-        return StairSequence_MapBallError(ball_result);
-    }
-    else
-    {
-        /* Three 90 mm moves produce P1, P2 and P3 after P0. */
-        for (search_move = 0U; search_move < 3U; search_move++)
+
+        StairSequence_State = StairSequence_Part2PointState(point);
+        ball_result = StairSequence_CheckRedBallStopped();
+        if (ball_result == STAIR_BALL_FOUND)
         {
-            ball_result = StairSequence_Move90WithVisionAssist(
-                STAIR_STATE_PART2_MOVE90,
-                STAIR_STATE_PART2_CHECK,
-                1U);
-            if (ball_result == STAIR_BALL_FOUND)
+            status = StairSequence_RunGrabAndTurn(
+                STAIR_GROUP_9,
+                STAIR_STATE_PART2_G9,
+                STAIR_STATE_PART2_TURN);
+            if (status != STAIR_SEQUENCE_OK)
             {
-                status = StairSequence_RunGrabAndTurn(
-                    STAIR_GROUP_9,
-                    STAIR_STATE_PART2_G9,
-                    STAIR_STATE_PART2_TURN);
-                if (status != STAIR_SEQUENCE_OK)
-                {
-                    return status;
-                }
-                break;
+                return status;
             }
-            if (ball_result != STAIR_BALL_NOT_FOUND)
-            {
-                return StairSequence_MapBallError(ball_result);
-            }
+        }
+        else if (ball_result != STAIR_BALL_NOT_FOUND)
+        {
+            return StairSequence_MapBallError(ball_result);
         }
     }
 
     status = StairSequence_RunTransitionGroup(
-        STAIR_GROUP_10, STAIR_STATE_PART2_G10);
+        STAIR_GROUP_7, STAIR_STATE_PART2_G7);
     if (status != STAIR_SEQUENCE_OK)
     {
         return status;
@@ -498,23 +609,33 @@ static StairSequenceStatus StairSequence_RunPart3(void)
         return StairSequence_MapBallError(ball_result);
     }
 
-    /* P0 never ends Part 3; the second point is always searched once. */
-    ball_result = StairSequence_Move90WithVisionAssist(
+    /* The first point is always followed by one 90 mm move and a second check. */
+    ball_result = StairSequence_Move90ThenCheck(
         STAIR_STATE_PART3_MOVE90,
-        STAIR_STATE_PART3_CHECK2,
-        0U);
+        STAIR_STATE_PART3_CHECK2);
     if (ball_result == STAIR_BALL_FOUND)
     {
-        return StairSequence_RunGrabAndTurn(
+        status = StairSequence_RunGrabAndTurn(
             STAIR_GROUP_12,
             STAIR_STATE_PART3_G12,
             STAIR_STATE_PART3_TURN);
+        if (status != STAIR_SEQUENCE_OK)
+        {
+            return status;
+        }
     }
-    if (ball_result != STAIR_BALL_NOT_FOUND)
+    else if (ball_result != STAIR_BALL_NOT_FOUND)
     {
         return StairSequence_MapBallError(ball_result);
     }
-    return STAIR_SEQUENCE_OK;
+
+    status = StairSequence_RunTransitionGroup(
+        STAIR_GROUP_10, STAIR_STATE_PART3_G10);
+    if (status != STAIR_SEQUENCE_OK)
+    {
+        return status;
+    }
+    return StairSequence_Move117(STAIR_STATE_PART3_MOVE117);
 }
 
 StairSequenceStatus StairSequence_Run(void)
@@ -531,7 +652,7 @@ StairSequenceStatus StairSequence_Run(void)
     }
 
     StairSequence_State = STAIR_STATE_ALIGNING;
-    gray_status = GrayAlign_Run();
+    gray_status = GrayAlign_RunUnlimited();
     if (gray_status == GRAY_ALIGN_CANCELED)
     {
         return StairSequence_Finalize(STAIR_SEQUENCE_CANCELED_BY_STOP);
@@ -549,7 +670,13 @@ StairSequenceStatus StairSequence_Run(void)
         return StairSequence_Finalize(STAIR_SEQUENCE_ERROR_GRAY_ALIGN);
     }
 
-    status = StairSequence_RunPart1();
+    status = StairSequence_Move20AfterAlign();
+    if (status != STAIR_SEQUENCE_OK)
+    {
+        return StairSequence_Finalize(status);
+    }
+
+    status = StairSequence_RunPart3();
     if (status != STAIR_SEQUENCE_OK)
     {
         return StairSequence_Finalize(status);
@@ -559,7 +686,7 @@ StairSequenceStatus StairSequence_Run(void)
     {
         return StairSequence_Finalize(status);
     }
-    status = StairSequence_RunPart3();
+    status = StairSequence_RunPart1();
     return StairSequence_Finalize(status);
 }
 
@@ -569,6 +696,7 @@ const char *StairSequence_StateName(StairSequenceState state)
     {
     case STAIR_STATE_IDLE:          return "IDLE";
     case STAIR_STATE_ALIGNING:      return "ALIGNING";
+    case STAIR_STATE_MOVE20_AFTER_ALIGN:return "MOVE20_AFTER_ALIGN";
     case STAIR_STATE_PART1_G5:      return "PART1_G5";
     case STAIR_STATE_PART1_CHECK1:  return "PART1_CHECK1";
     case STAIR_STATE_PART1_MOVE90: return "PART1_MOVE90";
@@ -577,19 +705,28 @@ const char *StairSequence_StateName(StairSequenceState state)
     case STAIR_STATE_PART1_CHECK2:  return "PART1_CHECK2";
     case STAIR_STATE_PART1_G7:      return "PART1_G7";
     case STAIR_STATE_PART1_MOVE117:return "PART1_MOVE117";
+    case STAIR_STATE_PART1_G0:      return "PART1_G0";
     case STAIR_STATE_PART2_G8:      return "PART2_G8";
-    case STAIR_STATE_PART2_CHECK:   return "PART2_CHECK";
-    case STAIR_STATE_PART2_MOVE90:  return "PART2_MOVE90";
+    case STAIR_STATE_PART2_P1:      return "PART2_P1";
+    case STAIR_STATE_PART2_MOVE_TO_P2:return "PART2_MOVE_TO_P2";
+    case STAIR_STATE_PART2_P2:      return "PART2_P2";
+    case STAIR_STATE_PART2_MOVE_TO_P3:return "PART2_MOVE_TO_P3";
+    case STAIR_STATE_PART2_P3:      return "PART2_P3";
+    case STAIR_STATE_PART2_MOVE_TO_P4:return "PART2_MOVE_TO_P4";
+    case STAIR_STATE_PART2_P4:      return "PART2_P4";
     case STAIR_STATE_PART2_G9:      return "PART2_G9";
     case STAIR_STATE_PART2_TURN:    return "PART2_TURN";
     case STAIR_STATE_PART2_G10:     return "PART2_G10";
     case STAIR_STATE_PART2_MOVE117:return "PART2_MOVE117";
+    case STAIR_STATE_PART2_G7:      return "PART2_G7";
     case STAIR_STATE_PART3_G11:     return "PART3_G11";
     case STAIR_STATE_PART3_CHECK1: return "PART3_CHECK1";
     case STAIR_STATE_PART3_MOVE90: return "PART3_MOVE90";
     case STAIR_STATE_PART3_CHECK2: return "PART3_CHECK2";
     case STAIR_STATE_PART3_G12:     return "PART3_G12";
     case STAIR_STATE_PART3_TURN:   return "PART3_TURN";
+    case STAIR_STATE_PART3_G10:    return "PART3_G10";
+    case STAIR_STATE_PART3_MOVE117:return "PART3_MOVE117";
     case STAIR_STATE_DONE:          return "DONE";
     case STAIR_STATE_CANCELED:      return "CANCELED";
     case STAIR_STATE_ERROR:         return "ERROR";

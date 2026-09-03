@@ -40,7 +40,8 @@ static HAL_StatusTypeDef GrayAlign_Stop(void)
     return status;
 }
 
-GrayAlignStatus GrayAlign_Run(void)
+static GrayAlignStatus GrayAlign_RunInternal(uint32_t timeout_ms,
+                                              uint8_t timeout_enabled)
 {
     uint32_t start_tick = HAL_GetTick();
     uint32_t stable_since = 0U;
@@ -68,7 +69,8 @@ GrayAlignStatus GrayAlign_Run(void)
             }
             return GRAY_ALIGN_CANCELED;
         }
-        if ((uint32_t)(now - start_tick) >= GRAY_ALIGN_TIMEOUT_MS)
+        if ((timeout_enabled != 0U) &&
+            ((uint32_t)(now - start_tick) >= timeout_ms))
         {
             (void)GrayAlign_Stop();
             return GRAY_ALIGN_ERROR_TIMEOUT;
@@ -115,4 +117,14 @@ GrayAlignStatus GrayAlign_Run(void)
 
         osDelay(GRAY_ALIGN_PERIOD_MS);
     }
+}
+
+GrayAlignStatus GrayAlign_Run(void)
+{
+    return GrayAlign_RunInternal(GRAY_ALIGN_TIMEOUT_MS, 1U);
+}
+
+GrayAlignStatus GrayAlign_RunUnlimited(void)
+{
+    return GrayAlign_RunInternal(0U, 0U);
 }

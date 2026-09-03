@@ -2,7 +2,7 @@
 
 ## 项目目标
 
-基于 STM32F750V8Tx、JY60/JY61P 陀螺仪和 x42_v1.3 张大头闭环步进驱动板，实现四麦克纳姆轮底盘的开环距离控制与实时航向保持。
+基于 STM32F750V8Tx、JY60 陀螺仪和 x42_v1.3 张大头闭环步进驱动板，实现四麦克纳姆轮底盘的开环距离控制与实时航向保持。
 
 ## 硬件与接口
 
@@ -11,7 +11,7 @@
 - 3号电机：左后轮。
 - 4号电机：右后轮。
 - USART3，115200：四台电机驱动器通信。
-- USART2，PD5/PD6，115200：JY60/JY61P 通信。
+- USART2，PD5/PD6，9600：JY60 通信（软件层保留 `Jy61P_*` 兼容 API）。
 - UART5，PC12/PD2，115200：PC/VOFA ASCII 比赛调试接口（PC12=TX，PD2=RX）。
 - USART6，PC6/PC7，115200：仓库转盘专用张大头闭环步进电机（PC6=TX，PC7=RX，地址 `0x05`）。
 - 麦轮直径：75 mm。
@@ -24,12 +24,14 @@
 - `Motor/motor_control.*`：张大头驱动协议、地址和安装方向、`F6/FD` 命令、四轴缓存与同步触发。
 - `Motor/mecanum_kinematics.*`：不依赖 HAL 的麦轮运动学解算和等比例限幅。
 - `Motor/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、任意角度平移、故障停车和动作序列。
-- `IMU/jy61p.*`：JY60/JY61P 数据帧解析、连续航向角和串口中断接收。
+- `IMU/jy61p.*`：JY60/JY61P 标准角度帧解析、连续航向角和串口中断接收；文件名及 `Jy61P_*` 接口保留用于兼容历史工程。
 - `App/uart_command.*`：UART5 ASCII 命令接收、解析、精简状态查询和 FreeRTOS 命令投递。
 - `Motor/cangku_motor.*`：仓库转盘的单电机 Emm V5.0/x42 协议层；只操作 USART1 地址 `0x05`，不与底盘四轮共用状态。
 - `App/turntable_control.*`：仓库转盘一格相对运动、启用、停止及集中等待策略。
 - `App/warehouse_control.*`：机械臂组 2（夹取）完成后的仓库协同和六球计数状态机，由现有 `ChassisTask` 调用，不新建重复任务。
 - `App/stair_sequence.*`：独立 UART5 `STAIR` 阶梯测试流程；复用灰度校准、MaixCAM、舵机组 5–12 和转盘接口，不进入仓库球计数状态机。
+- `App/path_sequence.*`：固定比赛路线的一站式动作编排；由一个 `PATH` 命令触发，内部按编译期静态表顺序调用既有运动、BALL 和 RZ API。
+- PATH 在 RZ 成功后阻塞等待第一次动作组 0 回位完成，再前进 330 mm、同步执行完整 STAIR（第三、第二、第一部分）；STAIR 成功完成后再次阻塞等待动作组 0 回位完成，再以极坐标 +90° 向左横移 2000 mm，随后停车并进入 DONE。任一动作组 0 失败时 PATH 立即结束并报告独立舵机错误。
 - `.vscode/`：IntelliSense 与 Keil 构建任务。
 
 ## 已确定的设计决策
@@ -44,8 +46,9 @@
 - 通用麦轮限幅保持四轮比例。
 - 平移方向统一使用极坐标：0°前进、+90°左移、180°后退、-90°右移，角度范围为 -180°～+180°。
 - 指定的极坐标距离表示实际平移轨迹长度；每个控制周期把轮速限幅后的有效平移 RPM 纳入距离积分。
-- 现场运动测试只通过 UART5 命令完成；不恢复动态 PATH 编辑器，保留独立上电测试删除决策和旧的运动包装接口。
+- 现场运动测试只通过 UART5 命令完成；不再保留 PATH 编辑器、独立上电测试和旧的运动包装接口。
 - UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、PATH、STOP、STATUS、HELP。
+- `PATH` 不是动态路径编辑器；它只运行 `App/path_sequence.c` 中的固定比赛指令表，并以单条 `CHASSIS_CMD_PATH` 占用底盘命令队列。
 - 平移统一使用 `MotionControl_MovePolarSegmentMm()`；纯横移额外使用唯一的 `LATERAL_FORWARD_COMPENSATION` 前后偏差补偿，初值为 `0.0f`。
 - `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `Motor/motion_control.c` 保留一套。
 - FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
@@ -53,7 +56,7 @@
 
 ## UART5 现场 STATUS
 
-- `STATUS` 只输出 `STATE`、`IMU`、`YAW`、`HEAD_ERR`、`HEAD_CORR`、`DIST`、`TARGET`、`LAST`、`BALL_STATE`、`BALL_ROUND`、`WAREHOUSE_BALL` 和 `STOP`。
+- `STATUS` 只输出 `STATE`、`IMU`、`YAW`、`HEAD_ERR`、`HEAD_CORR`、`DIST`、`TARGET`、`LAST`、`BALL_STATE`、`BALL_ROUND`、`PATH_STATE`、`PATH_STEP`、`PATH_LAST`、`PATH_BALL_LAST`、`WAREHOUSE_STATE`、`WAREHOUSE_BALL`、`STOP`、`STOPPED`、`STAIR_STATE`、`STAIR_LAST`、`TURNTABLE_STATE` 和 `TURNTABLE_LAST`。
 - MaixCAM、机械臂和转盘的实际错误处理仍保留，但不再为 STATUS 保存或输出仅用于调试的收发计数、动作计数和预计时间统计。
 
 ## 用户工作偏好
@@ -79,13 +82,6 @@
 - `GRAB` remains a separate single cycle: group 2 (clamp) -> one turntable slot -> group 1 (return). While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
 - MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during group 2/turntable it still completes group 1 (return) before ending the remaining batch.
 
-## UART5 fixed PATH sequence (2026-09-03)
-
-- `PATH` is a single UART5 command for the compile-time static competition route; it does not restore the deleted dynamic PATH editor (`PATH CLEAR`, `PATH ADD`, `PATH SHOW`, `PATH LOAD DEFAULT` or `PATH RUN`).
-- The default route is `LF +45° 1850 mm` → `F 2300 mm` → `ROT +178°` → existing `BallSequence_Run()` → `ROT +180°` → `B 1820 mm` (`angle=180°`) → existing `RoundPillar_Run()` → final stop.
-- PATH submits only one `CHASSIS_CMD_PATH` to the existing chassis queue and remains busy for the whole synchronous sequence. Ordinary commands cannot be inserted; `STOP` cancels the current path and prevents all later steps.
-- PATH checks chassis/servo/warehouse readiness before motion, preserves existing Warehouse state, and maps each Motion/BALL/RZ failure to a distinct `PathSequenceStatus`. BALL and RZ are invoked directly and their business logic is not duplicated.
-
 ## BALL gray alignment (2026-08-25)
 
 - The four gray sensors are ordered from left to right as `MID2`, `IN2`, `IN1`, `MID1`: `MID2=PD8`, `IN2=PD0`, `IN1=PD1`, `MID1=PD3`.
@@ -97,8 +93,9 @@
 
 - UART5 command `RZ` enters the existing `ChassisCommandQueue` and is executed by `ChassisTask`; it first uses PD10 to approach the pillar, locks the yaw during chassis positioning, then stops and settles before any arm or vision action. After the stable IR trigger, RZ starts the camera group directly without an extra approach move.
 - After the chassis is positioned, RZ starts `SERVO_ACTION_PILLAR_CAMERA_GROUP` (group 3) once without requiring a completion frame, waits the fixed `RZ_CAMERA_RAISE_WAIT_MS` mechanical interval, and then starts `RoundPillar_OrbitAndGrab()`. The integrated routine sends the first red request and keeps the single-direction pillar orbit active while polling the MaixCAM reply.
-- A valid reply stops and settles the chassis before `SERVO_ACTION_PILLAR_GRAB_GROUP` (group 4); after Group4 completes, the next red request is sent and the orbit resumes from the current continuous yaw. The RZ orbit now uses one clockwise direction with the corrected circle-centre side (`forward=+62 RPM`, `omega=-49 RPM`) and continues from its reset heading to `-360 degrees`; it completes directly at that target after four grabs, with no reverse stage.
-- Group 4 contains clamp, release and camera re-positioning, so group 3 is never repeated. RZ does not call `BALL`, group 1, group 2 or `WarehouseControl`; after each successful Group4 it advances the turntable one slot, requests the next red ball and continues the current 450-degree orbit.
+- RZ succeeds when the configured `RZ_ORBIT_TARGET_DEG` is reached and the chassis completes its stop/settle sequence; `RZ_GRAB_COUNT` only limits the maximum balls processed, so finding fewer balls does not fail RZ.
+- A valid reply stops and settles the chassis before `SERVO_ACTION_PILLAR_GRAB_GROUP` (group 4); after Group4 completes, the next red request is sent and the orbit resumes from the current continuous yaw. The RZ orbit now uses the reversed counter-clockwise direction (`forward=-62 RPM`, `omega=+49 RPM`) and continues from its reset heading to the configured `+352 degrees`; it completes directly at that target after four grabs, with no reverse stage.
+- Group 4 contains clamp, release and camera re-positioning, so group 3 is never repeated. RZ does not call `BALL`, group 1, group 2 or `WarehouseControl`; after each successful Group4 it advances the turntable one slot, requests the next red ball and continues the current 355-degree orbit.
 - STOP during approach or MaixCAM waiting cancels before the next arm action. Once group 3 or group 4 starts, that group is allowed to finish; a pending STOP is handled before the next vision request. MaixCAM and servo failures map to their dedicated RZ result statuses and do not trigger later group 4 actions.
 
 ## Warehouse turntable coordination (2026-08-25)
@@ -120,8 +117,9 @@
 ## STAIR 阶梯测试流程（2026-08-29）
 
 - UART5 无参数命令 `STAIR` 由 `ChassisTask` 串行执行；开始前仅检查 `Turntable_IsReady()`，不初始化或修改仓库状态。
-- 流程首先直接复用 `GrayAlign_Run()`，成功后依次执行第一、第二、第三部分；灰度失败、IMU/电机/舵机/转盘/MaixCAM 通信失败均有独立状态，3 秒未找到红球是正常的 `NOT_FOUND` 分支。
-- 搜索姿态组 G5/G8/G11 使用 `ServoAction_StartGroupNoWait()` 并等待 1000 ms；抓取组 G6/G9/G12 和过渡组 G7/G10 使用 20 s 真实完成回包等待。
+- 流程首先使用仅供 STAIR 的 `GrayAlign_RunUnlimited()`；灰度成功后先以极坐标 180° 后退 20 mm，再实际依次执行第一段 `G11`、第二段 `G8`、第三段 `G5`。灰度失败、IMU/电机/舵机/转盘/MaixCAM 通信失败均有独立状态，1 秒未找到红球是正常的 `NOT_FOUND` 分支。BALL 仍使用普通 `GrayAlign_Run()`。
+- 搜索姿态组 G5/G8/G11 使用 `ServoAction_StartGroupNoWait()` 并等待 1000 ms；抓取组 G6/G9/G12、过渡组 G7/G10 和第三段末尾的 G0 使用 20 s 真实完成回包等待。
+- 第一段：G11 后静止识别；命中执行 G12，随后后退 90 mm；未命中直接后退 90 mm；再次静止识别，命中执行 G12，随后执行 G10，未命中直接执行 G10，最后后退 117 mm。该 117 mm 的终点就是第二段第 1 点；第二段在此执行 G8/G9 搜索，再依次后退 90 mm 到第 2、3、4 点，因此四个点位之间总共只有三次 90 mm 移动；第四点结束后执行 G7 再后退 117 mm。第三段：G5 后识别，命中执行 G6；后退 90 mm 后再次静止识别，命中执行 G6 后执行 G0，未命中直接执行 G0。
 - 每次成功 G6、G9 或 G12 后，直接调用现有 `Turntable_MoveOneSlotAndWait()` 转动一格（1280 脉冲）；不调用 `WarehouseControl`，不增加 `Warehouse_BallCount`。
-- 90 mm 搜索移动使用 STAIR 专用 40 RPM，并在运动控制 20 ms 周期中轮询当前 MaixCAM 请求，视觉提前命中即停车且不补足剩余距离；完整移动后重新发请求并静止识别 3 s。117 mm 仅作为阶段过渡距离正常完成，不使用视觉截断。
+- 第二段的 90 mm 搜索移动使用 STAIR 专用 40 RPM，并在运动控制 20 ms 周期中轮询当前 MaixCAM 请求，视觉提前命中即停车且不补足剩余距离；第一段和第三段均完成后退 90 mm，再重新发请求静止识别 1 s。117 mm 过渡均以后退 180°执行，不使用视觉截断。
 - `STATUS` 增加 `STAIR_STATE`、`STAIR_LAST`、`TURNTABLE_STATE` 和 `TURNTABLE_LAST`，便于区分灰度、动作组、视觉和转盘阶段。

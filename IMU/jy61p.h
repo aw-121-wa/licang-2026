@@ -3,7 +3,8 @@
 
 #include "main.h"
 
-/* JY60/JY61P angle frame: 55 53 RollL RollH PitchL PitchH YawL YawH ... SUM. */
+/* Legacy Jy61P_* API retained for JY60/JY61P compatibility. */
+/* Current hardware: JY60 at 9600 baud; standard 11-byte 55 53 angle frame. */
 void Jy61P_Init(UART_HandleTypeDef *huart);
 void Jy61P_UartRxCpltCallback(UART_HandleTypeDef *huart);
 void Jy61P_UartErrorCallback(UART_HandleTypeDef *huart);

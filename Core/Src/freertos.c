@@ -231,6 +231,96 @@ void StartChassisTask(void *argument)
       {
         result = MotionControl_RotateDeg(command.angle_deg);
       }
+      else if (command.type == CHASSIS_CMD_PATH)
+      {
+        path_result = PathSequence_Run();
+        if ((path_result == PATH_SEQUENCE_OK) ||
+            (path_result == PATH_SEQUENCE_STATUS_CANCELED))
+        {
+          result = MOTION_STATUS_FINISHED;
+        }
+        else if ((path_result == PATH_SEQUENCE_ERROR_MOTION) ||
+                 (path_result == PATH_SEQUENCE_ERROR_ROTATE))
+        {
+          result = PathSequence_LastMotionStatus;
+        }
+        else if (path_result == PATH_SEQUENCE_ERROR_BALL)
+        {
+          if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_SERVO)
+          {
+            result = MOTION_ERROR_MOTOR_UART;
+          }
+          else if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_MAIX_TIMEOUT)
+          {
+            result = MOTION_ERROR_MAIX_TIMEOUT;
+          }
+          else if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_TURNTABLE)
+          {
+            result = MOTION_ERROR_MOTOR_UART;
+          }
+          else if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_GRAY_ALIGN)
+          {
+            result = MOTION_ERROR_GRAY_ALIGN;
+          }
+          else
+          {
+            result = MOTION_ERROR_MAIX_UART;
+          }
+        }
+        else if (path_result == PATH_SEQUENCE_ERROR_STAIR)
+        {
+          if (PathSequence_LastStairStatus == STAIR_SEQUENCE_ERROR_GRAY_ALIGN)
+          {
+            result = MOTION_ERROR_GRAY_ALIGN;
+          }
+          else if (PathSequence_LastStairStatus == STAIR_SEQUENCE_ERROR_IMU)
+          {
+            result = MOTION_ERROR_IMU_LOST;
+          }
+          else if (PathSequence_LastStairStatus == STAIR_SEQUENCE_ERROR_MAIX_UART)
+          {
+            result = MOTION_ERROR_MAIX_UART;
+          }
+          else
+          {
+            result = MOTION_ERROR_MOTOR_UART;
+            }
+        }
+        else if (path_result == PATH_SEQUENCE_ERROR_SERVO)
+        {
+          /* PATH keeps the servo failure distinct; the command API exposes the UART fault class. */
+          result = MOTION_ERROR_MOTOR_UART;
+        }
+        else
+        {
+          if (PathSequence_LastRzStatus == ROUND_PILLAR_ERROR_IMU)
+          {
+            result = MOTION_ERROR_IMU_LOST;
+          }
+          else if ((PathSequence_LastRzStatus == ROUND_PILLAR_ERROR_MOTOR) ||
+                   (PathSequence_LastRzStatus == ROUND_PILLAR_ERROR_SERVO) ||
+                   (PathSequence_LastRzStatus == ROUND_PILLAR_ERROR_TURNTABLE))
+          {
+            result = MOTION_ERROR_MOTOR_UART;
+          }
+          else if (PathSequence_LastRzStatus == ROUND_PILLAR_ERROR_MAIX_UART)
+          {
+            result = MOTION_ERROR_MAIX_UART;
+          }
+          else if (PathSequence_LastRzStatus == ROUND_PILLAR_ERROR_MAIX_TIMEOUT)
+          {
+            result = MOTION_ERROR_MAIX_TIMEOUT;
+          }
+          else
+          {
+            result = MOTION_ERROR_RZ_TIMEOUT;
+          }
+        }
+
+        /* Keep PATH retryable unless an action-group driver entered ERROR. */
+        ChassisTask_Ready =
+            (ServoAction_SequenceState == SERVO_SEQUENCE_ERROR) ? 0U : 1U;
+      }
       else if (command.type == CHASSIS_CMD_BALL)
       {
         ball_result = BallSequence_Run();
@@ -347,14 +437,6 @@ void StartChassisTask(void *argument)
         }
         /* STAIR is a retryable test flow; keep the chassis command path open. */
         ChassisTask_Ready = 1U;
-      }
-      else if (command.type == CHASSIS_CMD_PATH)
-      {
-        path_result = PathSequence_Run();
-        result = PathSequence_ToMotionControlStatus(path_result);
-        /* PATH is retryable unless an existing arm failure has locked the sequence. */
-        ChassisTask_Ready = (path_result == PATH_SEQUENCE_ERROR_BALL_SERVO) ?
-                            0U : 1U;
       }
       else if (command.type == CHASSIS_CMD_GRAB)
       {

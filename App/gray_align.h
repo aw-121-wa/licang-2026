@@ -20,5 +20,6 @@ typedef enum
 } GrayAlignStatus;
 
 GrayAlignStatus GrayAlign_Run(void);
+GrayAlignStatus GrayAlign_RunUnlimited(void);
 
 #endif /* GRAY_ALIGN_H */
