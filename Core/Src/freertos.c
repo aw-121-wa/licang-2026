@@ -33,6 +33,7 @@
 #include "servo_action.h"
 #include "warehouse_control.h"
 #include "round_pillar.h"
+#include "stair_sequence.h"
 
 /* USER CODE END Includes */
 
@@ -166,6 +167,7 @@ void StartChassisTask(void *argument)
   MotionControlStatus result;
   BallSequenceStatus ball_result;
   RoundPillarStatus rz_result = ROUND_PILLAR_OK;
+  StairSequenceStatus stair_result = STAIR_SEQUENCE_OK;
   ServoActionStatus servo_result;
   WarehouseStatus warehouse_result;
   ChassisCommand command;
@@ -317,6 +319,33 @@ void StartChassisTask(void *argument)
           ChassisTask_Ready = 1U;
         }
       }
+      else if (command.type == CHASSIS_CMD_STAIR)
+      {
+        stair_result = StairSequence_Run();
+        if ((stair_result == STAIR_SEQUENCE_OK) ||
+            (stair_result == STAIR_SEQUENCE_CANCELED_BY_STOP))
+        {
+          result = MOTION_STATUS_FINISHED;
+        }
+        else if (stair_result == STAIR_SEQUENCE_ERROR_GRAY_ALIGN)
+        {
+          result = MOTION_ERROR_GRAY_ALIGN;
+        }
+        else if (stair_result == STAIR_SEQUENCE_ERROR_IMU)
+        {
+          result = MOTION_ERROR_IMU_LOST;
+        }
+        else if (stair_result == STAIR_SEQUENCE_ERROR_MAIX_UART)
+        {
+          result = MOTION_ERROR_MAIX_UART;
+        }
+        else
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+        }
+        /* STAIR is a retryable test flow; keep the chassis command path open. */
+        ChassisTask_Ready = 1U;
+      }
       else if (command.type == CHASSIS_CMD_GRAB)
       {
         /* GRAB is the operator's explicit trigger for action group 2 (clamp). */
@@ -420,4 +449,3 @@ void StartUartCommandTask(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

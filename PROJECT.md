@@ -11,7 +11,7 @@
 - 3号电机：左后轮。
 - 4号电机：右后轮。
 - USART3，115200：四台电机驱动器通信。
-- USART2，PD5/PD6，9600：JY60/JY61P 通信。
+- USART2，PD5/PD6，115200：JY60/JY61P 通信。
 - UART5，PC12/PD2，115200：PC/VOFA ASCII 比赛调试接口（PC12=TX，PD2=RX）。
 - USART6，PC6/PC7，115200：仓库转盘专用张大头闭环步进电机（PC6=TX，PC7=RX，地址 `0x05`）。
 - 麦轮直径：75 mm。
@@ -29,6 +29,7 @@
 - `Motor/cangku_motor.*`：仓库转盘的单电机 Emm V5.0/x42 协议层；只操作 USART1 地址 `0x05`，不与底盘四轮共用状态。
 - `App/turntable_control.*`：仓库转盘一格相对运动、启用、停止及集中等待策略。
 - `App/warehouse_control.*`：机械臂组 2（夹取）完成后的仓库协同和六球计数状态机，由现有 `ChassisTask` 调用，不新建重复任务。
+- `App/stair_sequence.*`：独立 UART5 `STAIR` 阶梯测试流程；复用灰度校准、MaixCAM、舵机组 5–12 和转盘接口，不进入仓库球计数状态机。
 - `.vscode/`：IntelliSense 与 Keil 构建任务。
 
 ## 已确定的设计决策
@@ -44,7 +45,7 @@
 - 平移方向统一使用极坐标：0°前进、+90°左移、180°后退、-90°右移，角度范围为 -180°～+180°。
 - 指定的极坐标距离表示实际平移轨迹长度；每个控制周期把轮速限幅后的有效平移 RPM 纳入距离积分。
 - 现场运动测试只通过 UART5 命令完成；不再保留 PATH 编辑器、独立上电测试和旧的运动包装接口。
-- UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STOP、STATUS、HELP。
+- UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、STOP、STATUS、HELP。
 - 平移统一使用 `MotionControl_MovePolarSegmentMm()`；纯横移额外使用唯一的 `LATERAL_FORWARD_COMPENSATION` 前后偏差补偿，初值为 `0.0f`。
 - `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `Motor/motion_control.c` 保留一套。
 - FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
@@ -108,3 +109,12 @@
 - Rotation is measured only by `Jy61P_GetContinuousYaw()`; it has no time- or encoder-pulse-based completion estimate. The heading baseline is reset at the start and after a settled successful rotation, so following translation holds the new vehicle heading.
 - UART5 accepts `ROT CCW <deg>` / `ROT CW <deg>` (1..360 degrees)；旋转由 `ChassisTask` 直接执行，不再经过路径编辑器。
 - Default parameters are 50 RPM cruise, 15 RPM approach, 8 RPM minimum effective speed, deceleration from 30 degrees, fine control from 10 degrees, 0.8-degree tolerance, five 20-ms settle periods, 250-ms ramp, and 8-s timeout.
+
+## STAIR 阶梯测试流程（2026-08-29）
+
+- UART5 无参数命令 `STAIR` 由 `ChassisTask` 串行执行；开始前仅检查 `Turntable_IsReady()`，不初始化或修改仓库状态。
+- 流程首先直接复用 `GrayAlign_Run()`，成功后依次执行第一、第二、第三部分；灰度失败、IMU/电机/舵机/转盘/MaixCAM 通信失败均有独立状态，3 秒未找到红球是正常的 `NOT_FOUND` 分支。
+- 搜索姿态组 G5/G8/G11 使用 `ServoAction_StartGroupNoWait()` 并等待 1000 ms；抓取组 G6/G9/G12 和过渡组 G7/G10 使用 20 s 真实完成回包等待。
+- 每次成功 G6、G9 或 G12 后，直接调用现有 `Turntable_MoveOneSlotAndWait()` 转动一格（1280 脉冲）；不调用 `WarehouseControl`，不增加 `Warehouse_BallCount`。
+- 90 mm 搜索移动使用 STAIR 专用 40 RPM，并在运动控制 20 ms 周期中轮询当前 MaixCAM 请求，视觉提前命中即停车且不补足剩余距离；完整移动后重新发请求并静止识别 3 s。117 mm 仅作为阶段过渡距离正常完成，不使用视觉截断。
+- `STATUS` 增加 `STAIR_STATE`、`STAIR_LAST`、`TURNTABLE_STATE` 和 `TURNTABLE_LAST`，便于区分灰度、动作组、视觉和转盘阶段。

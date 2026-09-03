@@ -24,6 +24,7 @@ set(CHASSIS_SOURCES
     App/maixcam_link.c
     App/ball_sequence.c
     App/gray_align.c
+    App/stair_sequence.c
     App/round_pillar.c
     App/turntable_control.c
     App/warehouse_control.c

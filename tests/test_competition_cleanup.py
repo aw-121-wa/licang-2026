@@ -181,6 +181,40 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertLess(group4, turntable)
         self.assertLess(turntable, grab_count)
 
+    def test_stair_sequence_isolated_and_wired(self):
+        stair_h = self.read("App/stair_sequence.h")
+        stair_c = self.read("App/stair_sequence.c")
+        uart_h = self.read("App/uart_command.h")
+        uart_c = self.read("App/uart_command.c")
+        freertos_c = self.read("Core/Src/freertos.c")
+        cmake_c = self.read("CMakeLists.txt")
+        cmake_armcc = self.read("CMakeLists_armcc.txt")
+        motion_h = self.read("Motor/motion_control.h")
+        motion_c = self.read("Motor/motion_control.c")
+
+        for token in (
+            "STAIR_GROUP_5", "STAIR_GROUP_6", "STAIR_GROUP_7",
+            "STAIR_GROUP_8", "STAIR_GROUP_9", "STAIR_GROUP_10",
+            "STAIR_GROUP_11", "STAIR_GROUP_12",
+            "STAIR_CAMERA_POSE_WAIT_MS", "STAIR_SERVO_TIMEOUT_MS",
+            "STAIR_VISION_TIMEOUT_MS", "STAIR_FORWARD_RPM",
+        ):
+            self.assertIn(token, stair_h)
+        self.assertIn("GrayAlign_Run()", stair_c)
+        self.assertIn("MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)", stair_c)
+        self.assertIn("MotionControl_MovePolarSegmentMmUntil", stair_c)
+        self.assertIn("Turntable_MoveOneSlotAndWait", stair_c)
+        self.assertNotIn("WarehouseControl_", stair_c)
+        self.assertNotIn("Warehouse_BallCount", stair_c)
+        self.assertNotIn("MecanumKinematics_Solve", stair_c)
+        self.assertIn("CHASSIS_CMD_STAIR", uart_h + uart_c + freertos_c)
+        self.assertIn("STAIR_STATE", uart_c)
+        self.assertIn("STAIR_LAST", uart_c)
+        self.assertIn("App/stair_sequence.c", cmake_c)
+        self.assertIn("App/stair_sequence.c", cmake_armcc)
+        self.assertIn("MotionControlEarlyStopCheck", motion_h)
+        self.assertIn("early_stop_check", motion_c)
+
 
 if __name__ == "__main__":
     unittest.main()

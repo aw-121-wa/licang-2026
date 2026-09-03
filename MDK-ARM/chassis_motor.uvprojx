@@ -137,7 +137,7 @@
             <DriverSelection>4101</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
-          <Flash2>BIN\UL2V8M.DLL</Flash2>
+          <Flash2>BIN\UL2CM3.DLL</Flash2>
           <Flash3></Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
@@ -585,6 +585,16 @@
               <FileName>gray_align.h</FileName>
               <FileType>5</FileType>
               <FilePath>../App/gray_align.h</FilePath>
+            </File>
+            <File>
+              <FileName>stair_sequence.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/stair_sequence.c</FilePath>
+            </File>
+            <File>
+              <FileName>stair_sequence.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/stair_sequence.h</FilePath>
             </File>
             <File>
               <FileName>round_pillar.c</FileName>

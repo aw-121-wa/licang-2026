@@ -4,7 +4,7 @@
 
 1. 等待 JY60/JY61P 输出有效角度帧。
 2. 使能四个电机并建立当前车头航向基准。
-3. 等待 UART5 现场命令；普通平移、ROT、BALL、GRAB 和 RZ 均由 `ChassisTask` 顺序执行。
+3. 等待 UART5 现场命令；普通平移、ROT、BALL、GRAB、RZ 和 STAIR 均由 `ChassisTask` 顺序执行。
 4. 平移过程中保持同一航向基准，实时执行统一的航向 PD 修正。
 5. 完成动作后保持停止并返回可接收命令状态。
 
@@ -25,6 +25,7 @@
 
 ## UART5 PC/VOFA 调试接口
 
+- USART2（PD5/PD6）连接 JY60/JY61P，串口参数为 115200、8N1、无硬件流控。
 - UART5 使用 PC12=TX、PD2=RX，115200、8N1、无硬件流控、无 DMA，UART5 IRQ 优先级为 6。
 - UART5 只接收 ASCII 命令并返回文本，不得直接发送张大头电机协议。
 - UART5 中断只负责单字节接收、行缓冲和投递；所有运动函数只能由 `ChassisTask` 在任务上下文调用。
@@ -45,7 +46,7 @@
 
 - 运动：`F <mm>`、`B <mm>`、`L <mm>`、`R <mm>`、`LF <mm> <deg>`、`RF <mm> <deg>`、`LR <mm> <deg>`、`RR <mm> <deg>`。
 - 旋转：`ROT CCW <deg>`、`ROT CW <deg>`。
-- 动作：`BALL`、`GRAB`、`RZ`。
+- 动作：`BALL`、`GRAB`、`RZ`、`STAIR`。
 - 控制和查询：`STOP`、`STATUS`、`HELP`。
 - 已删除动态 PATH 编辑器、PATH LOAD DEFAULT、旧独立测试和未引用的运动包装接口。
 
@@ -63,6 +64,18 @@
 - 确认航向修正符号；若偏差被放大，应翻转 `HEADING_CORRECTION_SIGN`。
 - 标定开环速度时间积分与实际地面距离的误差，尤其是麦轮横移滑移误差。
 - 观察 `MotionControl_PeriodOverrunCount`；正常应保持为0，否则需要降低控制频率或优化串口发送。
+
+## STAIR 阶梯测试验收（2026-08-29）
+
+- `STAIR` 必须首先调用现有 `GrayAlign_Run()`；只有 `GRAY_ALIGN_OK` 才允许发送 G5。灰度逻辑、BALL、RZ、GRAB、Group0–4 和普通移动行为不得被修改。
+- 搜索姿态为 G5/G8/G11，均使用 `ServoAction_StartGroupNoWait()` 后等待 `STAIR_CAMERA_POSE_WAIT_MS=1000 ms`，等待期间每 10 ms 检查 STOP；抓取 G6/G9/G12 及过渡 G7/G10 使用 `ServoAction_RunGroup()`，超时为 20000 ms。
+- 第一部分：G5 → 静止识别 P1；P1 找到则 G6 → 转盘 1280，随后仍搜索 P2。P2 由一次 90 mm 视觉辅助移动得到；成功后 G6 → 转盘 1280；之后 G7 → 117 mm 过渡。
+- 第二部分：G8 → 静止识别 P0；找到则 G9 → 转盘 1280，否则最多再执行 3 次 90 mm 搜索（P1/P2/P3），每个新点独立发送红球请求；最后统一 G10 → 117 mm 过渡。
+- 第三部分：G11 → 静止识别 P0；无论 P0 是否找到都继续一次 90 mm 搜索。P0 或第二点找到时分别执行 G12 → 转盘 1280；第二点完成后结束。
+- 所有静止红球识别超时固定为 3000 ms，每次检测必须重新 `MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)`；超时仅表示 `NOT_FOUND`，不映射为错误。
+- 90 mm 移动先发红球请求，再调用带可选 early-stop callback 的运动 API；视觉提前命中时立即停车，保留当前 `MotionControl_TraveledMm`，不补足剩余 90 mm。90 mm 完整走完后停车并重新发请求静止识别；117 mm 不使用视觉提前截断。
+- STAIR 直接调用 `Turntable_MoveOneSlotAndWait()`，每个成功 G6/G9/G12 恰好转一次 1280 脉冲；不调用 `WarehouseControl_HandleActionGroup2Completed()`，不改变 `Warehouse_BallCount` 或 `Warehouse_State`。
+- `STATUS` 至少显示 `STAIR_STATE` 和 `STAIR_LAST`；STAIR 的 STOP、灰度、IMU、运动、电机、舵机、转盘和 MaixCAM UART 错误必须能从状态中区分。STAIR 联调失败后，在底层仍可用时保持 `ChassisTask_Ready=1` 以便重试。
 
 ## Servo action-group sequence (2026-08-24)
 

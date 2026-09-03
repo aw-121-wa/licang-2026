@@ -24,7 +24,8 @@ typedef enum
     CHASSIS_CMD_ROTATE,
     CHASSIS_CMD_GRAB,
     CHASSIS_CMD_BALL,
-    CHASSIS_CMD_RZ
+    CHASSIS_CMD_RZ,
+    CHASSIS_CMD_STAIR
 } ChassisCommandType;
 
 typedef struct

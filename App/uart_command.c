@@ -4,6 +4,8 @@
 #include "motion_control.h"
 #include "servo_action.h"
 #include "warehouse_control.h"
+#include "stair_sequence.h"
+#include "turntable_control.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -231,7 +233,7 @@ static uint8_t UartCommand_SubmitMotion(const ChassisCommand *command)
 
 static void UartCommand_SendStatus(void)
 {
-    char response[320];
+    char response[448];
     const char *state;
 
     if (ChassisCommand_Busy != 0U)
@@ -252,7 +254,9 @@ static void UartCommand_SendStatus(void)
                    "HEAD_ERR=%.2f\r\nHEAD_CORR=%.2f\r\n"
                    "DIST=%.0f\r\nTARGET=%.0f\r\nLAST=%u\r\n"
                    "BALL_STATE=%s\r\nBALL_ROUND=%u\r\n"
-                   "WAREHOUSE_BALL=%u\r\nSTOP=%u\r\n",
+                   "WAREHOUSE_BALL=%u\r\nSTOP=%u\r\n"
+                   "STAIR_STATE=%s\r\nSTAIR_LAST=%s\r\n"
+                   "TURNTABLE_STATE=%s\r\nTURNTABLE_LAST=%s\r\n",
                    state,
                    (Jy61P_IsOnline(500U) != 0U) ? "ONLINE" : "OFFLINE",
                    (double)Jy61P_GetContinuousYaw(),
@@ -264,7 +268,11 @@ static void UartCommand_SendStatus(void)
                    BallSequence_StateName(BallSequence_State),
                    BallSequence_Round,
                    Warehouse_BallCount,
-                   MotionControl_StopRequested);
+                   MotionControl_StopRequested,
+                   StairSequence_StateName(StairSequence_State),
+                   StairSequence_StatusName(StairSequence_LastStatus),
+                   Turntable_StateName(Turntable_State),
+                   Turntable_StatusName(Turntable_LastStatus));
     UartCommand_Send(response);
 }
 
@@ -275,7 +283,7 @@ static void UartCommand_SendHelp(void)
         "LF <mm> <deg>\r\nRF <mm> <deg>\r\n"
         "LR <mm> <deg>\r\nRR <mm> <deg>\r\n"
         "ROT CCW <deg>\r\nROT CW <deg>\r\n"
-        "GRAB\r\nBALL\r\nRZ\r\n"
+        "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\n"
         "STOP\r\nSTATUS\r\nHELP\r\n"
         "ARM: G0=start, G1=return, G2=clamp; GRAB=G2->turn->G1, BALL=max 6\r\n");
 }
@@ -366,6 +374,27 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         else
         {
             UartCommand_Send("OK GRAB\r\n");
+        }
+        return;
+    }
+    if (strcmp(command, "STAIR") == 0)
+    {
+        if (strtok(0, " \t") != 0)
+        {
+            UartCommand_ParseErrorCount++;
+            UartCommand_Send("ERR FORMAT\r\n");
+            return;
+        }
+        chassis_command.type = CHASSIS_CMD_STAIR;
+        chassis_command.distance_mm = 0U;
+        chassis_command.angle_deg = 0.0f;
+        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
+        {
+            UartCommand_Send("ERR BUSY\r\n");
+        }
+        else
+        {
+            UartCommand_Send("OK STAIR\r\n");
         }
         return;
     }

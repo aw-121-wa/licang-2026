@@ -270,7 +270,9 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     float start_rpm,
     float cruise_rpm,
     float end_rpm,
-    MotionControlStatus move_status)
+    MotionControlStatus move_status,
+    MotionControlEarlyStopCheck early_stop_check,
+    uint8_t *early_stopped)
 {
     const float wheel_mm_per_rpm_ms =
         MOTION_PI * (float)MOTOR_WHEEL_DIAMETER_MM / 60000.0f;
@@ -365,6 +367,29 @@ static MotionControlStatus MotionControl_RunPolarSegment(
             Motion_Absolute(previous_effective_base_rpm) *
             wheel_mm_per_rpm_ms * (float)elapsed_ms;
         last_integral_tick = now;
+
+        /* Application callbacks run only after the normal STOP check. */
+        if ((early_stop_check != 0) && (early_stop_check() != 0U))
+        {
+            if (MotionControl_SetBodySpeedWithScale(
+                    0.0f, 0.0f, 0.0f, 0) != HAL_OK)
+            {
+                (void)MotorControl_StopAll();
+                MotionControl_State = MOTION_ERROR_MOTOR_UART;
+                MotionControl_BaseRpm = 0.0f;
+                MotionControl_EffectiveBaseRpm = 0.0f;
+                return MotionControl_State;
+            }
+            if (early_stopped != 0)
+            {
+                *early_stopped = 1U;
+            }
+            /* This was an application event, not a user STOP request. */
+            MotionControl_State = MOTION_STATUS_FINISHED;
+            MotionControl_BaseRpm = 0.0f;
+            MotionControl_EffectiveBaseRpm = 0.0f;
+            return MotionControl_State;
+        }
 
         if (stage == 0U)
         {
@@ -492,12 +517,14 @@ static void Motion_ApplyLateralCompensation(float *forward_unit,
     }
 }
 
-MotionControlStatus MotionControl_MovePolarSegmentMm(
+MotionControlStatus MotionControl_MovePolarSegmentMmUntil(
     uint32_t distance_mm,
     float angle_deg,
     float start_rpm,
     float cruise_rpm,
-    float end_rpm)
+    float end_rpm,
+    MotionControlEarlyStopCheck early_stop_check,
+    uint8_t *early_stopped)
 {
     float radians;
     float corrected_forward;
@@ -506,6 +533,11 @@ MotionControlStatus MotionControl_MovePolarSegmentMm(
     float forward_unit;
     float left_unit;
     MotionControlStatus move_status;
+
+    if (early_stopped != 0)
+    {
+        *early_stopped = 0U;
+    }
 
     if (Motion_SegmentAngleValid(angle_deg) == 0U)
     {
@@ -533,7 +565,20 @@ MotionControlStatus MotionControl_MovePolarSegmentMm(
                   MOTION_STATUS_DIAGONAL : MOTION_STATUS_POLAR_MOVE;
     return MotionControl_RunPolarSegment(
         corrected_distance, forward_unit, left_unit,
-        start_rpm, cruise_rpm, end_rpm, move_status);
+        start_rpm, cruise_rpm, end_rpm, move_status,
+        early_stop_check, early_stopped);
+}
+
+MotionControlStatus MotionControl_MovePolarSegmentMm(
+    uint32_t distance_mm,
+    float angle_deg,
+    float start_rpm,
+    float cruise_rpm,
+    float end_rpm)
+{
+    return MotionControl_MovePolarSegmentMmUntil(
+        distance_mm, angle_deg, start_rpm, cruise_rpm, end_rpm,
+        0, 0);
 }
 
 MotionControlStatus MotionControl_RotateDeg(float angle_deg)
@@ -738,4 +783,3 @@ MotionControlStatus MotionControl_PrepareForMove(void)
 
     return MotionControl_State;
 }
-

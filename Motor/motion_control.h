@@ -47,6 +47,16 @@ MotionControlStatus MotionControl_MovePolarSegmentMm(
     float start_rpm,
     float cruise_rpm,
     float end_rpm);
+/* Optional application callback checked inside the 20 ms motion loop. */
+typedef uint8_t (*MotionControlEarlyStopCheck)(void);
+MotionControlStatus MotionControl_MovePolarSegmentMmUntil(
+    uint32_t distance_mm,
+    float angle_deg,
+    float start_rpm,
+    float cruise_rpm,
+    float end_rpm,
+    MotionControlEarlyStopCheck early_stop_check,
+    uint8_t *early_stopped);
 /* Positive angle = counter-clockwise (left); negative = clockwise (right). */
 MotionControlStatus MotionControl_RotateDeg(float angle_deg);
 
