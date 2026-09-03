@@ -34,6 +34,7 @@
 #include "warehouse_control.h"
 #include "round_pillar.h"
 #include "stair_sequence.h"
+#include "path_sequence.h"
 
 /* USER CODE END Includes */
 
@@ -168,6 +169,7 @@ void StartChassisTask(void *argument)
   BallSequenceStatus ball_result;
   RoundPillarStatus rz_result = ROUND_PILLAR_OK;
   StairSequenceStatus stair_result = STAIR_SEQUENCE_OK;
+  PathSequenceStatus path_result = PATH_SEQUENCE_OK;
   ServoActionStatus servo_result;
   WarehouseStatus warehouse_result;
   ChassisCommand command;
@@ -345,6 +347,14 @@ void StartChassisTask(void *argument)
         }
         /* STAIR is a retryable test flow; keep the chassis command path open. */
         ChassisTask_Ready = 1U;
+      }
+      else if (command.type == CHASSIS_CMD_PATH)
+      {
+        path_result = PathSequence_Run();
+        result = PathSequence_ToMotionControlStatus(path_result);
+        /* PATH is retryable unless an existing arm failure has locked the sequence. */
+        ChassisTask_Ready = (path_result == PATH_SEQUENCE_ERROR_BALL_SERVO) ?
+                            0U : 1U;
       }
       else if (command.type == CHASSIS_CMD_GRAB)
       {

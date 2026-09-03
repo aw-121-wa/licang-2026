@@ -26,6 +26,7 @@ set(CHASSIS_SOURCES
     App/gray_align.c
     App/stair_sequence.c
     App/round_pillar.c
+    App/path_sequence.c
     App/turntable_control.c
     App/warehouse_control.c
 

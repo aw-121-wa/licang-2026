@@ -31,8 +31,7 @@
 - UART5 中断只负责单字节接收、行缓冲和投递；所有运动函数只能由 `ChassisTask` 在任务上下文调用。
 - `STOP` 通过 `MotionControl_RequestStop()` 进入当前 20 ms 控制周期，不能依赖普通运动队列排队后才生效。
 - `BALL` 是无参数的 UART5 ASCII 命令；仅在底盘空闲、仓库转盘已准备好且尚有球位时接受，并运行当前六球批次的剩余 MaixCAM 握手流程。
-- 动态路径使用静态 RAM 表，最多 20 段；路径编辑只允许在底盘 IDLE 时进行。
-- 当前默认编译路径与用户 RAM 路径分离，`PATH LOAD DEFAULT` 负责载入默认路径。
+- `PATH` 使用编译期固定静态路径表；不恢复动态 PATH 编辑器，路径表只在 `App/path_sequence.c` 顶部修改。
 
 ## FreeRTOS 命令执行
 
@@ -46,9 +45,17 @@
 
 - 运动：`F <mm>`、`B <mm>`、`L <mm>`、`R <mm>`、`LF <mm> <deg>`、`RF <mm> <deg>`、`LR <mm> <deg>`、`RR <mm> <deg>`。
 - 旋转：`ROT CCW <deg>`、`ROT CW <deg>`。
-- 动作：`BALL`、`GRAB`、`RZ`、`STAIR`。
+- 动作：`BALL`、`GRAB`、`RZ`、`STAIR`、`PATH`。
 - 控制和查询：`STOP`、`STATUS`、`HELP`。
-- 已删除动态 PATH 编辑器、PATH LOAD DEFAULT、旧独立测试和未引用的运动包装接口。
+- 不恢复动态 PATH 编辑器、PATH LOAD DEFAULT、旧独立测试和未引用的运动包装接口；UART5 `PATH` 只运行固定比赛路径表。
+
+## UART5 固定 PATH 比赛流程（2026-09-03）
+
+- 发送无参数 `PATH\r\n` 后，整车按固定顺序同步执行：`LF +45° 1850 mm` → `F 2300 mm` → `ROT +178°` → `BallSequence_Run()` → `ROT +180°` → `B 1820 mm`（`angle=180°`）→ `RoundPillar_Run()` → 停车。
+- PATH 只向现有 `ChassisCommandQueue` 投递一条 `CHASSIS_CMD_PATH`，内部使用 `App/path_sequence.c` 的静态表，不恢复 `PATH CLEAR`、`PATH ADD`、`PATH SHOW`、`PATH LOAD DEFAULT` 或 `PATH RUN`。
+- PATH 开始前必须满足底盘、舵机和仓库可执行条件；不重置 `Warehouse_BallCount`、`Warehouse_State` 或转盘状态。BALL 按现有剩余球数执行，RZ 按现有完整流程执行。
+- PATH 期间 `ChassisCommand_Busy=1`，普通运动、ROT、BALL、RZ、STAIR、GRAB 和新的 PATH 不得插入。STOP 通过现有停止请求立即终止整条 PATH，后续步骤不得执行。
+- 任意步骤失败立即终止并停车；`PathSequenceStatus` 区分运动、IMU、旋转、BALL 和 RZ 的具体失败来源。只有 BALL 返回 `BALL_SEQUENCE_OK` 才允许进入第二次旋转。
 
 ## 构建验收
 

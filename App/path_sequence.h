@@ -1,0 +1,60 @@
+#ifndef PATH_SEQUENCE_H
+#define PATH_SEQUENCE_H
+
+#include "main.h"
+#include "motion_control.h"
+
+typedef enum
+{
+    PATH_STEP_MOVE_POLAR = 0,
+    PATH_STEP_ROTATE,
+    PATH_STEP_BALL,
+    PATH_STEP_RZ
+} PathStepType;
+
+typedef enum
+{
+    PATH_SEQUENCE_IDLE = 0,
+    PATH_SEQUENCE_MOVE_LF_1850,
+    PATH_SEQUENCE_MOVE_F_2300,
+    PATH_SEQUENCE_ROTATE_178,
+    PATH_SEQUENCE_BALL,
+    PATH_SEQUENCE_ROTATE_180,
+    PATH_SEQUENCE_BACK_1820,
+    PATH_SEQUENCE_RZ,
+    PATH_SEQUENCE_DONE,
+    PATH_SEQUENCE_STATE_CANCELED,
+    PATH_SEQUENCE_ERROR
+} PathSequenceState;
+
+typedef enum
+{
+    PATH_SEQUENCE_OK = 0,
+    PATH_SEQUENCE_CANCELED,
+    PATH_SEQUENCE_ERROR_NOT_READY,
+    PATH_SEQUENCE_ERROR_MOTION,
+    PATH_SEQUENCE_ERROR_IMU,
+    PATH_SEQUENCE_ERROR_ROTATE,
+    PATH_SEQUENCE_ERROR_BALL_MAIX_UART,
+    PATH_SEQUENCE_ERROR_BALL_MAIX_TIMEOUT,
+    PATH_SEQUENCE_ERROR_BALL_SERVO,
+    PATH_SEQUENCE_ERROR_BALL_TURNTABLE,
+    PATH_SEQUENCE_ERROR_BALL_GRAY_ALIGN,
+    PATH_SEQUENCE_ERROR_RZ_IMU,
+    PATH_SEQUENCE_ERROR_RZ_MOTOR,
+    PATH_SEQUENCE_ERROR_RZ_SERVO,
+    PATH_SEQUENCE_ERROR_RZ_TURNTABLE,
+    PATH_SEQUENCE_ERROR_RZ_MAIX_UART,
+    PATH_SEQUENCE_ERROR_RZ_MAIX_TIMEOUT,
+    PATH_SEQUENCE_ERROR_RZ_TIMEOUT
+} PathSequenceStatus;
+
+extern volatile PathSequenceState PathSequence_State;
+extern volatile PathSequenceStatus PathSequence_LastStatus;
+extern volatile uint8_t PathSequence_CurrentStep;
+
+PathSequenceStatus PathSequence_Run(void);
+MotionControlStatus PathSequence_ToMotionControlStatus(
+    PathSequenceStatus status);
+
+#endif /* PATH_SEQUENCE_H */

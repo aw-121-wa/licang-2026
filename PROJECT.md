@@ -44,8 +44,8 @@
 - 通用麦轮限幅保持四轮比例。
 - 平移方向统一使用极坐标：0°前进、+90°左移、180°后退、-90°右移，角度范围为 -180°～+180°。
 - 指定的极坐标距离表示实际平移轨迹长度；每个控制周期把轮速限幅后的有效平移 RPM 纳入距离积分。
-- 现场运动测试只通过 UART5 命令完成；不再保留 PATH 编辑器、独立上电测试和旧的运动包装接口。
-- UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、STOP、STATUS、HELP。
+- 现场运动测试只通过 UART5 命令完成；不恢复动态 PATH 编辑器，保留独立上电测试删除决策和旧的运动包装接口。
+- UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、PATH、STOP、STATUS、HELP。
 - 平移统一使用 `MotionControl_MovePolarSegmentMm()`；纯横移额外使用唯一的 `LATERAL_FORWARD_COMPENSATION` 前后偏差补偿，初值为 `0.0f`。
 - `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `Motor/motion_control.c` 保留一套。
 - FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
@@ -78,6 +78,13 @@
 - UART5 command `BALL` first runs action group 1 (return/recognition posture). It then runs the remaining rounds of the current six-ball warehouse batch: request MaixCAM, wait up to 10 s for reply `1`, run action group 2 (clamp), turn the warehouse one slot, then run action group 1 (return). The sixth group-2 completion also turns one slot and is followed by group 1 return.
 - `GRAB` remains a separate single cycle: group 2 (clamp) -> one turntable slot -> group 1 (return). While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
 - MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during group 2/turntable it still completes group 1 (return) before ending the remaining batch.
+
+## UART5 fixed PATH sequence (2026-09-03)
+
+- `PATH` is a single UART5 command for the compile-time static competition route; it does not restore the deleted dynamic PATH editor (`PATH CLEAR`, `PATH ADD`, `PATH SHOW`, `PATH LOAD DEFAULT` or `PATH RUN`).
+- The default route is `LF +45° 1850 mm` → `F 2300 mm` → `ROT +178°` → existing `BallSequence_Run()` → `ROT +180°` → `B 1820 mm` (`angle=180°`) → existing `RoundPillar_Run()` → final stop.
+- PATH submits only one `CHASSIS_CMD_PATH` to the existing chassis queue and remains busy for the whole synchronous sequence. Ordinary commands cannot be inserted; `STOP` cancels the current path and prevents all later steps.
+- PATH checks chassis/servo/warehouse readiness before motion, preserves existing Warehouse state, and maps each Motion/BALL/RZ failure to a distinct `PathSequenceStatus`. BALL and RZ are invoked directly and their business logic is not duplicated.
 
 ## BALL gray alignment (2026-08-25)
 

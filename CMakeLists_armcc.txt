@@ -26,12 +26,14 @@ set(CHASSIS_SOURCES
     Core/Src/stm32f7xx_hal_timebase_tim.c
     Core/Src/system_stm32f7xx.c
 
-    App/competition_path.c
+    App/path_sequence.c
     App/uart_command.c
     App/servo_action.c
     App/maixcam_link.c
     App/ball_sequence.c
+    App/gray_align.c
     App/stair_sequence.c
+    App/round_pillar.c
     App/turntable_control.c
     App/warehouse_control.c
 

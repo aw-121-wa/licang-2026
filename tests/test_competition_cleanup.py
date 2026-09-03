@@ -30,6 +30,63 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         ):
             self.assertNotIn(symbol, motion_h + motion_c)
 
+    def test_path_sequence_is_static_and_wired(self):
+        path_h = self.read("App/path_sequence.h")
+        path_c = self.read("App/path_sequence.c")
+        uart_h = self.read("App/uart_command.h")
+        uart_c = self.read("App/uart_command.c")
+        freertos_c = self.read("Core/Src/freertos.c")
+        cmake_c = self.read("CMakeLists.txt")
+        cmake_armcc = self.read("CMakeLists_armcc.txt")
+        uvprojx = self.read("MDK-ARM/chassis_motor.uvprojx")
+
+        self.assertFalse((ROOT / "App/competition_path.c").exists())
+        self.assertFalse((ROOT / "App/competition_path.h").exists())
+        self.assertIn("PATH_STEP_MOVE_POLAR", path_h)
+        self.assertIn("PATH_STEP_ROTATE", path_h)
+        self.assertIn("PATH_STEP_BALL", path_h)
+        self.assertIn("PATH_STEP_RZ", path_h)
+        for token in ("1850U", "45.0f", "2300U", "178.0f", "180.0f", "1820U"):
+            self.assertIn(token, path_c)
+        self.assertIn("BallSequence_Run()", path_c)
+        self.assertIn("RoundPillar_Run()", path_c)
+        self.assertIn("CHASSIS_CMD_PATH", uart_h + uart_c + freertos_c)
+        self.assertIn('"PATH\\r\\n"', uart_c)
+        self.assertIn("PathSequence_Run()", freertos_c)
+        self.assertIn("App/path_sequence.c", cmake_c)
+        self.assertIn("App/path_sequence.c", cmake_armcc)
+        self.assertIn("<FileName>path_sequence.c</FileName>", uvprojx)
+        self.assertNotIn("PATH CLEAR", uart_c)
+        self.assertNotIn("PATH ADD", uart_c)
+        self.assertNotIn("PATH LOAD DEFAULT", uart_c)
+
+    def test_path_sequence_stops_on_failure_before_later_steps(self):
+        path_c = self.read("App/path_sequence.c")
+        self.assertIn("return PathSequence_Finalize(PATH_SEQUENCE_CANCELED)", path_c)
+        self.assertIn("return PathSequence_Finalize(path_status)", path_c)
+        self.assertIn("MotionControl_WasStopped()", path_c)
+        table_body = path_c[path_c.index("PathSequence_Steps[]"):]
+        self.assertLess(
+            table_body.index("1850U"),
+            table_body.index("2300U"),
+        )
+        self.assertLess(
+            table_body.index("2300U"),
+            table_body.index("178.0f"),
+        )
+        self.assertLess(
+            table_body.index("178.0f"),
+            table_body.index("PATH_STEP_BALL"),
+        )
+        self.assertLess(
+            table_body.index("PATH_STEP_BALL"),
+            table_body.index("180.0f"),
+        )
+        self.assertLess(
+            table_body.index("180.0f"),
+            table_body.index("1820U"),
+        )
+
     def test_motion_control_owns_body_speed_heading_and_lateral_compensation(self):
         motion_h = self.read("Motor/motion_control.h")
         motion_c = self.read("Motor/motion_control.c")
@@ -134,6 +191,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
 
     def test_uart5_keeps_only_competition_commands_in_help_and_status(self):
         uart_c = self.read("App/uart_command.c")
+        uart_h = self.read("App/uart_command.h")
         self.assertIn('"F <mm>', uart_c)
         self.assertIn('"ROT CCW <deg>', uart_c)
         self.assertIn('"BALL', uart_c)
@@ -142,8 +200,11 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn('"STOP', uart_c)
         self.assertIn('"STATUS', uart_c)
         self.assertIn('"HELP', uart_c)
-        for token in ("PATH ", "MAIX_TX", "ARM_MOTION_COUNT", "WAREHOUSE_G2_DONE"):
+        for token in ("PATH CLEAR", "PATH ADD", "PATH LOAD DEFAULT",
+                      "MAIX_TX", "ARM_MOTION_COUNT", "WAREHOUSE_G2_DONE"):
             self.assertNotIn(token, uart_c)
+        self.assertIn("CHASSIS_CMD_PATH", uart_h + uart_c)
+        self.assertIn('"PATH\\r\\n"', uart_c)
         for token in ("HEAD_ERR", "HEAD_CORR", "DIST=", "TARGET=", "BALL_STATE", "WAREHOUSE_BALL"):
             self.assertIn(token, uart_c)
 

@@ -537,6 +537,16 @@
           <GroupName>App</GroupName>
           <Files>
             <File>
+              <FileName>path_sequence.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/path_sequence.c</FilePath>
+            </File>
+            <File>
+              <FileName>path_sequence.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/path_sequence.h</FilePath>
+            </File>
+            <File>
               <FileName>uart_command.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/uart_command.c</FilePath>
