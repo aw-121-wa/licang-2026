@@ -67,6 +67,7 @@ RATIO_MIN = 0.65
 RATIO_MAX = 1.35
 
 MAIN_LOOP_SLEEP_MS = 1
+PERFORMANCE_REPORT_INTERVAL_MS = 1000
 
 STATE_WAIT_CMD = 0
 STATE_SEARCH_BALL = 1
@@ -110,6 +111,112 @@ def sleep_ms(milliseconds):
     else:
         import time as pytime
         pytime.sleep(milliseconds / 1000.0)
+
+
+class PerformanceStats:
+    """Small in-process profiler for the rotary main loop.
+
+    Stage values are accumulated for one-second reporting windows.  Track
+    updates are printed immediately because they are useful for verifying
+    whether velocity estimation is actually receiving consecutive blobs.
+    """
+
+    STAGES = ("camera", "detect", "track", "draw", "display")
+
+    def __init__(self):
+        self.stage_totals = {stage: 0.0 for stage in self.STAGES}
+        self.frame_count = 0
+        self.frame_time_total = 0.0
+        self.raw_blob_count = 0
+        self.valid_blob_count = 0
+        self.track_count = 0
+        self.track_update_count = 0
+        self.ball_presence_frames = 0
+        self.ball_presence_run = 0
+        self.ball_presence_runs = []
+        self.last_fps = 0.0
+        self.min_fps = None
+        self._window_start_ms = None
+        self._frame_start_ms = None
+
+    def start_frame(self, now_ms=None):
+        self._frame_start_ms = ticks_ms() if now_ms is None else now_ms
+
+    def record_stage(self, stage, duration_ms):
+        if stage in self.stage_totals:
+            self.stage_totals[stage] += max(0.0, float(duration_ms))
+
+    def record_detection(self, raw_count, valid_count):
+        self.raw_blob_count = int(raw_count)
+        self.valid_blob_count = int(valid_count)
+        if self.valid_blob_count > 0:
+            self.ball_presence_frames += 1
+            self.ball_presence_run += 1
+        elif self.ball_presence_run > 0:
+            self.ball_presence_runs.append(self.ball_presence_run)
+            self.ball_presence_run = 0
+
+    def record_track_update(self, track):
+        self.track_update_count += 1
+        print("ID:{} FRAME:{} X:{} Y:{} VX:{:.1f} VY:{:.1f}".format(
+            track.id,
+            track.frame_count,
+            int(round(track.last_x)),
+            int(round(track.last_y)),
+            track.vx,
+            track.vy,
+        ))
+
+    def finish_frame(self, now_ms=None, track_count=0):
+        if self._frame_start_ms is None:
+            self.start_frame(now_ms)
+        end_ms = ticks_ms() if now_ms is None else now_ms
+        frame_duration = ticks_diff(end_ms, self._frame_start_ms)
+        if frame_duration < 0:
+            frame_duration = 0
+        self.frame_count += 1
+        self.frame_time_total += frame_duration
+        self.track_count = int(track_count)
+        if self._window_start_ms is None:
+            self._window_start_ms = end_ms
+        elapsed_ms = ticks_diff(end_ms, self._window_start_ms)
+        if elapsed_ms < PERFORMANCE_REPORT_INTERVAL_MS:
+            return None
+
+        fps = self.frame_count * 1000.0 / max(1, elapsed_ms)
+        self.last_fps = fps
+        if self.min_fps is None or fps < self.min_fps:
+            self.min_fps = fps
+        frame_ms = self.frame_time_total / max(1, self.frame_count)
+        averages = {
+            stage: self.stage_totals[stage] / max(1, self.frame_count)
+            for stage in self.STAGES
+        }
+        print(("FPS:{:.1f} MIN_FPS:{:.1f} FRAME:{:.1f}ms "
+               "DETECT:{:.1f}ms TRACK:{:.1f}ms DRAW:{:.1f}ms "
+               "DISPLAY:{:.1f}ms RAW:{} VALID:{} TRACKS:{} "
+               "BALL_FRAMES:{}").format(
+                   fps,
+                   self.min_fps,
+                   frame_ms,
+                   averages["detect"],
+                   averages["track"],
+                   averages["draw"],
+                   averages["display"],
+                   self.raw_blob_count,
+                   self.valid_blob_count,
+                   self.track_count,
+                   self.ball_presence_frames,
+               ))
+        self.frame_count = 0
+        self.frame_time_total = 0.0
+        for stage in self.STAGES:
+            self.stage_totals[stage] = 0.0
+        self._window_start_ms = end_ms
+        return fps
+
+
+performance_stats = PerformanceStats()
 
 
 def light_init():
@@ -290,9 +397,12 @@ def select_largest_blob(blobs):
     return max(candidates, key=lambda item: (item[0], item[1]))[2]
 
 
-def detect_rotary_candidates(img, mode=None):
+def detect_rotary_candidates(img, mode=None, metrics=None):
     """Detect valid target blobs over the whole frame; no ROI is passed."""
+    if metrics is None:
+        metrics = performance_stats
     if img is None:
+        metrics.record_detection(0, 0)
         return []
     selected_mode = current_mode if mode is None else mode
     threshold = COLOR_THRESHOLDS.get(selected_mode, RED_THRESHOLD)
@@ -304,15 +414,20 @@ def detect_rotary_candidates(img, mode=None):
             merge=True,
         )
     except Exception:
+        metrics.record_detection(0, 0)
         return []
-    return [blob for blob in (blobs or []) if filter_blob(blob) is not None]
+    raw_blobs = blobs or []
+    candidates = [blob for blob in raw_blobs if filter_blob(blob) is not None]
+    metrics.record_detection(len(raw_blobs), len(candidates))
+    return candidates
 
 
 # ================================= Tracking =================================
 
 class RotaryTrack:
-    def __init__(self, track_id, center_x, center_y, now_ms):
+    def __init__(self, track_id, center_x, center_y, now_ms, metrics=None):
         self.id = track_id
+        self.metrics = performance_stats if metrics is None else metrics
         self.history = []
         self.last_x = float(center_x)
         self.last_y = float(center_y)
@@ -331,20 +446,20 @@ class RotaryTrack:
         self.history.append((now_ms, self.last_x, self.last_y))
         if len(self.history) > TRACK_LENGTH:
             self.history.pop(0)
-        if len(self.history) < 2:
-            return
-        first = self.history[0]
-        last = self.history[-1]
-        elapsed_ms = ticks_diff(last[0], first[0])
-        if elapsed_ms <= 0:
-            return
-        elapsed_seconds = elapsed_ms / 1000.0
-        measured_vx = (last[1] - first[1]) / elapsed_seconds
-        measured_vy = (last[2] - first[2]) / elapsed_seconds
-        self.vx = ((1.0 - SPEED_FILTER) * self.vx +
-                   SPEED_FILTER * measured_vx)
-        self.vy = ((1.0 - SPEED_FILTER) * self.vy +
-                   SPEED_FILTER * measured_vy)
+        if len(self.history) >= 2:
+            first = self.history[0]
+            last = self.history[-1]
+            elapsed_ms = ticks_diff(last[0], first[0])
+            if elapsed_ms > 0:
+                elapsed_seconds = elapsed_ms / 1000.0
+                measured_vx = (last[1] - first[1]) / elapsed_seconds
+                measured_vy = (last[2] - first[2]) / elapsed_seconds
+                self.vx = ((1.0 - SPEED_FILTER) * self.vx +
+                           SPEED_FILTER * measured_vx)
+                self.vy = ((1.0 - SPEED_FILTER) * self.vy +
+                           SPEED_FILTER * measured_vy)
+        if self.metrics is not None:
+            self.metrics.record_track_update(self)
 
     def speed(self):
         return math.sqrt(self.vx * self.vx + self.vy * self.vy)
@@ -354,10 +469,12 @@ def _distance(x1, y1, x2, y2):
     return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 
-def update_rotary_tracks(candidates, now_ms=None):
+def update_rotary_tracks(candidates, now_ms=None, metrics=None):
     global rotary_tracks, next_track_id
     if now_ms is None:
         now_ms = ticks_ms()
+    if metrics is None:
+        metrics = performance_stats
 
     unmatched = list(candidates or [])
     matched_track_ids = set()
@@ -387,7 +504,7 @@ def update_rotary_tracks(candidates, now_ms=None):
         blob = unmatched.pop(0)
         center_x, center_y = blob_center(blob)
         rotary_tracks.append(RotaryTrack(next_track_id, center_x, center_y,
-                                         now_ms))
+                                         now_ms, metrics))
         next_track_id += 1
     return rotary_tracks
 
@@ -427,21 +544,28 @@ def select_trigger_track():
     return min(choices, key=lambda item: item[1][2])
 
 
-def rotary_recognition_process(img, serial, now_ms=None):
+def rotary_recognition_process(img, serial, now_ms=None, metrics=None):
     global recognition_armed, detected_latched, recognition_state
     global last_status_message, last_candidates, last_selected_blob
     global last_prediction
     if not recognition_armed or detected_latched:
         return last_selected_blob
 
+    if metrics is None:
+        metrics = performance_stats
     if now_ms is None:
         now_ms = ticks_ms()
-    last_candidates = detect_rotary_candidates(img)
+    detect_start_ms = ticks_ms()
+    last_candidates = detect_rotary_candidates(img, metrics=metrics)
     last_selected_blob = select_largest_blob(last_candidates)
-    update_rotary_tracks(last_candidates, now_ms)
+    metrics.record_stage("detect", ticks_diff(ticks_ms(), detect_start_ms))
+
+    track_start_ms = ticks_ms()
+    update_rotary_tracks(last_candidates, now_ms, metrics)
 
     recognition_state = STATE_TRACK_BALL if rotary_tracks else STATE_SEARCH_BALL
     track, prediction = select_trigger_track()
+    metrics.record_stage("track", ticks_diff(ticks_ms(), track_start_ms))
     last_prediction = prediction
     if track is None:
         last_status_message = "TRACK BALL" if rotary_tracks else "SEARCH BALL"
@@ -565,13 +689,24 @@ def main():
         print("MaixCAM2 rotary speed compensation started")
         print("UART2 {} TX=B0 RX=B1".format(UART_DEVICE))
         while not app.need_exit():
+            performance_stats.start_frame()
             uart_process(serial)
+            camera_start_ms = ticks_ms()
             frame = cam.read()
+            performance_stats.record_stage(
+                "camera", ticks_diff(ticks_ms(), camera_start_ms))
             if recognition_armed:
                 rotary_recognition_process(frame, serial)
+            draw_start_ms = ticks_ms()
             draw_ui(frame)
+            performance_stats.record_stage(
+                "draw", ticks_diff(ticks_ms(), draw_start_ms))
+            display_start_ms = ticks_ms()
             disp.show(frame)
+            performance_stats.record_stage(
+                "display", ticks_diff(ticks_ms(), display_start_ms))
             sleep_ms(MAIN_LOOP_SLEEP_MS)
+            performance_stats.finish_frame(ticks_ms(), len(rotary_tracks))
     finally:
         light_off()
         print("program exit")
@@ -628,6 +763,18 @@ def _selftest():
     global GRAB_ROI
     global current_mode, recognition_armed, detected_latched, recognition_state
 
+    metrics = PerformanceStats()
+    metrics.record_stage("camera", 3)
+    metrics.record_stage("detect", 4)
+    metrics.record_stage("track", 1)
+    metrics.record_stage("draw", 2)
+    metrics.record_stage("display", 5)
+    metrics.record_detection(3, 1)
+    assert metrics.stage_totals["camera"] == 3
+    assert metrics.stage_totals["detect"] == 4
+    assert metrics.raw_blob_count == 3
+    assert metrics.valid_blob_count == 1
+
     assert DEFAULT_GRAB_ROI == [220, 190, 260, 155]
     assert GRAB_ROI == DEFAULT_GRAB_ROI
     assert _valid_rect(GRAB_ROI) is True
@@ -651,13 +798,16 @@ def _selftest():
     # Full-frame detection must not receive an ROI keyword.
     for now_ms, x in ((0, 100), (100, 130), (200, 160)):
         rotary_recognition_process(_FakeImage([_FakeBlob(x, 200)]),
-                                   serial, now_ms)
+                                   serial, now_ms, metrics)
         assert serial.sent == []
     rotary_recognition_process(_FakeImage([_FakeBlob(190, 200)]),
-                               serial, 300)
+                               serial, 300, metrics)
     assert serial.sent == [b"1\n"]
     assert recognition_armed is False
     assert detected_latched is True
+    assert metrics.raw_blob_count == 1
+    assert metrics.valid_blob_count == 1
+    assert metrics.track_update_count >= 4
 
     # A new command starts a fresh transaction.  A ball moving away from the
     # fixed ROI must not satisfy the trigger.
