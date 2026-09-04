@@ -418,35 +418,6 @@ static StairSequenceStatus StairSequence_Move117(
     return StairSequence_CheckStop();
 }
 
-static StairSequenceStatus StairSequence_Move20AfterAlign(void)
-{
-    MotionControlStatus motion_status;
-    StairSequenceStatus stair_status;
-
-    StairSequence_State = STAIR_STATE_MOVE20_AFTER_ALIGN;
-    motion_status = MotionControl_MovePolarSegmentMm(
-        STAIR_INITIAL_BACKWARD_MM,
-        180.0f,
-        0.0f,
-        STAIR_FORWARD_RPM,
-        0.0f);
-    if (MotionControl_WasStopped() != 0U)
-    {
-        return STAIR_SEQUENCE_CANCELED_BY_STOP;
-    }
-    stair_status = StairSequence_FromMotionStatus(motion_status);
-    if (stair_status != STAIR_SEQUENCE_OK)
-    {
-        return stair_status;
-    }
-    stair_status = StairSequence_StopChassis();
-    if (stair_status != STAIR_SEQUENCE_OK)
-    {
-        return stair_status;
-    }
-    return StairSequence_CheckStop();
-}
-
 static StairSequenceStatus StairSequence_MapBallError(
     StairBallResult result)
 {
@@ -670,12 +641,6 @@ StairSequenceStatus StairSequence_Run(void)
         return StairSequence_Finalize(STAIR_SEQUENCE_ERROR_GRAY_ALIGN);
     }
 
-    status = StairSequence_Move20AfterAlign();
-    if (status != STAIR_SEQUENCE_OK)
-    {
-        return StairSequence_Finalize(status);
-    }
-
     status = StairSequence_RunPart3();
     if (status != STAIR_SEQUENCE_OK)
     {
@@ -696,7 +661,6 @@ const char *StairSequence_StateName(StairSequenceState state)
     {
     case STAIR_STATE_IDLE:          return "IDLE";
     case STAIR_STATE_ALIGNING:      return "ALIGNING";
-    case STAIR_STATE_MOVE20_AFTER_ALIGN:return "MOVE20_AFTER_ALIGN";
     case STAIR_STATE_PART1_G5:      return "PART1_G5";
     case STAIR_STATE_PART1_CHECK1:  return "PART1_CHECK1";
     case STAIR_STATE_PART1_MOVE90: return "PART1_MOVE90";

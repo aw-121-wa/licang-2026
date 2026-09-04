@@ -71,7 +71,7 @@
 #define STAIR_GROUP_10                      10U
 #define STAIR_GROUP_11                      11U
 #define STAIR_GROUP_12                      12U
-#define STAIR_CAMERA_POSE_WAIT_MS          1000U
+#define STAIR_CAMERA_POSE_WAIT_MS          500U
 #define STAIR_SERVO_TIMEOUT_MS             20000U
 #define STAIR_VISION_TIMEOUT_MS            1000U
 #define STAIR_VISION_POLL_MS                  1U

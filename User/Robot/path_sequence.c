@@ -112,8 +112,8 @@ static const PathStep PathSequence_CommandQueue[] =
 
     {
         PATH_STEP_MOVE,
-        2000U,
-        150.0f,
+        2200U,
+        153.0f,
         MOTION_CRUISE_RPM,
         0U
     },

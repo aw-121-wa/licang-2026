@@ -383,7 +383,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             "STAIR_INITIAL_BACKWARD_MM",
         ):
             self.assertIn(token, stair_h + config_h)
-        self.assertRegex(config_h, r"#define\s+STAIR_VISION_TIMEOUT_MS\s+1000U")
+        self.assertRegex(config_h, r"#define\s+STAIR_VISION_TIMEOUT_MS\s+500U")
         gray_h = self.read("User/Algorithm/gray_align.h")
         gray_c = self.read("User/Algorithm/gray_align.c")
         ball_c = self.read("User/Robot/ball_sequence.c")
@@ -412,16 +412,12 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertRegex(
             config_h, r"#define\s+STAIR_INITIAL_BACKWARD_MM\s+18U"
         )
-        self.assertIn("STAIR_STATE_MOVE20_AFTER_ALIGN", stair_h)
-        self.assertIn("STAIR_STATE_MOVE20_AFTER_ALIGN", stair_c)
+        self.assertNotIn("STAIR_STATE_MOVE20_AFTER_ALIGN", stair_h)
+        self.assertNotIn("StairSequence_Move20AfterAlign", stair_c)
         run_start = stair_c.index("StairSequenceStatus StairSequence_Run(void)")
         run_body = stair_c[run_start:]
         self.assertLess(
             run_body.index("gray_status = GrayAlign_RunUnlimited();"),
-            run_body.index("status = StairSequence_Move20AfterAlign();"),
-        )
-        self.assertLess(
-            run_body.index("status = StairSequence_Move20AfterAlign();"),
             run_body.index("status = StairSequence_RunPart3();"),
         )
 
