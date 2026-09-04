@@ -29,6 +29,7 @@ set(CHASSIS_SOURCES
     App/round_pillar.c
     App/turntable_control.c
     App/warehouse_control.c
+    App/cangku_task.c
 
     Motor/motor_control.c
     Motor/cangku_motor.c

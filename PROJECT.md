@@ -114,6 +114,10 @@
 - UART5 accepts `ROT CCW <deg>` / `ROT CW <deg>` (1..360 degrees)；旋转由 `ChassisTask` 直接执行，不再经过路径编辑器。
 - Default parameters are 50 RPM cruise, 15 RPM approach, 8 RPM minimum effective speed, deceleration from 30 degrees, fine control from 10 degrees, 0.8-degree tolerance, five 20-ms settle periods, 250-ms ramp, and 8-s timeout.
 
+## CANGKU 仓库搬运流程（2026-09-04）
+
+- `App/cangku_task.*`：`CANGKU` 仓库搬运流程；由 `ChassisTask` 执行旋转、0110 灰度对齐、移动、动作组和反向转盘步骤。
+
 ## STAIR 阶梯测试流程（2026-08-29）
 
 - UART5 无参数命令 `STAIR` 由 `ChassisTask` 串行执行；开始前仅检查 `Turntable_IsReady()`，不初始化或修改仓库状态。

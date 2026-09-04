@@ -218,6 +218,11 @@ static uint8_t UartCommand_SubmitMotion(const ChassisCommand *command)
     {
         return 0U;
     }
+    if ((command->type == CHASSIS_CMD_CANGKU) &&
+        (Turntable_IsReady() == 0U))
+    {
+        return 0U;
+    }
     if ((ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION) &&
         (ServoAction_SequenceState != SERVO_SEQUENCE_DONE))
     {
@@ -294,7 +299,7 @@ static void UartCommand_SendHelp(void)
         "LF <mm> <deg>\r\nRF <mm> <deg>\r\n"
         "LR <mm> <deg>\r\nRR <mm> <deg>\r\n"
         "ROT CCW <deg>\r\nROT CW <deg>\r\n"
-        "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\nPATH\r\n"
+        "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\nPATH\r\nCANGKU\r\n"
         "STOP\r\nSTATUS\r\nHELP\r\n"
         "ARM: G0=start, G1=return, G2=clamp; GRAB=G2->turn->G1, BALL=max 6\r\n");
 }
@@ -451,6 +456,27 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         else
         {
             UartCommand_Send("OK PATH\r\n");
+        }
+        return;
+    }
+    if (strcmp(command, "CANGKU") == 0)
+    {
+        if (strtok(0, " \t") != 0)
+        {
+            UartCommand_ParseErrorCount++;
+            UartCommand_Send("ERR FORMAT\r\n");
+            return;
+        }
+        chassis_command.type = CHASSIS_CMD_CANGKU;
+        chassis_command.distance_mm = 0U;
+        chassis_command.angle_deg = 0.0f;
+        if (UartCommand_SubmitMotion(&chassis_command) == 0U)
+        {
+            UartCommand_Send("ERR BUSY\r\n");
+        }
+        else
+        {
+            UartCommand_Send("OK CANGKU\r\n");
         }
         return;
     }

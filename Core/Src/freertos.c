@@ -35,6 +35,7 @@
 #include "round_pillar.h"
 #include "stair_sequence.h"
 #include "path_sequence.h"
+#include "cangku_task.h"
 
 /* USER CODE END Includes */
 
@@ -170,6 +171,7 @@ void StartChassisTask(void *argument)
   RoundPillarStatus rz_result = ROUND_PILLAR_OK;
   StairSequenceStatus stair_result = STAIR_SEQUENCE_OK;
   PathSequenceStatus path_result = PATH_SEQUENCE_OK;
+  CangkuSequenceStatus cangku_result = CANGKU_STATUS_OK;
   ServoActionStatus servo_result;
   WarehouseStatus warehouse_result;
   ChassisCommand command;
@@ -179,6 +181,7 @@ void StartChassisTask(void *argument)
   ChassisTask_Ready = 0U;
   ChassisCommand_LastStatus = MOTION_STATUS_IDLE;
   ServoAction_SequenceState = SERVO_SEQUENCE_STARTING;
+  CangkuSequence_Init();
 
   MotionControl_Init(&huart3, &huart2);
   osDelay(100);
@@ -437,6 +440,37 @@ void StartChassisTask(void *argument)
         }
         /* STAIR is a retryable test flow; keep the chassis command path open. */
         ChassisTask_Ready = 1U;
+      }
+      else if (command.type == CHASSIS_CMD_CANGKU)
+      {
+        cangku_result = CangkuSequence_Run();
+        if ((cangku_result == CANGKU_STATUS_OK) ||
+            (cangku_result == CANGKU_STATUS_CANCELED))
+        {
+          result = MOTION_STATUS_FINISHED;
+        }
+        else if (cangku_result == CANGKU_STATUS_ERROR_IMU)
+        {
+          result = MOTION_ERROR_IMU_LOST;
+        }
+        else if (cangku_result == CANGKU_STATUS_ERROR_ROTATE)
+        {
+          result = MOTION_ERROR_ROTATE_TIMEOUT;
+        }
+        else if (cangku_result == CANGKU_STATUS_ERROR_GRAY_ALIGN)
+        {
+          result = MOTION_ERROR_GRAY_ALIGN;
+        }
+        else if (cangku_result == CANGKU_STATUS_ERROR_SERVO)
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+        }
+        else
+        {
+          result = MOTION_ERROR_MOTOR_UART;
+        }
+        ChassisTask_Ready =
+            (ServoAction_SequenceState == SERVO_SEQUENCE_ERROR) ? 0U : 1U;
       }
       else if (command.type == CHASSIS_CMD_GRAB)
       {

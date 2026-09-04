@@ -51,7 +51,7 @@ TurntableStatus Turntable_Enable(void)
     return Turntable_LastStatus;
 }
 
-TurntableStatus Turntable_MoveOneSlot(void)
+static TurntableStatus Turntable_MoveOneSlotInDirection(ZdtDirection direction)
 {
     if (Turntable_State != TURNTABLE_STATE_READY)
     {
@@ -60,7 +60,7 @@ TurntableStatus Turntable_MoveOneSlot(void)
     }
 
     Turntable_LastStatus = Turntable_FromHalStatus(
-        ZDT_MoveRelative(TURNTABLE_SLOT_DIRECTION,
+        ZDT_MoveRelative(direction,
                          TURNTABLE_MOVE_SPEED_RPM,
                          TURNTABLE_MOVE_ACCELERATION,
                          TURNTABLE_ONE_SLOT_PULSES));
@@ -75,9 +75,28 @@ TurntableStatus Turntable_MoveOneSlot(void)
     return Turntable_LastStatus;
 }
 
+TurntableStatus Turntable_MoveOneSlot(void)
+{
+    return Turntable_MoveOneSlotInDirection(TURNTABLE_SLOT_DIRECTION);
+}
+
 TurntableStatus Turntable_MoveOneSlotAndWait(TurntableCancelCheck cancel_check)
 {
     TurntableStatus status = Turntable_MoveOneSlot();
+
+    if (status != TURNTABLE_STATUS_OK)
+    {
+        return status;
+    }
+    return Turntable_WaitComplete(cancel_check);
+}
+
+TurntableStatus Turntable_MoveOneSlotReverseAndWait(
+    TurntableCancelCheck cancel_check)
+{
+    ZdtDirection reverse_direction =
+        (TURNTABLE_SLOT_DIRECTION == ZDT_DIR_CW) ? ZDT_DIR_CCW : ZDT_DIR_CW;
+    TurntableStatus status = Turntable_MoveOneSlotInDirection(reverse_direction);
 
     if (status != TURNTABLE_STATUS_OK)
     {

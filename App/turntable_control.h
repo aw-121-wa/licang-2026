@@ -42,6 +42,8 @@ TurntableStatus Turntable_Enable(void);
 TurntableStatus Turntable_MoveOneSlot(void);
 TurntableStatus Turntable_WaitComplete(TurntableCancelCheck cancel_check);
 TurntableStatus Turntable_MoveOneSlotAndWait(TurntableCancelCheck cancel_check);
+TurntableStatus Turntable_MoveOneSlotReverseAndWait(
+    TurntableCancelCheck cancel_check);
 TurntableStatus Turntable_Stop(void);
 uint8_t Turntable_IsReady(void);
 const char *Turntable_StateName(TurntableState state);
