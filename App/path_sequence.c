@@ -47,7 +47,77 @@ static const PathStep PathSequence_CommandQueue[] =
         0U
     },
 
+    /* STEP 4: BALL 成功后再次原地逆时针旋转178° */
+    {
+        PATH_STEP_ROTATE,
+        0U,
+        178.0f,
+        0.0f,
+        0U
+    },
 
+    /* STEP 5: 后退1810 mm，180°表示后退方向 */
+    {
+        PATH_STEP_MOVE,
+        1810U,
+        180.0f,
+        MOTION_CRUISE_RPM,
+        0U
+    },
+
+    /* STEP 6: 当前已有 RZ 流程 */
+    {
+        PATH_STEP_RZ,
+        0U,
+        0.0f,
+        0.0f,
+        0U
+    },
+
+    /* STEP 7: RZ成功后阻塞等待第一次动作组0回位完成 */
+    {
+        PATH_STEP_SERVO_GROUP,
+        0U,
+        0.0f,
+        0.0f,
+        SERVO_ACTION_START_GROUP
+    },
+
+    /* STEP 8: 第一次动作组0完成后前进330 mm */
+    {
+        PATH_STEP_MOVE,
+        330U,
+        0.0f,
+        MOTION_CRUISE_RPM,
+        0U
+    },
+
+    /* STEP 9: 执行完整 STAIR 流程 */
+    {
+        PATH_STEP_STAIR,
+        0U,
+        0.0f,
+        0.0f,
+        0U
+    },
+
+    /* STEP 10: STAIR成功后阻塞等待第二次动作组0回位完成 */
+    {
+        PATH_STEP_SERVO_GROUP,
+        0U,
+        0.0f,
+        0.0f,
+        SERVO_ACTION_START_GROUP
+    },
+
+    /* STEP 11: 第二次动作组0完成后向左横移2000 mm */
+    {
+        PATH_STEP_MOVE,
+        2000U,
+        90.0f,
+        MOTION_CRUISE_RPM,
+        0U
+    }
 };
 
 #define PATH_SEQUENCE_STEP_COUNT \

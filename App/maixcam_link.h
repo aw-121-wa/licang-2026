@@ -14,12 +14,6 @@ typedef enum
 
 typedef enum
 {
-    MAIXCAM_REQUEST_NORMAL = 0,
-    MAIXCAM_REQUEST_ROTARY = 1
-} MaixCamRequestMode;
-
-typedef enum
-{
     MAIXCAM_LINK_OK = 0,
     MAIXCAM_LINK_ERROR_ARGUMENT,
     MAIXCAM_LINK_ERROR_UART
@@ -27,7 +21,6 @@ typedef enum
 
 void MaixCamLink_Init(UART_HandleTypeDef *huart);
 MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color);
-MaixCamLinkStatus MaixCamLink_SendRotaryRequest(MaixCamColor color);
 uint8_t MaixCamLink_TakeReply(void);
 void MaixCamLink_UartRxCpltCallback(UART_HandleTypeDef *huart);
 void MaixCamLink_UartErrorCallback(UART_HandleTypeDef *huart);

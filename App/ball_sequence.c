@@ -100,7 +100,7 @@ BallSequenceStatus BallSequence_Run(void)
     {
         BallSequence_Round = round;
         BallSequence_State = BALL_SEQUENCE_WAITING_MAIXCAM;
-        if (MaixCamLink_SendRotaryRequest(BALL_SEQUENCE_TARGET_COLOR) != MAIXCAM_LINK_OK)
+        if (MaixCamLink_SendRequest(BALL_SEQUENCE_TARGET_COLOR) != MAIXCAM_LINK_OK)
         {
             BallSequence_State = BALL_SEQUENCE_ERROR;
             BallSequence_LastStatus = BALL_SEQUENCE_ERROR_MAIX_UART;
