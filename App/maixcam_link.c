@@ -45,7 +45,8 @@ void MaixCamLink_Init(UART_HandleTypeDef *huart)
     }
 }
 
-MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color)
+static MaixCamLinkStatus MaixCamLink_SendCommand(MaixCamColor color,
+                                                  MaixCamRequestMode mode)
 {
     uint8_t command;
 
@@ -54,13 +55,21 @@ MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color)
         return MAIXCAM_LINK_ERROR_ARGUMENT;
     }
 
-    if (color == MAIXCAM_COLOR_RED)
+    if ((mode == MAIXCAM_REQUEST_NORMAL) && (color == MAIXCAM_COLOR_RED))
     {
         command = '1';
     }
-    else if (color == MAIXCAM_COLOR_BLUE)
+    else if ((mode == MAIXCAM_REQUEST_NORMAL) && (color == MAIXCAM_COLOR_BLUE))
     {
         command = '2';
+    }
+    else if ((mode == MAIXCAM_REQUEST_ROTARY) && (color == MAIXCAM_COLOR_RED))
+    {
+        command = '3';
+    }
+    else if ((mode == MAIXCAM_REQUEST_ROTARY) && (color == MAIXCAM_COLOR_BLUE))
+    {
+        command = '4';
     }
     else
     {
@@ -81,6 +90,16 @@ MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color)
 
     maixcam_request_active = 1U;
     return MAIXCAM_LINK_OK;
+}
+
+MaixCamLinkStatus MaixCamLink_SendRequest(MaixCamColor color)
+{
+    return MaixCamLink_SendCommand(color, MAIXCAM_REQUEST_NORMAL);
+}
+
+MaixCamLinkStatus MaixCamLink_SendRotaryRequest(MaixCamColor color)
+{
+    return MaixCamLink_SendCommand(color, MAIXCAM_REQUEST_ROTARY);
 }
 
 uint8_t MaixCamLink_TakeReply(void)
