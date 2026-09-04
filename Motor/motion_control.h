@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-#define MOTION_CRUISE_RPM          125.0f
+#define MOTION_CRUISE_RPM          130.0f
 #define MOTION_DIAGONAL_CRUISE_RPM  85.0f
 
 /* Positive value adds a forward component to pure lateral motion. */
