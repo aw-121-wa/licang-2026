@@ -10,8 +10,8 @@ class BallRfidContractTest(unittest.TestCase):
         return (ROOT / relative).read_text(encoding="utf-8-sig")
 
     def test_rfid_module_exposes_single_byte_id_api(self):
-        rfid_h = self.read("App/RFID/rfid.h")
-        rfid_c = self.read("App/RFID/rfid.c")
+        rfid_h = self.read("User/Device/rfid/rfid.h")
+        rfid_c = self.read("User/Device/rfid/rfid.c")
 
         self.assertIn("RFID_Init", rfid_h)
         self.assertIn("RFID_Read_ID", rfid_h)
@@ -21,11 +21,12 @@ class BallRfidContractTest(unittest.TestCase):
         self.assertIn("huart8", rfid_c)
 
     def test_ball_separates_nine_id_domain_from_five_id_batch(self):
-        ball_h = self.read("App/ball_sequence.h")
-        ball_c = self.read("App/ball_sequence.c")
+        ball_h = self.read("User/Robot/ball_sequence.h")
+        ball_c = self.read("User/Robot/ball_sequence.c")
+        config_h = self.read("User/Config/robot_config.h")
 
-        self.assertRegex(ball_h, r"#define\s+BALL_ID_MAX\s+9U")
-        self.assertRegex(ball_h, r"#define\s+BALL_GRAB_MAX\s+5U")
+        self.assertRegex(config_h, r"#define\s+BALL_ID_MAX\s+9U")
+        self.assertRegex(config_h, r"#define\s+BALL_GRAB_MAX\s+5U")
         self.assertIn("all_ball_id", ball_h)
         self.assertIn("grabbed_ball_id", ball_h)
         self.assertIn("grabbed_ball_count", ball_h)
@@ -40,8 +41,8 @@ class BallRfidContractTest(unittest.TestCase):
         usart_c = self.read("Core/Src/usart.c")
         it_h = self.read("Core/Inc/stm32f7xx_it.h")
         it_c = self.read("Core/Src/stm32f7xx_it.c")
-        main_c = self.read("Core/Src/main.c")
-        imu_c = self.read("IMU/jy61p.c")
+        state_machine_c = self.read("User/Robot/state_machine.c")
+        imu_c = self.read("User/Device/imu/jy61p.c")
 
         self.assertIn("huart8", usart_h)
         self.assertIn("MX_UART8_Init", usart_h)
@@ -50,7 +51,7 @@ class BallRfidContractTest(unittest.TestCase):
         self.assertIn("PE1", usart_c)
         self.assertIn("UART8_IRQHandler", it_h)
         self.assertIn("HAL_UART_IRQHandler(&huart8)", it_c)
-        self.assertIn("RFID_Init", main_c)
+        self.assertIn("RFID_Init", state_machine_c)
         self.assertIn("RFID_UartRxCpltCallback", imu_c)
 
     def test_build_projects_include_rfid_source(self):
@@ -58,13 +59,13 @@ class BallRfidContractTest(unittest.TestCase):
         cmake_armcc = self.read("CMakeLists_armcc.txt")
         uvprojx = self.read("MDK-ARM/chassis_motor.uvprojx")
 
-        self.assertIn("App/RFID/rfid.c", cmake_gcc)
-        self.assertIn("App/RFID/rfid.c", cmake_armcc)
-        self.assertIn("../App/RFID/rfid.c", uvprojx)
-        self.assertIn("../App/RFID/rfid.h", uvprojx)
+        self.assertIn("User/Device/rfid/rfid.c", cmake_gcc)
+        self.assertIn("User/Device/rfid/rfid.c", cmake_armcc)
+        self.assertIn("../User/Device/rfid/rfid.c", uvprojx)
+        self.assertIn("../User/Device/rfid/rfid.h", uvprojx)
 
     def test_warehouse_mechanical_counter_remains_six(self):
-        warehouse_h = self.read("App/warehouse_control.h")
+        warehouse_h = self.read("User/Robot/warehouse_control.h")
         self.assertIn("#define WAREHOUSE_TOTAL_BALLS               6U", warehouse_h)
 
 

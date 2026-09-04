@@ -1,5 +1,12 @@
 # 当前需求与验收标准
 
+## 结构重构约束（2026-09-04）
+
+- 本阶段只重组用户代码目录，不改变比赛逻辑、控制参数、通信协议、任务周期或动作组顺序。
+- CubeMX 生成的 `Core/`、HAL/CMSIS `Drivers/` 和 `Middlewares/` 保留；`main.c` 保留系统初始化，业务初始化集中由 `User/Robot/state_machine.c` 调用。
+- `freertos.c` 保留 FreeRTOS 对象和线程创建；`StartChassisTask`、`StartUartCommandTask` 的实现位于 `User/Task/task_control.c`。
+- GCC CMake、ARMCC CMake、Keil 工程和 VS Code IntelliSense 必须引用同一套 `User/` 源文件；公共头文件 basename 和运行时行为保持兼容。
+
 ## 当前比赛动作
 
 1. 等待 JY60 输出有效角度帧（软件兼容 API 仍为 `Jy61P_*`）。
@@ -11,7 +18,7 @@
 ## 当前 IMU 硬件
 
 - 当前硬件为 JY60，使用 USART2：PD5=TX、PD6=RX，9600、8N1、无硬件流控。
-- 软件继续保留 `IMU/jy61p.*` 和 `Jy61P_*` 作为兼容接口；解析器只消费标准 11 字节 `0x55 0x53` 角度帧，并保留校验和、连续航向角及在线超时语义。
+- 软件继续保留 `User/Device/imu/jy61p.*` 和 `Jy61P_*` 作为兼容接口；解析器只消费标准 11 字节 `0x55 0x53` 角度帧，并保留校验和、连续航向角及在线超时语义。
 
 ## 控制要求
 
@@ -35,7 +42,7 @@
 - UART5 中断只负责单字节接收、行缓冲和投递；所有运动函数只能由 `ChassisTask` 在任务上下文调用。
 - `STOP` 通过 `MotionControl_RequestStop()` 进入当前 20 ms 控制周期，不能依赖普通运动队列排队后才生效。
 - `BALL` 是无参数的 UART5 ASCII 命令；仅在底盘空闲、仓库转盘已准备好且尚有球位时接受，并运行当前六球批次的剩余 MaixCAM 握手流程。
-- `PATH` 是无参数的固定比赛命令；仅在底盘空闲、仓库转盘已准备好且舵机状态可用时接受，并由 `App/path_sequence.c` 的编译期静态指令表逐项执行。
+- `PATH` 是无参数的固定比赛命令；仅在底盘空闲、仓库转盘已准备好且舵机状态可用时接受，并由 `User/Robot/path_sequence.c` 的编译期静态指令表逐项执行。
 - PATH 静态指令表在原有步骤之后追加 `CANGKU`；执行到该步时调用现有 `CangkuSequence_Run()`，其内部仍按 `0110` 灰度目标和既定动作组/反向转盘流程执行。
 - PATH 通过 `ChassisCommandQueue` 只投递一条 `CHASSIS_CMD_PATH`；PATH 内部不向现有 FreeRTOS 队列追加七条命令，运行期间 `ChassisCommand_Busy` 保持为 1。
 

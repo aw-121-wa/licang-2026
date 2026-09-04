@@ -114,7 +114,7 @@ class UserArchitectureContractTest(unittest.TestCase):
     def test_public_header_names_and_tooling_are_preserved(self):
         self.assertIn(
             '#include "motion_control.h"',
-            (ROOT / "User/Robot/path_sequence.c").read_text(encoding="utf-8"),
+            (ROOT / "User/Robot/path_sequence.h").read_text(encoding="utf-8"),
         )
         self.assertIn(
             '"${workspaceFolder}/User/Robot"',

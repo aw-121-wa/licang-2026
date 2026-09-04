@@ -1,5 +1,13 @@
 # chassis_motor 项目说明
 
+## User 层工程结构（2026-09-04）
+
+- `Core/`、`Drivers/`、`Middlewares/` 保持 CubeMX/HAL/CMSIS/FreeRTOS 系统代码不变。
+- `User/BSP/` 保存底盘电机和底层板级电机接口；`User/Device/` 保存舵机、RFID、IMU、MaixCAM 和转盘设备接口。
+- `User/Algorithm/` 保存麦轮解算、运动控制和灰度对线；`User/Robot/` 保存 BALL、RZ、STAIR、PATH、CANGKU 等比赛流程。
+- `User/Task/` 保存串口命令任务、底盘任务实现和任务接口；`User/Config/` 保存当前硬件映射及既有参数集中定义。
+- 头文件仍使用原有 basename include 方式，由 CMake、Keil 和 VS Code include path 解析；通信协议、控制参数和动作顺序保持不变。
+
 ## 项目目标
 
 基于 STM32F750V8Tx、JY60 陀螺仪和 x42_v1.3 张大头闭环步进驱动板，实现四麦克纳姆轮底盘的开环距离控制与实时航向保持。
@@ -21,16 +29,16 @@
 ## 模块结构
 
 - `Core/`：CubeMX 系统、时钟、GPIO、串口和 FreeRTOS 初始化。
-- `Motor/motor_control.*`：张大头驱动协议、地址和安装方向、`F6/FD` 命令、四轴缓存与同步触发。
-- `Motor/mecanum_kinematics.*`：不依赖 HAL 的麦轮运动学解算和等比例限幅。
-- `Motor/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、任意角度平移、故障停车和动作序列。
-- `IMU/jy61p.*`：JY60/JY61P 标准角度帧解析、连续航向角和串口中断接收；文件名及 `Jy61P_*` 接口保留用于兼容历史工程。
-- `App/uart_command.*`：UART5 ASCII 命令接收、解析、精简状态查询和 FreeRTOS 命令投递。
-- `Motor/cangku_motor.*`：仓库转盘的单电机 Emm V5.0/x42 协议层；只操作 USART1 地址 `0x05`，不与底盘四轮共用状态。
-- `App/turntable_control.*`：仓库转盘一格相对运动、启用、停止及集中等待策略。
-- `App/warehouse_control.*`：机械臂组 2（夹取）完成后的仓库协同和六球计数状态机，由现有 `ChassisTask` 调用，不新建重复任务。
-- `App/stair_sequence.*`：独立 UART5 `STAIR` 阶梯测试流程；复用灰度校准、MaixCAM、舵机组 5–12 和转盘接口，不进入仓库球计数状态机。
-- `App/path_sequence.*`：固定比赛路线的一站式动作编排；由一个 `PATH` 命令触发，内部按编译期静态表顺序调用既有运动、BALL 和 RZ API。
+- `User/BSP/motor_control.*`：张大头驱动协议、地址和安装方向、`F6/FD` 命令、四轴缓存与同步触发。
+- `User/Algorithm/mecanum_kinematics.*`：不依赖 HAL 的麦轮运动学解算和等比例限幅。
+- `User/Algorithm/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、任意角度平移、故障停车和动作序列。
+- `User/Device/imu/jy61p.*`：JY60/JY61P 标准角度帧解析、连续航向角和串口中断接收；文件名及 `Jy61P_*` 接口保留用于兼容历史工程。
+- `User/Task/uart_command.*`：UART5 ASCII 命令接收、解析、精简状态查询和 FreeRTOS 命令投递。
+- `User/BSP/cangku_motor.*`：仓库转盘的单电机 Emm V5.0/x42 协议层；只操作 USART1 地址 `0x05`，不与底盘四轮共用状态。
+- `User/Device/turntable/turntable_control.*`：仓库转盘一格相对运动、启用、停止及集中等待策略。
+- `User/Robot/warehouse_control.*`：机械臂组 2（夹取）完成后的仓库协同和六球计数状态机，由现有 `ChassisTask` 调用，不新建重复任务。
+- `User/Robot/stair_sequence.*`：独立 UART5 `STAIR` 阶梯测试流程；复用灰度校准、MaixCAM、舵机组 5–12 和转盘接口，不进入仓库球计数状态机。
+- `User/Robot/path_sequence.*`：固定比赛路线的一站式动作编排；由一个 `PATH` 命令触发，内部按编译期静态表顺序调用既有运动、BALL 和 RZ API。
 - PATH 现有固定步骤完成后追加 `CANGKU` 仓库搬运流程；该步骤直接调用 `CangkuSequence_Run()`，不重复展开仓库动作。
 - PATH 在 RZ 成功后阻塞等待第一次动作组 0 回位完成，再前进 330 mm、同步执行完整 STAIR（第三、第二、第一部分）；STAIR 成功完成后再次阻塞等待动作组 0 回位完成，再以极坐标 +90° 向左横移 1600 mm，随后执行 `CANGKU` 仓库搬运流程并进入 DONE。任一动作组或 CANGKU 步骤失败时 PATH 立即结束并报告对应错误。
 - `.vscode/`：IntelliSense 与 Keil 构建任务。
@@ -49,9 +57,9 @@
 - 指定的极坐标距离表示实际平移轨迹长度；每个控制周期把轮速限幅后的有效平移 RPM 纳入距离积分。
 - 现场运动测试只通过 UART5 命令完成；不再保留 PATH 编辑器、独立上电测试和旧的运动包装接口。
 - UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、PATH、STOP、STATUS、HELP。
-- `PATH` 不是动态路径编辑器；它只运行 `App/path_sequence.c` 中的固定比赛指令表，并以单条 `CHASSIS_CMD_PATH` 占用底盘命令队列。
+- `PATH` 不是动态路径编辑器；它只运行 `User/Robot/path_sequence.c` 中的固定比赛指令表，并以单条 `CHASSIS_CMD_PATH` 占用底盘命令队列。
 - 平移统一使用 `MotionControl_MovePolarSegmentMm()`；纯横移额外使用唯一的 `LATERAL_FORWARD_COMPENSATION` 前后偏差补偿，初值为 `0.0f`。
-- `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `Motor/motion_control.c` 保留一套。
+- `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `User/Algorithm/motion_control.c` 保留一套。
 - FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
 - UART5 接收使用单字节 `HAL_UART_Receive_IT()`；UART5 中断只收字节和投递行缓冲，运动命令统一由 `ChassisTask` 执行。任务只维护 Ready、Busy 和 LastStatus。
 
@@ -78,7 +86,7 @@
 ## MaixCAM ball handshake (2026-08-25)
 
 - UART4 connects to MaixCAM at 115200-8-N-1: PC10=TX and PC11=RX. Use 3.3 V TTL, cross-connect TX/RX and share GND.
-- `App/maixcam_link.*` owns UART4 byte reception and accepts only an ASCII reply line `1` as a MaixCAM acknowledgement; outgoing request is one byte, `1` for red or `2` for blue. The deployed `licang_BLUE_RED_BALL.py` accepts a new command after the prior request state is cleared and checks from the next frame for a color/shape-qualified complete target inside the yellow ROI. AUTO calibration updates only the measured ball dimensions and center, leaving the ROI unchanged; MANUAL ROI defines the yellow search area directly with two touch points. AUTO-calibrated size limits apply in both ROI modes. No green target rectangle or multi-frame confirmation is used.
+- `User/Device/camera/maixcam_link.*` owns UART4 byte reception and accepts only an ASCII reply line `1` as a MaixCAM acknowledgement; outgoing request is one byte, `1` for red or `2` for blue. The deployed `licang_BLUE_RED_BALL.py` accepts a new command after the prior request state is cleared and checks from the next frame for a color/shape-qualified complete target inside the yellow ROI. AUTO calibration updates only the measured ball dimensions and center, leaving the ROI unchanged; MANUAL ROI defines the yellow search area directly with two touch points. AUTO-calibrated size limits apply in both ROI modes. No green target rectangle or multi-frame confirmation is used.
 - UART5 command `BALL` first runs action group 1 (return/recognition posture). It then runs the remaining rounds of the current six-ball warehouse batch: request MaixCAM, wait up to 10 s for reply `1`, run action group 2 (clamp), turn the warehouse one slot, then run action group 1 (return). The sixth group-2 completion also turns one slot and is followed by group 1 return.
 - `GRAB` remains a separate single cycle: group 2 (clamp) -> one turntable slot -> group 1 (return). While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
 - MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during group 2/turntable it still completes group 1 (return) before ending the remaining batch.
@@ -87,7 +95,7 @@
 
 - The four gray sensors are ordered from left to right as `MID2`, `IN2`, `IN1`, `MID1`: `MID2=PD8`, `IN2=PD0`, `IN1=PD1`, `MID1=PD3`.
 - Inputs use GPIO pull-ups and active-low line detection. The logical `OnLine` order is therefore `0 1 1 0` for the only valid alignment state: both inner sensors on the line and both outer sensors off the line.
-- `App/gray_align.*` runs before BALL action group 1. It locks the current continuous JY61P yaw at entry, moves only along the left/right axis at 25 RPM, and applies a small heading PD correction (`KP=2.0`, `KD=0.15`, limit 8 RPM) during the lateral move. It holds the exact target for 50 ms, stops all wheels, and resets the continuous JY61P yaw before returning success. The alignment timeout is 5 s.
+- `User/Algorithm/gray_align.*` runs before BALL action group 1. It locks the current continuous JY61P yaw at entry, moves only along the left/right axis at 25 RPM, and applies a small heading PD correction (`KP=2.0`, `KD=0.15`, limit 8 RPM) during the lateral move. It holds the exact target for 50 ms, stops all wheels, and resets the continuous JY61P yaw before returning success. The alignment timeout is 5 s.
 - `MID1`/`MID2` are overshoot protection sensors, not completion sensors. If either is on, the chassis retreats while maintaining the locked yaw; otherwise it approaches. IN1/IN2 appearing in sequence never commands a chassis rotation. IMU loss during alignment stops the chassis and returns an alignment error.
 
 ## RZ pillar ball sequence (2026-08-26)
@@ -102,7 +110,7 @@
 ## Warehouse turntable coordination (2026-08-25)
 
 - `ZDT_MOTOR_ADDR = 0x05U` is the single authoritative warehouse-motor address. Chassis addresses 1–4 on USART3 remain unchanged.
-- One slot is a relative `FD` move of `1280` pulses. `TURNTABLE_SLOT_DIRECTION` is currently `ZDT_DIR_CW`, speed is 100 RPM and acceleration is 0; all are centralized in `App/turntable_control.h` for hardware calibration.
+- One slot is a relative `FD` move of `1280` pulses. `TURNTABLE_SLOT_DIRECTION` is currently `ZDT_DIR_CW`, speed is 100 RPM and acceleration is 0; all are centralized in `User/Device/turntable/turntable_control.h` for hardware calibration.
 - `ServoAction_RunGroup(2)` waits for the real UART7 completion frame (`55 55 05 08 02 ...`). Only after that frame does `WarehouseControl_HandleActionGroup2Completed()` issue one turntable move. A command transmission is not considered completion.
 - The installed turntable driver has no returned completion/status parser. The initial completion criterion is its calculated 240 ms running time plus 600 ms settling margin (840 ms total), bounded by a 1500 ms timeout. This must be verified on hardware before competition.
 - A successful group-2/turntable pair increments `Warehouse_BallCount`. The counter is capped at six; `WAREHOUSE_TURN_AFTER_LAST_BALL` is `1U`, so the sixth ball also triggers a turn. A UART failure or timeout stops the turntable and enters the warehouse error state without incrementing the count.
@@ -117,7 +125,7 @@
 
 ## CANGKU 仓库搬运流程（2026-09-04）
 
-- `App/cangku_task.*`：`CANGKU` 仓库搬运流程；由 `ChassisTask` 执行旋转、0110 灰度对齐、向左横移 50 mm、移动、动作组和反向转盘步骤。
+- `User/Robot/cangku_task.*`：`CANGKU` 仓库搬运流程；由 `ChassisTask` 执行旋转、0110 灰度对齐、向左横移 50 mm、移动、动作组和反向转盘步骤。
 
 ## RFID ball ID capture (2026-09-04)
 

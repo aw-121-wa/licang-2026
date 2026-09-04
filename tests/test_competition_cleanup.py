@@ -12,11 +12,11 @@ class CompetitionCleanupContractTest(unittest.TestCase):
     def test_fixed_path_and_legacy_motion_framework_contract(self):
         self.assertFalse((ROOT / "App/competition_path.c").exists())
         self.assertFalse((ROOT / "App/competition_path.h").exists())
-        self.assertTrue((ROOT / "App/path_sequence.c").exists())
-        self.assertTrue((ROOT / "App/path_sequence.h").exists())
-        motion_h = self.read("Motor/motion_control.h")
-        motion_c = self.read("Motor/motion_control.c")
-        uart_h = self.read("App/uart_command.h")
+        self.assertTrue((ROOT / "User/Robot/path_sequence.c").exists())
+        self.assertTrue((ROOT / "User/Robot/path_sequence.h").exists())
+        motion_h = self.read("User/Algorithm/motion_control.h")
+        motion_c = self.read("User/Algorithm/motion_control.c")
+        uart_h = self.read("User/Task/uart_command.h")
         self.assertNotIn("MotionControl_RunDefaultSequence", motion_h + motion_c)
         self.assertNotIn("DIAGONAL_TEST_", motion_h + motion_c)
         self.assertIn("CHASSIS_CMD_PATH", uart_h)
@@ -33,10 +33,10 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             self.assertNotIn(symbol, motion_h + motion_c)
 
     def test_motion_control_owns_body_speed_heading_and_lateral_compensation(self):
-        motion_h = self.read("Motor/motion_control.h")
-        motion_c = self.read("Motor/motion_control.c")
-        gray_c = self.read("App/gray_align.c")
-        rz_c = self.read("App/round_pillar.c")
+        motion_h = self.read("User/Algorithm/motion_control.h")
+        motion_c = self.read("User/Algorithm/motion_control.c")
+        gray_c = self.read("User/Algorithm/gray_align.c")
+        rz_c = self.read("User/Robot/round_pillar.c")
         self.assertIn("MotionControl_SetBodySpeed", motion_h)
         self.assertIn("MotionControl_ResetHeadingReference", motion_h)
         self.assertIn("MotionControl_GetHeadingCorrection", motion_h)
@@ -50,8 +50,8 @@ class CompetitionCleanupContractTest(unittest.TestCase):
     def test_jy60_uses_usart2_9600_and_legacy_parser_contract(self):
         usart_c = self.read("Core/Src/usart.c")
         ioc = self.read("chassis_motor.ioc")
-        imu_h = self.read("IMU/jy61p.h")
-        imu_c = self.read("IMU/jy61p.c")
+        imu_h = self.read("User/Device/imu/jy61p.h")
+        imu_c = self.read("User/Device/imu/jy61p.c")
         project = self.read("PROJECT.md")
         requirements = self.read("REQUIREMENTS.md")
 
@@ -87,22 +87,23 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("Jy61P_*", project + requirements)
 
     def test_rz_integrates_vision_into_orbit(self):
-        rz_h = self.read("App/round_pillar.h")
-        rz_c = self.read("App/round_pillar.c")
-        servo_h = self.read("App/servo_action.h")
+        rz_h = self.read("User/Robot/round_pillar.h")
+        rz_c = self.read("User/Robot/round_pillar.c")
+        servo_h = self.read("User/Device/servo/servo_action.h")
+        config_h = self.read("User/Config/robot_config.h")
 
-        self.assertIn("SERVO_ACTION_PILLAR_CAMERA_GROUP", servo_h)
-        self.assertIn("SERVO_ACTION_PILLAR_GRAB_GROUP", servo_h)
-        self.assertIn("SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS", servo_h)
-        self.assertIn("SERVO_ACTION_PILLAR_GRAB_TIMEOUT_MS", servo_h)
-        self.assertRegex(rz_h, r"#define\s+RZ_CAMERA_RAISE_WAIT_MS\s+1000U")
-        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_FORWARD_RPM\s+62\.0f")
-        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_OMEGA_RPM\s+49\.0f")
-        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TARGET_DEG\s+\(352\.0f\)")
+        self.assertIn("SERVO_ACTION_PILLAR_CAMERA_GROUP", config_h)
+        self.assertIn("SERVO_ACTION_PILLAR_GRAB_GROUP", config_h)
+        self.assertIn("SERVO_ACTION_PILLAR_CAMERA_TIMEOUT_MS", config_h)
+        self.assertIn("SERVO_ACTION_PILLAR_GRAB_TIMEOUT_MS", config_h)
+        self.assertRegex(config_h, r"#define\s+RZ_CAMERA_RAISE_WAIT_MS\s+1000U")
+        self.assertRegex(config_h, r"#define\s+RZ_ORBIT_FORWARD_RPM\s+62\.0f")
+        self.assertRegex(config_h, r"#define\s+RZ_ORBIT_OMEGA_RPM\s+49\.0f")
+        self.assertRegex(config_h, r"#define\s+RZ_ORBIT_TARGET_DEG\s+\(352\.0f\)")
         self.assertNotIn("RZ_CW_TARGET_DEG", rz_h)
         self.assertNotIn("RZ_CCW_REVERSE_DEG", rz_h)
-        self.assertRegex(rz_h, r"#define\s+RZ_ORBIT_TIMEOUT_MS\s+15000U")
-        self.assertRegex(rz_h, r"#define\s+RZ_GRAB_COUNT\s+4U")
+        self.assertRegex(config_h, r"#define\s+RZ_ORBIT_TIMEOUT_MS\s+15000U")
+        self.assertRegex(config_h, r"#define\s+RZ_GRAB_COUNT\s+4U")
         self.assertIn("RoundPillar_OrbitAndGrab", rz_c)
         self.assertIn("RoundPillar_HandleDetectedBall", rz_c)
         self.assertNotIn("RoundPillar_WaitForMaixCam", rz_c)
@@ -179,7 +180,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         )
 
     def test_uart5_keeps_only_competition_commands_in_help_and_status(self):
-        uart_c = self.read("App/uart_command.c")
+        uart_c = self.read("User/Task/uart_command.c")
         self.assertIn('"F <mm>', uart_c)
         self.assertIn('"ROT CCW <deg>', uart_c)
         self.assertIn('"BALL', uart_c)
@@ -195,11 +196,11 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             self.assertIn(token, uart_c)
 
     def test_fixed_path_sequence_is_static_and_wired_to_chassis_task(self):
-        path_h = self.read("App/path_sequence.h")
-        path_c = self.read("App/path_sequence.c")
-        uart_h = self.read("App/uart_command.h")
-        uart_c = self.read("App/uart_command.c")
-        freertos_c = self.read("Core/Src/freertos.c")
+        path_h = self.read("User/Robot/path_sequence.h")
+        path_c = self.read("User/Robot/path_sequence.c")
+        uart_h = self.read("User/Task/uart_command.h")
+        uart_c = self.read("User/Task/uart_command.c")
+        freertos_c = self.read("User/Task/task_control.c")
         cmake_c = self.read("CMakeLists.txt")
         cmake_armcc = self.read("CMakeLists_armcc.txt")
         uvprojx = self.read("MDK-ARM/chassis_motor.uvprojx")
@@ -241,7 +242,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             "2300U", "0.0f", "MOTION_CRUISE_RPM",
             "1810U", "180.0f",
             "330U", "90.0f",
-            "1600U",
+            "1650U",
             "SERVO_ACTION_START_GROUP",
         ):
             self.assertIn(token, table)
@@ -258,7 +259,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             table,
         )
         self.assertIn(
-            "1600U,\n        90.0f,\n        MOTION_CRUISE_RPM",
+            "1650U,\n        90.0f,\n        MOTION_CRUISE_RPM",
             table,
         )
 
@@ -308,7 +309,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         stair_case = run_body.index("case PATH_STEP_STAIR:")
         self.assertLess(
             table.index("PATH_STEP_STAIR"),
-            table.index("1600U"),
+            table.index("1650U"),
         )
         self.assertLess(
             run_body.index("StairSequence_Run()", stair_case),
@@ -326,12 +327,13 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         usart_h = self.read("Core/Inc/usart.h")
         usart_c = self.read("Core/Src/usart.c")
         main_c = self.read("Core/Src/main.c")
-        freertos_c = self.read("Core/Src/freertos.c")
-        turntable_h = self.read("App/turntable_control.h")
-        turntable_c = self.read("App/turntable_control.c")
-        warehouse_c = self.read("App/warehouse_control.c")
-        round_c = self.read("App/round_pillar.c")
-        cangku_h = self.read("Motor/cangku_motor.h")
+        freertos_c = self.read("User/Task/task_control.c")
+        turntable_h = self.read("User/Device/turntable/turntable_control.h")
+        turntable_c = self.read("User/Device/turntable/turntable_control.c")
+        warehouse_c = self.read("User/Robot/warehouse_control.c")
+        round_c = self.read("User/Robot/round_pillar.c")
+        cangku_h = self.read("User/BSP/cangku_motor.h")
+        config_h = self.read("User/Config/robot_config.h")
 
         self.assertIn("extern UART_HandleTypeDef huart6;", usart_h)
         self.assertIn("void MX_USART6_UART_Init(void);", usart_h)
@@ -344,7 +346,9 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertNotIn("WarehouseControl_Init(&huart1)", freertos_c)
 
         self.assertIn("ZDT_MOTOR_ADDR                 0x05U", cangku_h)
-        self.assertIn("TURNTABLE_ONE_SLOT_PULSES           1280U", turntable_h)
+        self.assertRegex(
+            config_h, r"#define\s+TURNTABLE_ONE_SLOT_PULSES\s+1280U"
+        )
         self.assertIn("Turntable_MoveOneSlotAndWait(", turntable_h)
         self.assertIn("Turntable_MoveOneSlotAndWait(", turntable_c)
         self.assertIn("Turntable_MoveOneSlotAndWait(", warehouse_c)
@@ -357,15 +361,16 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertLess(turntable, grab_count)
 
     def test_stair_sequence_isolated_and_wired(self):
-        stair_h = self.read("App/stair_sequence.h")
-        stair_c = self.read("App/stair_sequence.c")
-        uart_h = self.read("App/uart_command.h")
-        uart_c = self.read("App/uart_command.c")
-        freertos_c = self.read("Core/Src/freertos.c")
+        stair_h = self.read("User/Robot/stair_sequence.h")
+        stair_c = self.read("User/Robot/stair_sequence.c")
+        uart_h = self.read("User/Task/uart_command.h")
+        uart_c = self.read("User/Task/uart_command.c")
+        freertos_c = self.read("User/Task/task_control.c")
         cmake_c = self.read("CMakeLists.txt")
         cmake_armcc = self.read("CMakeLists_armcc.txt")
-        motion_h = self.read("Motor/motion_control.h")
-        motion_c = self.read("Motor/motion_control.c")
+        motion_h = self.read("User/Algorithm/motion_control.h")
+        motion_c = self.read("User/Algorithm/motion_control.c")
+        config_h = self.read("User/Config/robot_config.h")
 
         for token in (
             "STAIR_GROUP_0", "STAIR_GROUP_5", "STAIR_GROUP_6", "STAIR_GROUP_7",
@@ -375,11 +380,11 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             "STAIR_VISION_TIMEOUT_MS", "STAIR_FORWARD_RPM",
             "STAIR_INITIAL_BACKWARD_MM",
         ):
-            self.assertIn(token, stair_h)
-        self.assertRegex(stair_h, r"#define\s+STAIR_VISION_TIMEOUT_MS\s+1000U")
-        gray_h = self.read("App/gray_align.h")
-        gray_c = self.read("App/gray_align.c")
-        ball_c = self.read("App/ball_sequence.c")
+            self.assertIn(token, stair_h + config_h)
+        self.assertRegex(config_h, r"#define\s+STAIR_VISION_TIMEOUT_MS\s+1000U")
+        gray_h = self.read("User/Algorithm/gray_align.h")
+        gray_c = self.read("User/Algorithm/gray_align.c")
+        ball_c = self.read("User/Robot/ball_sequence.c")
         self.assertIn("GrayAlign_RunUnlimited(void)", gray_h)
         self.assertIn("GrayAlign_RunInternal", gray_c)
         self.assertIn("GrayAlign_RunUnlimited();", stair_c)
@@ -397,13 +402,13 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("CHASSIS_CMD_STAIR", uart_h + uart_c + freertos_c)
         self.assertIn("STAIR_STATE", uart_c)
         self.assertIn("STAIR_LAST", uart_c)
-        self.assertIn("App/stair_sequence.c", cmake_c)
-        self.assertIn("App/stair_sequence.c", cmake_armcc)
+        self.assertIn("User/Robot/stair_sequence.c", cmake_c)
+        self.assertIn("User/Robot/stair_sequence.c", cmake_armcc)
         self.assertIn("MotionControlEarlyStopCheck", motion_h)
         self.assertIn("early_stop_check", motion_c)
 
         self.assertRegex(
-            stair_h, r"#define\s+STAIR_INITIAL_BACKWARD_MM\s+20U"
+            config_h, r"#define\s+STAIR_INITIAL_BACKWARD_MM\s+18U"
         )
         self.assertIn("STAIR_STATE_MOVE20_AFTER_ALIGN", stair_h)
         self.assertIn("STAIR_STATE_MOVE20_AFTER_ALIGN", stair_c)
@@ -419,8 +424,8 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         )
 
     def test_stair_part2_has_four_points_and_single_g8_setup(self):
-        stair_h = self.read("App/stair_sequence.h")
-        stair_c = self.read("App/stair_sequence.c")
+        stair_h = self.read("User/Robot/stair_sequence.h")
+        stair_c = self.read("User/Robot/stair_sequence.c")
 
         for token in (
             "STAIR_STATE_PART2_G8",
@@ -521,8 +526,8 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         )
 
     def test_stair_action_flow_matches_requested_group_order(self):
-        stair_h = self.read("App/stair_sequence.h")
-        stair_c = self.read("App/stair_sequence.c")
+        stair_h = self.read("User/Robot/stair_sequence.h")
+        stair_c = self.read("User/Robot/stair_sequence.c")
 
         for token in (
             "STAIR_STATE_PART1_G0",

@@ -1,5 +1,12 @@
 # 最近工作状态
 
+## 2026-09-04 用户代码结构重构
+
+- 当前工作分支：`refactor-architecture`；基线：`6c43dc02094d089f557b278fd7a6fe5280b4fd45`。
+- 用户代码已迁移到 `User/BSP`、`User/Device`、`User/Algorithm`、`User/Robot`、`User/Task`、`User/Config`；`Core`、`Drivers`、`Middlewares` 保持。
+- `main.c` 仅保留系统/外设/RTOS 初始化；业务初始化由 `RobotUser_Init()` 统一调用，任务实现移至 `User/Task/task_control.c`。
+- 已完成 GCC CMake 增量构建和结构契约测试；正式验证仍需执行 `.vscode/build.ps1`，当前环境预期可能因缺少 `G:\Keil_v5\UV4\UV4.exe` 无法完成 Keil 构建。
+
 基线日期：2026-08-24
 
 ## 已完成
@@ -15,7 +22,7 @@
 - 用户确认四台驱动器的 `S_Vel_IS` 已开启；程序保留0.1 RPM编码，但不再上电重复发送配置命令。
 - 新增 `MotionControl_MovePolarMm()` 和四个前/后左右包装接口，支持 -180°～+180° 任意平移角度；`MotionControl_MoveMm()` 现在支持前进和横移分量同时非零。
 - 新增 `MecanumKinematics_DesaturateWithScale()`，将轮速限幅比例纳入距离积分，并增加极坐标、单位向量、有效 RPM、轨迹距离等 Keil Watch 诊断量。
-- `App/competition_path.c/.h` 当前正式路径改为左前 `+30°` 斜线运行 1800 mm，使用 F6 速度模式并软减速到 0。
+- `User/Robot/path_sequence.c/.h` 当前正式路径改为左前 `+30°` 斜线运行 1800 mm，使用 F6 速度模式并软减速到 0。
 - 本次路径为单段斜线，不使用方向 Blend；IMU 等待、四轮使能、锁头基准、20 ms 锁头控制和开环距离积分仍由原有模块负责。
 - `main.c` 不再初始化或执行底盘动作；`ChassisTask` 在 FreeRTOS 启动后初始化 `MotionControl`，完成 IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令。
 - 从 `MotionControl_RunDefaultSequence()` 抽取 `MotionControl_PrepareForMove()`，保留原有 IMU 等待、四轮使能和锁头基准建立流程，并供应用层路径复用。
