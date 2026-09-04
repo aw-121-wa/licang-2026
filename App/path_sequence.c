@@ -113,7 +113,7 @@ static const PathStep PathSequence_CommandQueue[] =
     /* STEP 11: 第二次动作组0完成后向左横移2000 mm */
     {
         PATH_STEP_MOVE,
-        2000U,
+        1600U,
         90.0f,
         MOTION_CRUISE_RPM,
         0U
