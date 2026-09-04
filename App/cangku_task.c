@@ -5,6 +5,7 @@
 #include "turntable_control.h"
 
 #define CANGKU_MOVE_DISTANCE_MM       200U
+#define CANGKU_AFTER_LINE_LEFT_DISTANCE_MM 50U
 #define CANGKU_SERVO_TIMEOUT_MS     20000U
 
 #define CANGKU_GROUP_13               13U
@@ -37,7 +38,8 @@ static CangkuSequenceStatus CangkuSequence_FromMotionStatus(
     return CANGKU_STATUS_OK;
 }
 
-static CangkuSequenceStatus CangkuSequence_RunMove(float angle_deg)
+static CangkuSequenceStatus CangkuSequence_RunMoveDistance(
+    uint32_t distance_mm, float angle_deg)
 {
     MotionControlStatus motion_status;
 
@@ -46,12 +48,17 @@ static CangkuSequenceStatus CangkuSequence_RunMove(float angle_deg)
         return CANGKU_STATUS_CANCELED;
     }
     motion_status = MotionControl_MovePolarSegmentMm(
-        CANGKU_MOVE_DISTANCE_MM, angle_deg, 0.0f, MOTION_CRUISE_RPM, 0.0f);
+        distance_mm, angle_deg, 0.0f, MOTION_CRUISE_RPM, 0.0f);
     if (MotionControl_WasStopped() != 0U)
     {
         return CANGKU_STATUS_CANCELED;
     }
     return CangkuSequence_FromMotionStatus(motion_status);
+}
+
+static CangkuSequenceStatus CangkuSequence_RunMove(float angle_deg)
+{
+    return CangkuSequence_RunMoveDistance(CANGKU_MOVE_DISTANCE_MM, angle_deg);
 }
 
 static CangkuSequenceStatus CangkuSequence_RunServoGroup(uint8_t group)
@@ -158,6 +165,14 @@ CangkuSequenceStatus CangkuSequence_Run(void)
     {
         status = CANGKU_STATUS_ERROR_GRAY_ALIGN;
         goto failed;
+    }
+
+    CangkuSequence_State = CANGKU_STATE_AFTER_LINE_LEFT;
+    status = CangkuSequence_RunMoveDistance(
+        CANGKU_AFTER_LINE_LEFT_DISTANCE_MM, 90.0f);
+    if (status != CANGKU_STATUS_OK)
+    {
+        goto cangku_status;
     }
 
     CangkuSequence_State = CANGKU_STATE_BACKWARD_1;
@@ -302,6 +317,7 @@ const char *CangkuSequence_StateName(CangkuSequenceState state)
     case CANGKU_STATE_IDLE:       return "IDLE";
     case CANGKU_STATE_ROTATE:     return "ROTATE";
     case CANGKU_STATE_FIND_LINE:  return "FIND_LINE";
+    case CANGKU_STATE_AFTER_LINE_LEFT: return "AFTER_LINE_LEFT";
     case CANGKU_STATE_BACKWARD_1: return "BACKWARD_1";
     case CANGKU_STATE_BACKWARD_2: return "BACKWARD_2";
     case CANGKU_STATE_BACKWARD_3: return "BACKWARD_3";

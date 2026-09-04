@@ -36,6 +36,7 @@
 - `STOP` 通过 `MotionControl_RequestStop()` 进入当前 20 ms 控制周期，不能依赖普通运动队列排队后才生效。
 - `BALL` 是无参数的 UART5 ASCII 命令；仅在底盘空闲、仓库转盘已准备好且尚有球位时接受，并运行当前六球批次的剩余 MaixCAM 握手流程。
 - `PATH` 是无参数的固定比赛命令；仅在底盘空闲、仓库转盘已准备好且舵机状态可用时接受，并由 `App/path_sequence.c` 的编译期静态指令表逐项执行。
+- PATH 静态指令表在原有步骤之后追加 `CANGKU`；执行到该步时调用现有 `CangkuSequence_Run()`，其内部仍按 `0110` 灰度目标和既定动作组/反向转盘流程执行。
 - PATH 通过 `ChassisCommandQueue` 只投递一条 `CHASSIS_CMD_PATH`；PATH 内部不向现有 FreeRTOS 队列追加七条命令，运行期间 `ChassisCommand_Busy` 保持为 1。
 
 ## FreeRTOS 命令执行
@@ -56,8 +57,8 @@
 
 ## 固定比赛路线 PATH
 
-- 顺序必须为：`Move(1800, +20°)` → `Move(2300, 0°)` → `Rotate(+178°)` → `BallSequence_Run()` → `Rotate(+178°)` → `Move(1810, 180°)` → `RoundPillar_Run()` → `ServoAction_RunGroup(SERVO_ACTION_START_GROUP, 1U, SERVO_ACTION_START_TIMEOUT_MS)` → `Move(330, 0°)` → `StairSequence_Run(Part3 → Part2 → Part1)` → `ServoAction_RunGroup(SERVO_ACTION_START_GROUP, 1U, SERVO_ACTION_START_TIMEOUT_MS)` → `Move(2000, +90°, MOTION_CRUISE_RPM)` → 停车并进入 `DONE`。最终 PATH 共 12 个 step，最后一步为向左横移 2000 mm；按极坐标定义必须使用 +90°，不再执行左后斜向移动。
-- 每个同步 API 成功返回后才进入下一步；RZ 成功后必须等待第一次动作组 0 返回 `SERVO_ACTION_OK`，再执行前进 330 mm；STAIR 必须按第三、第二、第一部分完整返回 `STAIR_SEQUENCE_OK` 后，才允许等待第二次动作组 0，第二次动作组 0 成功后才允许执行最后的 2000 mm 移动。任一动作组失败映射为独立 `PATH_SEQUENCE_ERROR_SERVO` 并立即结束 PATH；任一步 STOP、运动错误、BALL/RZ/STAIR 错误都立即结束整条 PATH，不执行后续步骤；最后的 2000 mm 移动期间仍可由 STOP 立即取消并停车。
+- 顺序必须为：`Move(1800, +20°)` → `Move(2300, 0°)` → `Rotate(+178°)` → `BallSequence_Run()` → `Rotate(+178°)` → `Move(1810, 180°)` → `RoundPillar_Run()` → `ServoAction_RunGroup(SERVO_ACTION_START_GROUP, 1U, SERVO_ACTION_START_TIMEOUT_MS)` → `Move(330, 0°)` → `StairSequence_Run(Part3 → Part2 → Part1)` → `ServoAction_RunGroup(SERVO_ACTION_START_GROUP, 1U, SERVO_ACTION_START_TIMEOUT_MS)` → `Move(1600, +90°, MOTION_CRUISE_RPM)` → `CangkuSequence_Run()` → 停车并进入 `DONE`。最终 PATH 共 13 个 step；最后一步是 `CANGKU`，按极坐标定义向左横移使用 +90°。
+- 每个同步 API 成功返回后才进入下一步；RZ 成功后必须等待第一次动作组 0 返回 `SERVO_ACTION_OK`，再执行前进 330 mm；STAIR 必须按第三、第二、第一部分完整返回 `STAIR_SEQUENCE_OK` 后，才允许等待第二次动作组 0，第二次动作组 0 成功后才允许执行最后的 1600 mm 移动，然后进入 CANGKU。任一动作组失败映射为独立 `PATH_SEQUENCE_ERROR_SERVO` 并立即结束 PATH；任一步 STOP、运动错误、BALL/RZ/STAIR/CANGKU 错误都立即结束整条 PATH，不执行后续步骤；最后的 1600 mm 移动和 CANGKU 期间仍可由 STOP 立即取消并停车。
 - PATH 状态通过 `PATH_STATE`、`PATH_STEP`、`PATH_LAST` 和 `PATH_BALL_LAST` 暴露在 `STATUS` 中；同时输出 `WAREHOUSE_STATE`、`WAREHOUSE_BALL`、`STOP` 和 `STOPPED` 便于区分 BALL 完成、仓库 FINISHED 与真实 STOP。成功结束状态为 `DONE`，STOP 状态为 `CANCELED`，其他失败状态为 `ERROR`。
 
 ## 构建验收
@@ -134,7 +135,7 @@
 ## CANGKU 仓库搬运流程（2026-09-04）
 
 - UART5 无参数命令 `CANGKU` 进入 `ChassisCommandQueue`，由 `ChassisTask` 执行；串口解析任务不直接执行阻塞动作。
-- CANGKU 先原地逆时针旋转 180 度，再复用 `GrayAlign_Run()` 对齐灰度目标 `MID2 IN2 IN1 MID1 = 0 1 1 0`，稳定后继续后续搬运流程。
+- CANGKU 先原地逆时针旋转 180 度，再复用 `GrayAlign_Run()` 对齐灰度目标 `MID2 IN2 IN1 MID1 = 0 1 1 0`；白线稳定识别后保持当前航向向左横移 50 mm，再继续后续搬运流程。
 - 搬运顺序固定为：后退 200 mm 后执行 G13、G14、反向转盘一格；后退 200 mm 后执行 G14、G13、反向转盘一格；再次后退 200 mm 后执行 G14、G13、反向转盘一格；执行 G15、G13、反向转盘一格；前进 200 mm 后执行 G15、G13、反向转盘一格；再次前进 200 mm 后执行 G15、G13、反向转盘一格。
 - 反向转盘仍使用现有一格 1280 脉冲、速度和加速度参数，仅取反 `TURNTABLE_SLOT_DIRECTION`；CANGKU 不改变 `Warehouse_BallCount`。
 - STOP、IMU、底盘、动作组和转盘错误均在 CANGKU 流程中停止并返回对应状态；动作组 13、14、15 必须预先写入舵机控制器。

@@ -289,6 +289,25 @@ void StartChassisTask(void *argument)
             result = MOTION_ERROR_MOTOR_UART;
             }
         }
+        else if (path_result == PATH_SEQUENCE_ERROR_CANGKU)
+        {
+          if (PathSequence_LastCangkuStatus == CANGKU_STATUS_ERROR_IMU)
+          {
+            result = MOTION_ERROR_IMU_LOST;
+          }
+          else if (PathSequence_LastCangkuStatus == CANGKU_STATUS_ERROR_ROTATE)
+          {
+            result = MOTION_ERROR_ROTATE_TIMEOUT;
+          }
+          else if (PathSequence_LastCangkuStatus == CANGKU_STATUS_ERROR_GRAY_ALIGN)
+          {
+            result = MOTION_ERROR_GRAY_ALIGN;
+          }
+          else
+          {
+            result = MOTION_ERROR_MOTOR_UART;
+          }
+        }
         else if (path_result == PATH_SEQUENCE_ERROR_SERVO)
         {
           /* PATH keeps the servo failure distinct; the command API exposes the UART fault class. */

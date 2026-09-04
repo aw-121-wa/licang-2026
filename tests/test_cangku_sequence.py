@@ -34,6 +34,23 @@ class CangkuSequenceContractTest(unittest.TestCase):
         self.assertIn("sample.in1 != 0U", gray_c)
         self.assertIn("sample.mid1 == 0U", gray_c)
 
+    def test_cangku_moves_left_50mm_after_gray_alignment(self):
+        cangku_h = self.read("App/cangku_task.h")
+        cangku_c = self.read("App/cangku_task.c")
+
+        self.assertIn("CANGKU_AFTER_LINE_LEFT_DISTANCE_MM", cangku_c)
+        self.assertIn("CANGKU_STATE_AFTER_LINE_LEFT", cangku_h)
+        gray_position = cangku_c.index("gray_status = GrayAlign_Run();")
+        left_position = cangku_c.index(
+            "CANGKU_AFTER_LINE_LEFT_DISTANCE_MM", gray_position
+        )
+        first_backward_position = cangku_c.index(
+            "CangkuSequence_RunMove(180.0f)", left_position
+        )
+        self.assertLess(gray_position, left_position)
+        self.assertLess(left_position, first_backward_position)
+        self.assertIn("90.0f", cangku_c[left_position:left_position + 1800])
+
     def test_cangku_preserves_imu_failure_as_a_distinct_status(self):
         cangku_h = self.read("App/cangku_task.h")
         cangku_c = self.read("App/cangku_task.c")
@@ -96,6 +113,28 @@ class CangkuSequenceContractTest(unittest.TestCase):
 
         self.assertIn("ServoAction_SequenceState = SERVO_SEQUENCE_DONE", canceled_body)
         self.assertIn("Turntable_Stop()", canceled_body)
+
+    def test_cangku_is_a_path_step_after_existing_path(self):
+        path_h = self.read("App/path_sequence.h")
+        path_c = self.read("App/path_sequence.c")
+        freertos_c = self.read("Core/Src/freertos.c")
+
+        self.assertIn("#include \"cangku_task.h\"", path_h)
+        self.assertIn("PATH_STEP_CANGKU", path_h)
+        self.assertIn("PATH_SEQUENCE_CANGKU", path_h)
+        self.assertIn("PATH_SEQUENCE_ERROR_CANGKU", path_h)
+        self.assertIn("PATH_STEP_CANGKU", path_c)
+        self.assertIn("PathSequence_LastCangkuStatus = CangkuSequence_Run();", path_c)
+        self.assertIn("PATH_SEQUENCE_ERROR_CANGKU", path_c)
+        self.assertIn("CangkuSequence_Run()", freertos_c)
+        self.assertIn("PATH_SEQUENCE_ERROR_CANGKU", freertos_c)
+        self.assertIn("App/cangku_task.c", self.read("CMakeLists_armcc.txt"))
+        self.assertIn("cangku_task.c", self.read("MDK-ARM/chassis_motor.uvprojx"))
+
+        table = path_c.split(
+            "static const PathStep PathSequence_CommandQueue[]", 1
+        )[1].split("#define PATH_SEQUENCE_STEP_COUNT", 1)[0]
+        self.assertLess(table.index("/* STEP 11"), table.index("/* STEP 12"))
 
 
 if __name__ == "__main__":

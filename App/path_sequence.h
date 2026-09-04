@@ -6,6 +6,7 @@
 #include "motion_control.h"
 #include "round_pillar.h"
 #include "stair_sequence.h"
+#include "cangku_task.h"
 
 typedef enum
 {
@@ -14,7 +15,8 @@ typedef enum
     PATH_STEP_BALL,
     PATH_STEP_RZ,
     PATH_STEP_SERVO_GROUP,
-    PATH_STEP_STAIR
+    PATH_STEP_STAIR,
+    PATH_STEP_CANGKU
 } PathStepType;
 
 typedef struct
@@ -42,6 +44,7 @@ typedef enum
     PATH_SEQUENCE_BACK310,
     PATH_SEQUENCE_STAIR,
     PATH_SEQUENCE_LEFT_2000,
+    PATH_SEQUENCE_CANGKU,
 
     PATH_SEQUENCE_DONE,
     PATH_SEQUENCE_CANCELED,
@@ -59,7 +62,8 @@ typedef enum
     PATH_SEQUENCE_ERROR_BALL,
     PATH_SEQUENCE_ERROR_RZ,
     PATH_SEQUENCE_ERROR_SERVO,
-    PATH_SEQUENCE_ERROR_STAIR
+    PATH_SEQUENCE_ERROR_STAIR,
+    PATH_SEQUENCE_ERROR_CANGKU
 } PathSequenceStatus;
 
 extern volatile PathSequenceState PathSequence_State;
@@ -68,6 +72,7 @@ extern volatile PathSequenceStatus PathSequence_LastStatus;
 extern volatile BallSequenceStatus PathSequence_LastBallStatus;
 extern volatile RoundPillarStatus PathSequence_LastRzStatus;
 extern volatile StairSequenceStatus PathSequence_LastStairStatus;
+extern volatile CangkuSequenceStatus PathSequence_LastCangkuStatus;
 extern volatile MotionControlStatus PathSequence_LastMotionStatus;
 
 PathSequenceStatus PathSequence_Run(void);

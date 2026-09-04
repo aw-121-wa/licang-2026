@@ -207,6 +207,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         for token in (
             "PATH_STEP_MOVE", "PATH_STEP_ROTATE", "PATH_STEP_BALL",
             "PATH_STEP_RZ", "PATH_STEP_SERVO_GROUP", "PATH_STEP_STAIR",
+            "PATH_STEP_CANGKU",
             "PATH_SEQUENCE_LF20_1800",
             "PATH_SEQUENCE_F2300", "PATH_SEQUENCE_ROTATE1_178",
             "PATH_SEQUENCE_BALL", "PATH_SEQUENCE_ROTATE2_178",
@@ -215,8 +216,10 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             "PATH_SEQUENCE_F330",
             "PATH_SEQUENCE_STAIR",
             "PATH_SEQUENCE_LEFT_2000",
+            "PATH_SEQUENCE_CANGKU",
             "PATH_SEQUENCE_DONE", "PATH_SEQUENCE_CANCELED",
             "PATH_SEQUENCE_ERROR",
+            "PATH_SEQUENCE_ERROR_CANGKU",
         ):
             self.assertIn(token, path_h)
 
@@ -232,19 +235,20 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertEqual(table.count("PATH_STEP_RZ"), 1)
         self.assertEqual(table.count("PATH_STEP_SERVO_GROUP"), 2)
         self.assertEqual(table.count("PATH_STEP_STAIR"), 1)
+        self.assertEqual(table.count("PATH_STEP_CANGKU"), 1)
         for token in (
             "1800U", "20.0f", "MOTION_DIAGONAL_CRUISE_RPM",
             "2300U", "0.0f", "MOTION_CRUISE_RPM",
             "1810U", "180.0f",
             "330U", "90.0f",
-            "2000U",
+            "1600U",
             "SERVO_ACTION_START_GROUP",
         ):
             self.assertIn(token, table)
         self.assertEqual(table.count("SERVO_ACTION_START_GROUP"), 2)
         self.assertEqual(table.count("MOTION_DIAGONAL_CRUISE_RPM"), 1)
         self.assertIn("/* STEP 11", table)
-        self.assertEqual(table.count("/* STEP"), 12)
+        self.assertEqual(table.count("/* STEP"), 13)
         self.assertLess(table.index("/* STEP 7"), table.index("/* STEP 8"))
         self.assertLess(table.index("/* STEP 8"), table.index("/* STEP 9"))
         self.assertLess(table.index("/* STEP 9"), table.index("/* STEP 10"))
@@ -254,7 +258,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             table,
         )
         self.assertIn(
-            "2000U,\n        90.0f,\n        MOTION_CRUISE_RPM",
+            "1600U,\n        90.0f,\n        MOTION_CRUISE_RPM",
             table,
         )
 
@@ -304,7 +308,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         stair_case = run_body.index("case PATH_STEP_STAIR:")
         self.assertLess(
             table.index("PATH_STEP_STAIR"),
-            table.index("2000U"),
+            table.index("1600U"),
         )
         self.assertLess(
             run_body.index("StairSequence_Run()", stair_case),
@@ -314,6 +318,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertNotIn("PATH_SEQUENCE_LR20_", path_h + path_c)
         self.assertIn('return "GROUP0";', path_c)
         self.assertIn("PATH_SEQUENCE_ERROR_STAIR", freertos_c)
+        self.assertIn("PATH_SEQUENCE_ERROR_CANGKU", freertos_c)
         self.assertIn("PATH_SEQUENCE_ERROR_SERVO", freertos_c)
         self.assertNotIn("ROUND_PILLAR_ERROR_MAIX_TIMEOUT", path_c)
 

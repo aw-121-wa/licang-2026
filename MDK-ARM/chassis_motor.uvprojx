@@ -587,6 +587,16 @@
               <FilePath>../App/path_sequence.h</FilePath>
             </File>
             <File>
+              <FileName>cangku_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/cangku_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>cangku_task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/cangku_task.h</FilePath>
+            </File>
+            <File>
               <FileName>gray_align.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/gray_align.c</FilePath>

@@ -18,7 +18,7 @@
 #define STAIR_VISION_TIMEOUT_MS          1000U
 #define STAIR_VISION_POLL_MS                1U
 #define STAIR_FORWARD_RPM                40.0f
-#define STAIR_INITIAL_BACKWARD_MM          20U
+#define STAIR_INITIAL_BACKWARD_MM          18U
 
 typedef enum
 {

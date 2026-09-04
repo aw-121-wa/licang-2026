@@ -110,12 +110,21 @@ static const PathStep PathSequence_CommandQueue[] =
         SERVO_ACTION_START_GROUP
     },
 
-    /* STEP 11: 第二次动作组0完成后向左横移2000 mm */
+    /* STEP 11: 第二次动作组0完成后向左横移1600 mm */
     {
         PATH_STEP_MOVE,
         1600U,
         90.0f,
         MOTION_CRUISE_RPM,
+        0U
+    },
+
+    /* STEP 12: 完成现有路径后执行仓库搬运流程 */
+    {
+        PATH_STEP_CANGKU,
+        0U,
+        0.0f,
+        0.0f,
         0U
     }
 };
@@ -130,6 +139,7 @@ volatile PathSequenceStatus PathSequence_LastStatus = PATH_SEQUENCE_OK;
 volatile BallSequenceStatus PathSequence_LastBallStatus = BALL_SEQUENCE_OK;
 volatile RoundPillarStatus PathSequence_LastRzStatus = ROUND_PILLAR_OK;
 volatile StairSequenceStatus PathSequence_LastStairStatus = STAIR_SEQUENCE_OK;
+volatile CangkuSequenceStatus PathSequence_LastCangkuStatus = CANGKU_STATUS_OK;
 volatile MotionControlStatus PathSequence_LastMotionStatus = MOTION_STATUS_IDLE;
 
 static void PathSequence_SetStepState(uint32_t step_index)
@@ -148,6 +158,7 @@ static void PathSequence_SetStepState(uint32_t step_index)
     case 9U: PathSequence_State = PATH_SEQUENCE_STAIR;       break;
     case 10U:PathSequence_State = PATH_SEQUENCE_GROUP0;      break;
     case 11U:PathSequence_State = PATH_SEQUENCE_LEFT_2000;   break;
+    case 12U:PathSequence_State = PATH_SEQUENCE_CANGKU;      break;
     default: PathSequence_State = PATH_SEQUENCE_IDLE;       break;
     }
 }
@@ -199,6 +210,7 @@ PathSequenceStatus PathSequence_Run(void)
     PathSequence_LastBallStatus = BALL_SEQUENCE_OK;
     PathSequence_LastRzStatus = ROUND_PILLAR_OK;
     PathSequence_LastStairStatus = STAIR_SEQUENCE_OK;
+    PathSequence_LastCangkuStatus = CANGKU_STATUS_OK;
     PathSequence_LastMotionStatus = MOTION_STATUS_IDLE;
 
     /* This is the only warehouse/servo readiness check for the whole PATH. */
@@ -290,6 +302,18 @@ PathSequenceStatus PathSequence_Run(void)
             }
             break;
 
+        case PATH_STEP_CANGKU:
+            PathSequence_LastCangkuStatus = CangkuSequence_Run();
+            if (PathSequence_LastCangkuStatus == CANGKU_STATUS_CANCELED)
+            {
+                return PathSequence_Cancel();
+            }
+            if (PathSequence_LastCangkuStatus != CANGKU_STATUS_OK)
+            {
+                return PathSequence_Fail(PATH_SEQUENCE_ERROR_CANGKU);
+            }
+            break;
+
         case PATH_STEP_SERVO_GROUP:
         {
             ServoActionStatus servo_status;
@@ -347,6 +371,7 @@ const char *PathSequence_StateName(PathSequenceState state)
     case PATH_SEQUENCE_F330:          return "F330";
     case PATH_SEQUENCE_STAIR:         return "STAIR";
     case PATH_SEQUENCE_LEFT_2000:     return "LEFT_2000";
+    case PATH_SEQUENCE_CANGKU:        return "CANGKU";
     case PATH_SEQUENCE_DONE:          return "DONE";
     case PATH_SEQUENCE_CANCELED:      return "CANCELED";
     case PATH_SEQUENCE_ERROR:         return "ERROR";
@@ -366,6 +391,7 @@ const char *PathSequence_StatusName(PathSequenceStatus status)
     case PATH_SEQUENCE_ERROR_RZ:       return "RZ";
     case PATH_SEQUENCE_ERROR_SERVO:    return "SERVO";
     case PATH_SEQUENCE_ERROR_STAIR:    return "STAIR";
+    case PATH_SEQUENCE_ERROR_CANGKU:   return "CANGKU";
     default:                           return "UNKNOWN";
     }
 }
