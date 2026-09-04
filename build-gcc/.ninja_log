@@ -76,3 +76,5 @@
 472	654	8102245870699353	CMakeFiles/chassis_motor.elf.dir/User/Robot/state_machine.c.obj	b8f9fdfafa61f596
 435	760	8102245870329343	CMakeFiles/chassis_motor.elf.dir/User/Task/uart_command.c.obj	24d96307e6ffebd1
 71	839	8102248309181164	CMakeFiles/chassis_motor.elf.dir/User/Task/task_control.c.obj	8549087c5be4e1e2
+6	157	8102324678670110	CMakeFiles/chassis_motor.elf.dir/User/Robot/path_sequence.c.obj	77047adb084acfb0
+158	375	8102324680182347	chassis_motor.elf	98c32535bc3d5d9c

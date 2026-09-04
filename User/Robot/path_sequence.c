@@ -110,6 +110,14 @@ static const PathStep PathSequence_CommandQueue[] =
         SERVO_ACTION_START_GROUP
     },
 
+    {
+        PATH_STEP_MOVE,
+        2000U,
+        150.0f,
+        MOTION_CRUISE_RPM,
+        0U
+    },
+
     /* STEP 11: 第二次动作组0完成后向左横移1600 mm */
     /*{
         PATH_STEP_MOVE,
