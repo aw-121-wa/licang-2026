@@ -140,6 +140,13 @@
 - 反向转盘仍使用现有一格 1280 脉冲、速度和加速度参数，仅取反 `TURNTABLE_SLOT_DIRECTION`；CANGKU 不改变 `Warehouse_BallCount`。
 - STOP、IMU、底盘、动作组和转盘错误均在 CANGKU 流程中停止并返回对应状态；动作组 13、14、15 必须预先写入舵机控制器。
 
+## RFID 球 ID 采集（2026-09-04）
+
+- RFID 使用 UART8：PE0 为 RX、PE1 为 TX，115200-8-N-1，采用单字节中断接收。
+- 合法球 ID 范围为 1~9；一次 BALL 圆盘机任务最多保存 5 个 ID，保存顺序必须保持。
+- 每次动作组 2 夹球完成后先清理旧 RFID 数据，再等待合法且不等于上一个已保存 ID 的新 ID；读取成功后才允许执行原有转盘和动作组 1 回位。
+- `BALL_Get_Grabbed_ID()` / `BALL_Get_ID_List()` 为后续 CANGKU 分拣提供本轮 ID 列表；现有 `WarehouseControl` 六球机械计数保持不变。
+
 ## 原地旋转任意角度（2026-08-25）
 
 - 提供 `MotionControl_RotateDeg(float angle_deg)`：正角为逆时针左转，负角为顺时针右转，允许绝对值 `1..360` 度（0 度无效）。

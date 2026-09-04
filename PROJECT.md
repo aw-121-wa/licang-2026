@@ -119,6 +119,13 @@
 
 - `App/cangku_task.*`：`CANGKU` 仓库搬运流程；由 `ChassisTask` 执行旋转、0110 灰度对齐、向左横移 50 mm、移动、动作组和反向转盘步骤。
 
+## RFID ball ID capture (2026-09-04)
+
+- UART8 is reserved for the RFID reader: PE0=RX, PE1=TX, 115200-8-N-1, interrupt reception.
+- RFID IDs are the independent domain 1 through 9 (`BALL_ID_MAX=9U`); the current BALL rotary batch stores at most five IDs (`BALL_GRAB_MAX=5U`).
+- After a successful BALL group 2 clamp, the sequence clears stale RFID data, waits for a valid non-duplicate ID, saves it in order, then performs the existing turntable and group 1 return sequence.
+- `BALL_Get_Grabbed_ID()` and `BALL_Get_ID_List()` expose the five-entry cache for later CANGKU sorting; `WarehouseControl` keeps its existing six-ball mechanical counter.
+
 ## STAIR 阶梯测试流程（2026-08-29）
 
 - UART5 无参数命令 `STAIR` 由 `ChassisTask` 串行执行；开始前仅检查 `Turntable_IsReady()`，不初始化或修改仓库状态。

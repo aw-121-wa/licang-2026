@@ -577,6 +577,16 @@
               <FilePath>../App/ball_sequence.h</FilePath>
             </File>
             <File>
+              <FileName>rfid.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../App/RFID/rfid.c</FilePath>
+            </File>
+            <File>
+              <FileName>rfid.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../App/RFID/rfid.h</FilePath>
+            </File>
+            <File>
               <FileName>path_sequence.c</FileName>
               <FileType>1</FileType>
               <FilePath>../App/path_sequence.c</FilePath>

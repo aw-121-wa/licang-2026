@@ -2,6 +2,7 @@
 #include "maixcam_link.h"
 #include "servo_action.h"
 #include "uart_command.h"
+#include "RFID/rfid.h"
 
 static UART_HandleTypeDef *jy61p_uart = NULL;
 static uint8_t jy61p_rx_byte = 0U;
@@ -281,6 +282,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     MaixCamLink_UartRxCpltCallback(huart);
     UartCommand_UartRxCpltCallback(huart);
     ServoAction_UartRxCpltCallback(huart);
+    RFID_UartRxCpltCallback(huart);
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
@@ -289,4 +291,5 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     MaixCamLink_UartErrorCallback(huart);
     UartCommand_UartErrorCallback(huart);
     ServoAction_UartErrorCallback(huart);
+    RFID_UartErrorCallback(huart);
 }

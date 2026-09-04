@@ -27,7 +27,8 @@ typedef enum
     MOTION_ERROR_MAIX_UART = 0xE5,
     MOTION_ERROR_MAIX_TIMEOUT = 0xE6,
     MOTION_ERROR_GRAY_ALIGN = 0xE7,
-    MOTION_ERROR_RZ_TIMEOUT = 0xE8
+    MOTION_ERROR_RZ_TIMEOUT = 0xE8,
+    MOTION_ERROR_RFID_TIMEOUT = 0xE9
 } MotionControlStatus;
 
 void MotionControl_Init(UART_HandleTypeDef *motor_uart,

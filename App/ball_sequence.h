@@ -3,7 +3,9 @@
 
 #include "main.h"
 
-#define BALL_SEQUENCE_ROUND_COUNT           6U
+#define BALL_ID_MAX                         9U
+#define BALL_GRAB_MAX                       5U
+#define BALL_SEQUENCE_ROUND_COUNT           BALL_GRAB_MAX
 
 typedef enum
 {
@@ -11,6 +13,7 @@ typedef enum
     BALL_SEQUENCE_ALIGNING,
     BALL_SEQUENCE_WAITING_MAIXCAM,
     BALL_SEQUENCE_GRAB_RUNNING,
+    BALL_SEQUENCE_WAITING_RFID,
     BALL_SEQUENCE_RETURN_RUNNING,
     BALL_SEQUENCE_COMPLETE,
     BALL_SEQUENCE_TIMEOUT,
@@ -26,15 +29,21 @@ typedef enum
     BALL_SEQUENCE_ERROR_MAIX_TIMEOUT,
     BALL_SEQUENCE_ERROR_SERVO,
     BALL_SEQUENCE_ERROR_TURNTABLE,
-    BALL_SEQUENCE_ERROR_GRAY_ALIGN
+    BALL_SEQUENCE_ERROR_GRAY_ALIGN,
+    BALL_SEQUENCE_ERROR_RFID_TIMEOUT
 } BallSequenceStatus;
 
 extern volatile BallSequenceState BallSequence_State;
 extern volatile BallSequenceStatus BallSequence_LastStatus;
 extern volatile uint8_t BallSequence_Round;
+extern uint8_t all_ball_id[BALL_ID_MAX];
+extern uint8_t grabbed_ball_id[BALL_GRAB_MAX];
+extern uint8_t grabbed_ball_count;
 
 void BallSequence_Init(void);
 BallSequenceStatus BallSequence_Run(void);
+uint8_t *BALL_Get_Grabbed_ID(void);
+uint8_t *BALL_Get_ID_List(void);
 const char *BallSequence_StateName(BallSequenceState state);
 const char *BallSequence_StatusName(BallSequenceStatus status);
 

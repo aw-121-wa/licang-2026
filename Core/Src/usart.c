@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
+#include "RFID/rfid.h"
 #include "servo_action.h"
 
 /* USER CODE BEGIN 0 */
@@ -32,6 +33,7 @@ UART_HandleTypeDef huart3;
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart7;
+UART_HandleTypeDef huart8;
 
 /* USART1 init function: PA9=TX, PA10=RX, warehouse turntable motor. */
 void MX_USART1_UART_Init(void)
@@ -187,6 +189,25 @@ void MX_UART7_Init(void)
   huart7.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart7.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
   if (HAL_UART_Init(&huart7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/* UART8 init function: PE0/PE1 RFID reader interface. */
+void MX_UART8_Init(void)
+{
+  huart8.Instance = UART8;
+  huart8.Init.BaudRate = RFID_BAUDRATE;
+  huart8.Init.WordLength = UART_WORDLENGTH_8B;
+  huart8.Init.StopBits = UART_STOPBITS_1;
+  huart8.Init.Parity = UART_PARITY_NONE;
+  huart8.Init.Mode = UART_MODE_TX_RX;
+  huart8.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart8.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart8.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart8.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart8) != HAL_OK)
   {
     Error_Handler();
   }
@@ -397,6 +418,34 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_NVIC_SetPriority(UART7_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(UART7_IRQn);
   }
+  else if(uartHandle->Instance==UART8)
+  {
+    RCC_PeriphCLKInitTypeDef uart8_clk = {0};
+
+    uart8_clk.PeriphClockSelection = RCC_PERIPHCLK_UART8;
+    uart8_clk.Uart8ClockSelection = RCC_UART8CLKSOURCE_PCLK1;
+    if (HAL_RCCEx_PeriphCLKConfig(&uart8_clk) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_RCC_UART8_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+
+    /**UART8 GPIO Configuration
+    PE0     ------> UART8_RX
+    PE1     ------> UART8_TX
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF8_UART8;
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+    HAL_NVIC_SetPriority(UART8_IRQn, 6, 0);
+    HAL_NVIC_EnableIRQ(UART8_IRQn);
+  }
 }
 
 void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
@@ -468,6 +517,12 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     __HAL_RCC_UART7_CLK_DISABLE();
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_7|GPIO_PIN_8);
     HAL_NVIC_DisableIRQ(UART7_IRQn);
+  }
+  else if(uartHandle->Instance==UART8)
+  {
+    __HAL_RCC_UART8_CLK_DISABLE();
+    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_0|GPIO_PIN_1);
+    HAL_NVIC_DisableIRQ(UART8_IRQn);
   }
 }
 

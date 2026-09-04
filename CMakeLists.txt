@@ -23,6 +23,7 @@ set(CHASSIS_SOURCES
     App/servo_action.c
     App/maixcam_link.c
     App/ball_sequence.c
+    App/RFID/rfid.c
     App/gray_align.c
     App/path_sequence.c
     App/stair_sequence.c
