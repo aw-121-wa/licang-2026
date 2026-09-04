@@ -1,0 +1,16 @@
+Architecture refactor baseline
+==============================
+
+Repository: aw-121-wa/licang-2026
+Branch before refactor: snapshot-2026-08-24-servo-arm
+Baseline commit: 6c43dc02094d089f557b278fd7a6fe5280b4fd45
+Refactor branch: refactor-architecture
+
+This directory records the baseline identity. The Git branch and commit above
+are the recoverable source backup; no generated or user source files are
+duplicated here.
+
+Known baseline test differences unrelated to this refactor:
+- App/path_sequence.c uses 1650U while the existing contract test expects 1600U.
+- App/stair_sequence.h uses 18U while the existing contract test expects 20U.
+- CMakeLists_armcc.txt references the absent App/competition_path.c.
