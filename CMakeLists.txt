@@ -19,24 +19,26 @@ set(CHASSIS_SOURCES
     Core/Src/stm32f7xx_hal_timebase_tim.c
     Core/Src/system_stm32f7xx.c
 
-    App/uart_command.c
-    App/servo_action.c
-    App/maixcam_link.c
-    App/ball_sequence.c
-    App/RFID/rfid.c
-    App/gray_align.c
-    App/path_sequence.c
-    App/stair_sequence.c
-    App/round_pillar.c
-    App/turntable_control.c
-    App/warehouse_control.c
-    App/cangku_task.c
+    User/Task/uart_command.c
+    User/Task/task_control.c
+    User/Robot/state_machine.c
+    User/Device/servo/servo_action.c
+    User/Device/camera/maixcam_link.c
+    User/Robot/ball_sequence.c
+    User/Device/rfid/rfid.c
+    User/Algorithm/gray_align.c
+    User/Robot/path_sequence.c
+    User/Robot/stair_sequence.c
+    User/Robot/round_pillar.c
+    User/Device/turntable/turntable_control.c
+    User/Robot/warehouse_control.c
+    User/Robot/cangku_task.c
 
-    Motor/motor_control.c
-    Motor/cangku_motor.c
-    Motor/mecanum_kinematics.c
-    Motor/motion_control.c
-    IMU/jy61p.c
+    User/BSP/motor_control.c
+    User/BSP/cangku_motor.c
+    User/Algorithm/mecanum_kinematics.c
+    User/Algorithm/motion_control.c
+    User/Device/imu/jy61p.c
 
     Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c
     Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c
@@ -81,9 +83,16 @@ target_compile_definitions(${PROJECT_NAME}.elf PRIVATE
 
 target_include_directories(${PROJECT_NAME}.elf PRIVATE
     Core/Inc
-    App
-    Motor
-    IMU
+    User/BSP
+    User/Device/servo
+    User/Device/rfid
+    User/Device/imu
+    User/Device/camera
+    User/Device/turntable
+    User/Algorithm
+    User/Robot
+    User/Task
+    User/Config
     Drivers/STM32F7xx_HAL_Driver/Inc
     Drivers/STM32F7xx_HAL_Driver/Inc/Legacy
     Drivers/CMSIS/Device/ST/STM32F7xx/Include

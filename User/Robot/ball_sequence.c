@@ -3,12 +3,10 @@
 #include "gray_align.h"
 #include "maixcam_link.h"
 #include "motion_control.h"
-#include "RFID/rfid.h"
+#include "rfid.h"
 #include "servo_action.h"
 #include "warehouse_control.h"
 
-#define BALL_SEQUENCE_WAIT_PERIOD_MS        1U
-#define BALL_SEQUENCE_RFID_TIMEOUT_MS       10000U
 #define BALL_SEQUENCE_TARGET_COLOR          MAIXCAM_COLOR_RED
 
 volatile BallSequenceState BallSequence_State = BALL_SEQUENCE_IDLE;

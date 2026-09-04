@@ -1,6 +1,6 @@
 #include "cangku_motor.h"
 
-/* These bytes are the same Emm V5.0/x42 commands used by Motor/motor_control.c. */
+/* These bytes are the same Emm V5.0/x42 commands used by User/BSP/motor_control.c. */
 #define ZDT_CHECK_BYTE                 0x6BU
 #define ZDT_SYNC_WAIT                  0x01U
 #define ZDT_POSITION_RELATIVE          0x00U

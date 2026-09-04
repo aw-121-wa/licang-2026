@@ -3,14 +3,7 @@
 #include "motion_control.h"
 #include "servo_action.h"
 #include "turntable_control.h"
-
-#define CANGKU_MOVE_DISTANCE_MM       200U
-#define CANGKU_AFTER_LINE_LEFT_DISTANCE_MM 50U
-#define CANGKU_SERVO_TIMEOUT_MS     20000U
-
-#define CANGKU_GROUP_13               13U
-#define CANGKU_GROUP_14               14U
-#define CANGKU_GROUP_15               15U
+#include "robot_config.h"
 
 volatile CangkuSequenceState CangkuSequence_State = CANGKU_STATE_IDLE;
 volatile CangkuSequenceStatus CangkuSequence_LastStatus = CANGKU_STATUS_OK;

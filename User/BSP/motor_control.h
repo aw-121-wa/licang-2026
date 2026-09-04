@@ -2,17 +2,7 @@
 #define MOTOR_CONTROL_H
 
 #include "main.h"
-
-#define MOTOR_WHEEL_DIAMETER_MM          75U
-#define MOTOR_PULSES_PER_REV            3200U
-#define MOTOR_DRIVE_GEAR_RATIO_NUM      1U
-#define MOTOR_DRIVE_GEAR_RATIO_DEN      1U
-#define MOTOR_MOVE_SPEED_RPM            100U
-#define MOTOR_MOVE_ACCELERATION         0U
-#define MOTOR_SEGMENT_SETTLE_MARGIN_MS  100U
-#define MOTOR_SPEED_ACCELERATION         0U
-#define MOTOR_SPEED_LIMIT_RPM          150U
-#define MOTOR_SPEED_COMMAND_SCALE       10U
+#include "robot_config.h"
 
 typedef struct
 {

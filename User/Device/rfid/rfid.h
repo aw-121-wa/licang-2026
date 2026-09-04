@@ -2,8 +2,7 @@
 #define RFID_H
 
 #include "main.h"
-
-#define RFID_BAUDRATE 115200U
+#include "robot_config.h"
 
 void RFID_Init(void);
 uint8_t RFID_Read_ID(uint8_t *id);

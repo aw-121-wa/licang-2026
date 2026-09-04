@@ -2,16 +2,10 @@
 #define TURNTABLE_CONTROL_H
 
 #include "cangku_motor.h"
+#include "robot_config.h"
 
 /* USART6 uses the standard Emm V5.0/x42 baud rate used by this project. */
-#define TURNTABLE_UART_BAUDRATE             115200U
-#define TURNTABLE_ONE_SLOT_PULSES           1280U
-#define TURNTABLE_MOVE_SPEED_RPM             100U
-#define TURNTABLE_MOVE_ACCELERATION            0U
 #define TURNTABLE_SLOT_DIRECTION       ZDT_DIR_CW
-#define TURNTABLE_PULSES_PER_REV           3200U
-#define TURNTABLE_SETTLE_MARGIN_MS          600U
-#define TURNTABLE_MOVE_TIMEOUT_MS          1500U
 
 typedef enum
 {

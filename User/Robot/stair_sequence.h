@@ -2,23 +2,7 @@
 #define STAIR_SEQUENCE_H
 
 #include "main.h"
-
-#define STAIR_GROUP_0                     0U
-#define STAIR_GROUP_5                     5U
-#define STAIR_GROUP_6                     6U
-#define STAIR_GROUP_7                     7U
-#define STAIR_GROUP_8                     8U
-#define STAIR_GROUP_9                     9U
-#define STAIR_GROUP_10                   10U
-#define STAIR_GROUP_11                   11U
-#define STAIR_GROUP_12                   12U
-
-#define STAIR_CAMERA_POSE_WAIT_MS       1000U
-#define STAIR_SERVO_TIMEOUT_MS          20000U
-#define STAIR_VISION_TIMEOUT_MS          1000U
-#define STAIR_VISION_POLL_MS                1U
-#define STAIR_FORWARD_RPM                40.0f
-#define STAIR_INITIAL_BACKWARD_MM          18U
+#include "robot_config.h"
 
 typedef enum
 {

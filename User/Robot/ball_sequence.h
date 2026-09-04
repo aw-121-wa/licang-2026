@@ -2,10 +2,7 @@
 #define BALL_SEQUENCE_H
 
 #include "main.h"
-
-#define BALL_ID_MAX                         9U
-#define BALL_GRAB_MAX                       5U
-#define BALL_SEQUENCE_ROUND_COUNT           BALL_GRAB_MAX
+#include "robot_config.h"
 
 typedef enum
 {

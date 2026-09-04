@@ -11,14 +11,9 @@
 #include "cmsis_os.h"
 #include "usart.h"
 #include "gpio.h"
-#include "servo_action.h"
-#include "RFID/rfid.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
-#include "ball_sequence.h"
-#include "maixcam_link.h"
 
 /* USER CODE END Includes */
 
@@ -100,12 +95,7 @@ int main(void)
   MX_UART5_Init();
   MX_UART7_Init();
   MX_UART8_Init();
-  ServoAction_Init(&huart7);
   /* USER CODE BEGIN 2 */
-
-  MaixCamLink_Init(&huart4);
-  RFID_Init();
-  BallSequence_Init();
 
   /* USER CODE END 2 */
 

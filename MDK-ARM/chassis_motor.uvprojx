@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F750xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../App;../Motor;../IMU;../Drivers/STM32F7xx_HAL_Driver/Inc;../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F7xx/Include;../Drivers/CMSIS/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1</IncludePath>
+              <IncludePath>../Core/Inc;../User/BSP;../User/Device/servo;../User/Device/rfid;../User/Device/imu;../User/Device/camera;../User/Device/turntable;../User/Algorithm;../User/Robot;../User/Task;../User/Config;../Drivers/STM32F7xx_HAL_Driver/Inc;../Drivers/STM32F7xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F7xx/Include;../Drivers/CMSIS/Include;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM7/r0p1</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -534,187 +534,207 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>App</GroupName>
+          <GroupName>User/Robot and Task</GroupName>
           <Files>
             <File>
               <FileName>uart_command.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/uart_command.c</FilePath>
+              <FilePath>../User/Task/uart_command.c</FilePath>
             </File>
             <File>
               <FileName>uart_command.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/uart_command.h</FilePath>
+              <FilePath>../User/Task/uart_command.h</FilePath>
             </File>
             <File>
               <FileName>servo_action.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/servo_action.c</FilePath>
+              <FilePath>../User/Device/servo/servo_action.c</FilePath>
             </File>
             <File>
               <FileName>servo_action.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/servo_action.h</FilePath>
+              <FilePath>../User/Device/servo/servo_action.h</FilePath>
             </File>
             <File>
               <FileName>maixcam_link.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/maixcam_link.c</FilePath>
+              <FilePath>../User/Device/camera/maixcam_link.c</FilePath>
             </File>
             <File>
               <FileName>maixcam_link.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/maixcam_link.h</FilePath>
+              <FilePath>../User/Device/camera/maixcam_link.h</FilePath>
             </File>
             <File>
               <FileName>ball_sequence.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/ball_sequence.c</FilePath>
+              <FilePath>../User/Robot/ball_sequence.c</FilePath>
             </File>
             <File>
               <FileName>ball_sequence.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/ball_sequence.h</FilePath>
+              <FilePath>../User/Robot/ball_sequence.h</FilePath>
             </File>
             <File>
               <FileName>rfid.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/RFID/rfid.c</FilePath>
+              <FilePath>../User/Device/rfid/rfid.c</FilePath>
             </File>
             <File>
               <FileName>rfid.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/RFID/rfid.h</FilePath>
+              <FilePath>../User/Device/rfid/rfid.h</FilePath>
             </File>
             <File>
               <FileName>path_sequence.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/path_sequence.c</FilePath>
+              <FilePath>../User/Robot/path_sequence.c</FilePath>
             </File>
             <File>
               <FileName>path_sequence.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/path_sequence.h</FilePath>
+              <FilePath>../User/Robot/path_sequence.h</FilePath>
             </File>
             <File>
               <FileName>cangku_task.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/cangku_task.c</FilePath>
+              <FilePath>../User/Robot/cangku_task.c</FilePath>
             </File>
             <File>
               <FileName>cangku_task.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/cangku_task.h</FilePath>
+              <FilePath>../User/Robot/cangku_task.h</FilePath>
             </File>
             <File>
               <FileName>gray_align.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/gray_align.c</FilePath>
+              <FilePath>../User/Algorithm/gray_align.c</FilePath>
             </File>
             <File>
               <FileName>gray_align.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/gray_align.h</FilePath>
+              <FilePath>../User/Algorithm/gray_align.h</FilePath>
             </File>
             <File>
               <FileName>stair_sequence.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/stair_sequence.c</FilePath>
+              <FilePath>../User/Robot/stair_sequence.c</FilePath>
             </File>
             <File>
               <FileName>stair_sequence.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/stair_sequence.h</FilePath>
+              <FilePath>../User/Robot/stair_sequence.h</FilePath>
             </File>
             <File>
               <FileName>round_pillar.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/round_pillar.c</FilePath>
+              <FilePath>../User/Robot/round_pillar.c</FilePath>
             </File>
             <File>
               <FileName>round_pillar.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/round_pillar.h</FilePath>
+              <FilePath>../User/Robot/round_pillar.h</FilePath>
             </File>
             <File>
               <FileName>turntable_control.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/turntable_control.c</FilePath>
+              <FilePath>../User/Device/turntable/turntable_control.c</FilePath>
             </File>
             <File>
               <FileName>turntable_control.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/turntable_control.h</FilePath>
+              <FilePath>../User/Device/turntable/turntable_control.h</FilePath>
             </File>
             <File>
               <FileName>warehouse_control.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../App/warehouse_control.c</FilePath>
+              <FilePath>../User/Robot/warehouse_control.c</FilePath>
             </File>
             <File>
               <FileName>warehouse_control.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../App/warehouse_control.h</FilePath>
+              <FilePath>../User/Robot/warehouse_control.h</FilePath>
+            </File>
+            <File>
+              <FileName>state_machine.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../User/Robot/state_machine.c</FilePath>
+            </File>
+            <File>
+              <FileName>state_machine.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../User/Robot/state_machine.h</FilePath>
+            </File>
+            <File>
+              <FileName>task_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../User/Task/task_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>task_control.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../User/Task/task_control.h</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>Motor</GroupName>
+          <GroupName>User/BSP and Algorithm</GroupName>
           <Files>
             <File>
               <FileName>motor_control.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Motor/motor_control.c</FilePath>
+              <FilePath>../User/BSP/motor_control.c</FilePath>
             </File>
             <File>
               <FileName>motor_control.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../Motor/motor_control.h</FilePath>
+              <FilePath>../User/BSP/motor_control.h</FilePath>
             </File>
             <File>
               <FileName>cangku_motor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Motor/cangku_motor.c</FilePath>
+              <FilePath>../User/BSP/cangku_motor.c</FilePath>
             </File>
             <File>
               <FileName>cangku_motor.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../Motor/cangku_motor.h</FilePath>
+              <FilePath>../User/BSP/cangku_motor.h</FilePath>
             </File>
             <File>
               <FileName>mecanum_kinematics.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Motor/mecanum_kinematics.c</FilePath>
+              <FilePath>../User/Algorithm/mecanum_kinematics.c</FilePath>
             </File>
             <File>
               <FileName>mecanum_kinematics.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../Motor/mecanum_kinematics.h</FilePath>
+              <FilePath>../User/Algorithm/mecanum_kinematics.h</FilePath>
             </File>
             <File>
               <FileName>motion_control.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Motor/motion_control.c</FilePath>
+              <FilePath>../User/Algorithm/motion_control.c</FilePath>
             </File>
             <File>
               <FileName>motion_control.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../Motor/motion_control.h</FilePath>
+              <FilePath>../User/Algorithm/motion_control.h</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>IMU</GroupName>
+          <GroupName>User/Device/imu</GroupName>
           <Files>
             <File>
               <FileName>jy61p.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../IMU/jy61p.c</FilePath>
+              <FilePath>../User/Device/imu/jy61p.c</FilePath>
             </File>
             <File>
               <FileName>jy61p.h</FileName>
               <FileType>5</FileType>
-              <FilePath>../IMU/jy61p.h</FilePath>
+              <FilePath>../User/Device/imu/jy61p.h</FilePath>
             </File>
           </Files>
         </Group>

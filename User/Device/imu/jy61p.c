@@ -2,7 +2,7 @@
 #include "maixcam_link.h"
 #include "servo_action.h"
 #include "uart_command.h"
-#include "RFID/rfid.h"
+#include "rfid.h"
 
 static UART_HandleTypeDef *jy61p_uart = NULL;
 static uint8_t jy61p_rx_byte = 0U;

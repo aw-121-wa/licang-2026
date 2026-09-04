@@ -2,9 +2,7 @@
 #define MAIXCAM_LINK_H
 
 #include "main.h"
-
-#define MAIXCAM_BAUDRATE                    115200U
-#define MAIXCAM_REQUEST_TIMEOUT_MS          10000U
+#include "robot_config.h"
 
 typedef enum
 {

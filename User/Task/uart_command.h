@@ -3,12 +3,9 @@
 
 #include "main.h"
 #include "motion_control.h"
+#include "robot_config.h"
 #include "FreeRTOS.h"
 #include "queue.h"
-
-#define UART_CMD_BUFFER_SIZE 96U
-#define UART_CMD_LINE_QUEUE_LENGTH 4U
-#define CHASSIS_COMMAND_QUEUE_LENGTH 4U
 
 typedef enum
 {
