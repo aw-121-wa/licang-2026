@@ -111,7 +111,7 @@ static const PathStep PathSequence_CommandQueue[] =
     },
 
     /* STEP 11: 第二次动作组0完成后向左横移1600 mm */
-    {
+    /*{
         PATH_STEP_MOVE,
         1650U,
         90.0f,
@@ -120,13 +120,13 @@ static const PathStep PathSequence_CommandQueue[] =
     },
 
     /* STEP 12: 完成现有路径后执行仓库搬运流程 */
-    {
+    /*{
         PATH_STEP_CANGKU,
         0U,
         0.0f,
         0.0f,
         0U
-    }
+    }*/
 };
 
 #define PATH_SEQUENCE_STEP_COUNT \

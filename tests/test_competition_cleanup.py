@@ -242,7 +242,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             "2300U", "0.0f", "MOTION_CRUISE_RPM",
             "1810U", "180.0f",
             "330U", "90.0f",
-            "1650U",
+            "2000U",
             "SERVO_ACTION_START_GROUP",
         ):
             self.assertIn(token, table)
@@ -258,9 +258,11 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             "330U,\n        0.0f,\n        MOTION_CRUISE_RPM",
             table,
         )
+        step11 = table[table.index("/* STEP 11"):]
+        self.assertNotIn("/*{", step11)
         self.assertIn(
-            "1650U,\n        90.0f,\n        MOTION_CRUISE_RPM",
-            table,
+            "PATH_STEP_MOVE,\n        2000U,\n        90.0f,\n        MOTION_CRUISE_RPM",
+            step11,
         )
 
         self.assertIn("PATH_SEQUENCE_STEP_COUNT", path_c)
@@ -309,7 +311,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         stair_case = run_body.index("case PATH_STEP_STAIR:")
         self.assertLess(
             table.index("PATH_STEP_STAIR"),
-            table.index("1650U"),
+            table.index("2000U"),
         )
         self.assertLess(
             run_body.index("StairSequence_Run()", stair_case),

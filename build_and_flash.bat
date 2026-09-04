@@ -38,16 +38,6 @@ exit /b 1
 :found_tool
 echo Using flash tool: %FLASH_TOOL%
 
-REM Switch to GCC CMakeLists if needed
-if exist CMakeLists.txt (
-    findstr /C:"ARMCC" CMakeLists.txt >nul
-    if %ERRORLEVEL% EQU 0 (
-        echo Switching to GCC CMakeLists...
-        ren CMakeLists.txt CMakeLists_armcc.txt
-        ren CMakeLists_gcc.txt CMakeLists.txt
-    )
-)
-
 REM Build
 echo.
 echo [1/2] Building with GCC...
