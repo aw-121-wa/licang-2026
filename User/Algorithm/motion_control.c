@@ -16,15 +16,15 @@
 #define MOTION_PI                          3.1415926f
 
 /* IMU closed-loop in-place rotation. Positive omega is counter-clockwise. */
-#define ROTATE_CRUISE_RPM                  60.0f
-#define ROTATE_APPROACH_RPM                15.0f
-#define ROTATE_MIN_EFFECTIVE_RPM            8.0f
+#define ROTATE_CRUISE_RPM                  100.0f
+#define ROTATE_APPROACH_RPM                5.0f
+#define ROTATE_MIN_EFFECTIVE_RPM            16.0f
 #define ROTATE_DECEL_START_DEG             30.0f
 #define ROTATE_FINE_START_DEG              10.0f
 #define ROTATE_TOLERANCE_DEG                0.8f
 #define ROTATE_SETTLE_CYCLES                5U
 #define ROTATE_RAMP_TIME_MS               250U
-#define ROTATE_TIMEOUT_MS                8000U
+#define ROTATE_TIMEOUT_MS                10000U
 #define ROTATE_MAX_ANGLE_DEG              360.0f
 
 #define HEADING_RATE_FILTER_MS             40.0f
