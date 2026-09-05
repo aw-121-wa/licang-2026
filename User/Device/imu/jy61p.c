@@ -1,8 +1,4 @@
 #include "jy61p.h"
-#include "maixcam_link.h"
-#include "servo_action.h"
-#include "uart_command.h"
-#include "rfid.h"
 
 static UART_HandleTypeDef *jy61p_uart = NULL;
 static uint8_t jy61p_rx_byte = 0U;
@@ -273,23 +269,4 @@ uint32_t Jy61P_GetRxByteCount(void)
 uint32_t Jy61P_GetChecksumErrorCount(void)
 {
     return Jy61P_ChecksumErrorCount;
-}
-
-/* Keep the UART interrupt plumbing inside the IMU module. */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    Jy61P_UartRxCpltCallback(huart);
-    MaixCamLink_UartRxCpltCallback(huart);
-    UartCommand_UartRxCpltCallback(huart);
-    ServoAction_UartRxCpltCallback(huart);
-    RFID_UartRxCpltCallback(huart);
-}
-
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-    Jy61P_UartErrorCallback(huart);
-    MaixCamLink_UartErrorCallback(huart);
-    UartCommand_UartErrorCallback(huart);
-    ServoAction_UartErrorCallback(huart);
-    RFID_UartErrorCallback(huart);
 }

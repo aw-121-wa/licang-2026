@@ -127,12 +127,15 @@
 
 - `User/Robot/cangku_task.*`：`CANGKU` 仓库搬运流程；由 `ChassisTask` 执行旋转、0110 灰度对齐、向左横移 50 mm、移动、动作组和反向转盘步骤。
 
-## RFID ball ID capture (2026-09-04)
+## RFID 自动卡号采集（2026-09-05）
 
-- UART8 is reserved for the RFID reader: PE0=RX, PE1=TX, 115200-8-N-1, interrupt reception.
-- RFID IDs are the independent domain 1 through 9 (`BALL_ID_MAX=9U`); the current BALL rotary batch stores at most five IDs (`BALL_GRAB_MAX=5U`).
-- After a successful BALL group 2 clamp, the sequence clears stale RFID data, waits for a valid non-duplicate ID, saves it in order, then performs the existing turntable and group 1 return sequence.
-- `BALL_Get_Grabbed_ID()` and `BALL_Get_ID_List()` expose the five-entry cache for later CANGKU sorting; `WarehouseControl` keeps its existing six-ball mechanical counter.
+- UART8 PE0=RX、PE1=TX，9600-8-N-1，地址 0x20，匹配厂家 V1.0.5 手册默认参数。
+- 读写器预设为自动读卡号、主动上传，推荐一直读；固件不在上电时修改读写器 EEPROM。
+- 使用完整帧的长度、命令、地址、状态和异或取反校验，保存真实 32 位 UID；不限制为 1..9，不建立固定编号映射。
+- BALL 在夹取组 2 前清除旧数据，保留夹取期间的卡号，整批去重，最多 5 个 UID；重试保留成功记录，转盘步骤成功后才追加卡号。
+- `BALL_Get_Grabbed_ID()` / `BALL_Get_ID_List()` 返回 `uint32_t *`。仓库机械计数仍为 6；CANGKU 尚未按 UID 分拣。
+- UART5 `RFID` 提供不消费数据的接收、卡号和批次查询。配置和实物验收见 [RFID.md](docs/RFID.md)。
+- 全局 HAL UART 回调由 `User/Robot/state_machine.c` 分发，各 Device 模块只负责自身设备。
 
 ## STAIR 阶梯测试流程（2026-08-29）
 

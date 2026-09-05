@@ -15,6 +15,22 @@
 #include "path_sequence.h"
 #include "cangku_task.h"
 
+/* Shared by direct BALL and the BALL step inside PATH. */
+static MotionControlStatus ChassisTask_FromBallStatus(BallSequenceStatus status)
+{
+  switch (status)
+  {
+  case BALL_SEQUENCE_OK:
+  case BALL_SEQUENCE_CANCELED_BY_STOP: return MOTION_STATUS_FINISHED;
+  case BALL_SEQUENCE_ERROR_SERVO:
+  case BALL_SEQUENCE_ERROR_TURNTABLE: return MOTION_ERROR_MOTOR_UART;
+  case BALL_SEQUENCE_ERROR_MAIX_TIMEOUT: return MOTION_ERROR_MAIX_TIMEOUT;
+  case BALL_SEQUENCE_ERROR_GRAY_ALIGN: return MOTION_ERROR_GRAY_ALIGN;
+  case BALL_SEQUENCE_ERROR_RFID_TIMEOUT: return MOTION_ERROR_RFID_TIMEOUT;
+  default: return MOTION_ERROR_MAIX_UART;
+  }
+}
+
 /* USER CODE BEGIN Header_StartChassisTask */
 /**
 * @brief Function implementing the ChassisTask thread.
@@ -108,30 +124,7 @@ void StartChassisTask(void *argument)
         }
         else if (path_result == PATH_SEQUENCE_ERROR_BALL)
         {
-          if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_SERVO)
-          {
-            result = MOTION_ERROR_MOTOR_UART;
-          }
-          else if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_MAIX_TIMEOUT)
-          {
-            result = MOTION_ERROR_MAIX_TIMEOUT;
-          }
-          else if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_TURNTABLE)
-          {
-            result = MOTION_ERROR_MOTOR_UART;
-          }
-          else if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_GRAY_ALIGN)
-          {
-            result = MOTION_ERROR_GRAY_ALIGN;
-          }
-          else if (PathSequence_LastBallStatus == BALL_SEQUENCE_ERROR_RFID_TIMEOUT)
-          {
-            result = MOTION_ERROR_RFID_TIMEOUT;
-          }
-          else
-          {
-            result = MOTION_ERROR_MAIX_UART;
-          }
+          result = ChassisTask_FromBallStatus(PathSequence_LastBallStatus);
         }
         else if (path_result == PATH_SEQUENCE_ERROR_STAIR)
         {
@@ -209,42 +202,8 @@ void StartChassisTask(void *argument)
       else if (command.type == CHASSIS_CMD_BALL)
       {
         ball_result = BallSequence_Run();
-        if ((ball_result == BALL_SEQUENCE_OK) ||
-            (ball_result == BALL_SEQUENCE_CANCELED_BY_STOP))
-        {
-          result = MOTION_STATUS_FINISHED;
-          ChassisTask_Ready = 1U;
-        }
-        else if (ball_result == BALL_SEQUENCE_ERROR_SERVO)
-        {
-          result = MOTION_ERROR_MOTOR_UART;
-          ChassisTask_Ready = 0U;
-        }
-        else if (ball_result == BALL_SEQUENCE_ERROR_MAIX_TIMEOUT)
-        {
-          result = MOTION_ERROR_MAIX_TIMEOUT;
-          ChassisTask_Ready = 1U;
-        }
-        else if (ball_result == BALL_SEQUENCE_ERROR_TURNTABLE)
-        {
-          result = MOTION_ERROR_MOTOR_UART;
-          ChassisTask_Ready = 1U;
-        }
-        else if (ball_result == BALL_SEQUENCE_ERROR_GRAY_ALIGN)
-        {
-          result = MOTION_ERROR_GRAY_ALIGN;
-          ChassisTask_Ready = 1U;
-        }
-        else if (ball_result == BALL_SEQUENCE_ERROR_RFID_TIMEOUT)
-        {
-          result = MOTION_ERROR_RFID_TIMEOUT;
-          ChassisTask_Ready = 1U;
-        }
-        else
-        {
-          result = MOTION_ERROR_MAIX_UART;
-          ChassisTask_Ready = 1U;
-        }
+        result = ChassisTask_FromBallStatus(ball_result);
+        ChassisTask_Ready = (ball_result == BALL_SEQUENCE_ERROR_SERVO) ? 0U : 1U;
       }
       else if (command.type == CHASSIS_CMD_RZ)
       {

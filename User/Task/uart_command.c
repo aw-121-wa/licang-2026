@@ -7,6 +7,7 @@
 #include "stair_sequence.h"
 #include "path_sequence.h"
 #include "turntable_control.h"
+#include "rfid.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -292,6 +293,39 @@ static void UartCommand_SendStatus(void)
     UartCommand_Send(response);
 }
 
+static void UartCommand_SendRfidStatus(void)
+{
+    RfidStatus status;
+    uint32_t ids[BALL_GRAB_MAX];
+    uint8_t count;
+    uint8_t index;
+    char response[220];
+
+    RFID_GetStatus(&status);
+    /* BALL's writer is another task; copy before formatting/transmitting. */
+    taskENTER_CRITICAL();
+    count = grabbed_ball_count;
+    (void)memcpy(ids, grabbed_ball_id, sizeof(ids));
+    taskEXIT_CRITICAL();
+    (void)snprintf(response, sizeof(response),
+        "RFID MODE=AUTO RX=%lu BAD=%lu BYTE=%02X UID=%08lX PENDING=%u ARMED=%u ERROR=%lu FRAMES=%lu READER=%u TAGS=%lu\r\n"
+        "BALL_LAST=%s COUNT=%u IDS=",
+        (unsigned long)status.rx_count, (unsigned long)status.invalid_count,
+        (unsigned)status.last_byte, (unsigned long)status.uid,
+        (unsigned)status.pending, (unsigned)status.receiving,
+        (unsigned long)status.last_error, (unsigned long)status.frame_count,
+        (unsigned)status.reader_status, (unsigned long)status.tag_count,
+        BallSequence_StatusName(BallSequence_LastStatus), (unsigned)count);
+    UartCommand_Send(response);
+    for (index = 0U; (index < count) && (index < BALL_GRAB_MAX); index++)
+    {
+        (void)snprintf(response, sizeof(response), "%s%08lX",
+            (index == 0U) ? "" : ",", (unsigned long)ids[index]);
+        UartCommand_Send(response);
+    }
+    UartCommand_Send("\r\n");
+}
+
 static void UartCommand_SendHelp(void)
 {
     UartCommand_Send(
@@ -300,8 +334,8 @@ static void UartCommand_SendHelp(void)
         "LR <mm> <deg>\r\nRR <mm> <deg>\r\n"
         "ROT CCW <deg>\r\nROT CW <deg>\r\n"
         "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\nPATH\r\nCANGKU\r\n"
-        "STOP\r\nSTATUS\r\nHELP\r\n"
-        "ARM: G0=start, G1=return, G2=clamp; GRAB=G2->turn->G1, BALL=max 6\r\n");
+        "STOP\r\nSTATUS\r\nRFID\r\nHELP\r\n"
+        "ARM: G0=start, G1=return, G2=clamp; GRAB=G2->turn->G1, BALL=max 5 IDs\r\n");
 }
 
 static void UartCommand_ProcessLine(UartCommandLine *line)
@@ -353,6 +387,16 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
             return;
         }
         UartCommand_SendStatus();
+        return;
+    }
+    if (strcmp(command, "RFID") == 0)
+    {
+        if (strtok(0, " \t") != 0)
+        {
+            UartCommand_Send("ERR FORMAT\r\n");
+            return;
+        }
+        UartCommand_SendRfidStatus();
         return;
     }
     if (strcmp(command, "HELP") == 0)
@@ -640,8 +684,9 @@ void UartCommand_Task(void *argument)
 
     for (;;)
     {
+        RFID_Poll();
         if ((command_line_queue != 0) &&
-            (xQueueReceive(command_line_queue, &line, portMAX_DELAY) == pdPASS))
+            (xQueueReceive(command_line_queue, &line, pdMS_TO_TICKS(20U)) == pdPASS))
         {
             UartCommand_ProcessLine(&line);
         }

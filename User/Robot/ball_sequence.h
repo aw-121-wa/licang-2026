@@ -33,14 +33,13 @@ typedef enum
 extern volatile BallSequenceState BallSequence_State;
 extern volatile BallSequenceStatus BallSequence_LastStatus;
 extern volatile uint8_t BallSequence_Round;
-extern uint8_t all_ball_id[BALL_ID_MAX];
-extern uint8_t grabbed_ball_id[BALL_GRAB_MAX];
+extern uint32_t grabbed_ball_id[BALL_GRAB_MAX];
 extern uint8_t grabbed_ball_count;
 
 void BallSequence_Init(void);
 BallSequenceStatus BallSequence_Run(void);
-uint8_t *BALL_Get_Grabbed_ID(void);
-uint8_t *BALL_Get_ID_List(void);
+uint32_t *BALL_Get_Grabbed_ID(void);
+uint32_t *BALL_Get_ID_List(void);
 const char *BallSequence_StateName(BallSequenceState state);
 const char *BallSequence_StatusName(BallSequenceStatus status);
 

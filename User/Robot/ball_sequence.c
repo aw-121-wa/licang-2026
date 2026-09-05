@@ -12,11 +12,41 @@
 volatile BallSequenceState BallSequence_State = BALL_SEQUENCE_IDLE;
 volatile BallSequenceStatus BallSequence_LastStatus = BALL_SEQUENCE_OK;
 volatile uint8_t BallSequence_Round = 0U;
-uint8_t all_ball_id[BALL_ID_MAX] = {1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U};
-uint8_t grabbed_ball_id[BALL_GRAB_MAX] = {0U};
+uint32_t grabbed_ball_id[BALL_GRAB_MAX] = {0U};
 uint8_t grabbed_ball_count = 0U;
 
-static uint8_t last_rfid_id = 0U;
+static uint8_t BallSequence_IsNewId(uint32_t id)
+{
+    uint8_t index;
+    for (index = 0U; index < grabbed_ball_count; index++)
+    {
+        if (grabbed_ball_id[index] == id) return 0U;
+    }
+    return 1U;
+}
+
+static BallSequenceStatus BallSequence_Finish(BallSequenceStatus status)
+{
+    BallSequence_LastStatus = status;
+    if (status == BALL_SEQUENCE_OK) BallSequence_State = BALL_SEQUENCE_COMPLETE;
+    else if (status == BALL_SEQUENCE_CANCELED_BY_STOP) BallSequence_State = BALL_SEQUENCE_CANCELED;
+    else if ((status == BALL_SEQUENCE_ERROR_RFID_TIMEOUT) ||
+             (status == BALL_SEQUENCE_ERROR_MAIX_TIMEOUT)) BallSequence_State = BALL_SEQUENCE_TIMEOUT;
+    else BallSequence_State = BALL_SEQUENCE_ERROR;
+    return status;
+}
+
+static ServoActionStatus BallSequence_RunGroup(uint8_t group)
+{
+    uint8_t is_grab = (group == SERVO_ACTION_GRAB_GROUP);
+    ServoActionStatus status;
+    BallSequence_State = is_grab ? BALL_SEQUENCE_GRAB_RUNNING : BALL_SEQUENCE_RETURN_RUNNING;
+    ServoAction_SequenceState = is_grab ? SERVO_SEQUENCE_GRAB_RUNNING : SERVO_SEQUENCE_RETURN_RUNNING;
+    status = ServoAction_RunGroup(group, 1U, is_grab ?
+        SERVO_ACTION_GRAB_TIMEOUT_MS : SERVO_ACTION_RETURN_TIMEOUT_MS);
+    ServoAction_SequenceState = (status == SERVO_ACTION_OK) ? SERVO_SEQUENCE_DONE : SERVO_SEQUENCE_ERROR;
+    return status;
+}
 
 static BallSequenceStatus BallSequence_WaitForMaixCam(void)
 {
@@ -38,10 +68,10 @@ static BallSequenceStatus BallSequence_WaitForMaixCam(void)
     return BALL_SEQUENCE_ERROR_MAIX_TIMEOUT;
 }
 
-static BallSequenceStatus BallSequence_WaitForRfid(uint8_t *id)
+static BallSequenceStatus BallSequence_WaitForRfid(uint32_t *id)
 {
     uint32_t start_tick = HAL_GetTick();
-    uint8_t candidate_id;
+    uint32_t candidate_id;
 
     if (id == NULL)
     {
@@ -56,9 +86,7 @@ static BallSequenceStatus BallSequence_WaitForRfid(uint8_t *id)
         }
         candidate_id = 0U;
         if ((RFID_Read_ID(&candidate_id) != 0U) &&
-            (candidate_id >= 1U) &&
-            (candidate_id <= BALL_ID_MAX) &&
-            (candidate_id != last_rfid_id))
+            (BallSequence_IsNewId(candidate_id) != 0U))
         {
             *id = candidate_id;
             return BALL_SEQUENCE_OK;
@@ -67,21 +95,6 @@ static BallSequenceStatus BallSequence_WaitForRfid(uint8_t *id)
     }
 
     return BALL_SEQUENCE_ERROR_RFID_TIMEOUT;
-}
-
-static uint8_t BallSequence_SaveRfidId(uint8_t id)
-{
-    if ((id < 1U) || (id > BALL_ID_MAX) ||
-        (id == last_rfid_id) ||
-        (grabbed_ball_count >= BALL_GRAB_MAX))
-    {
-        return 0U;
-    }
-
-    grabbed_ball_id[grabbed_ball_count] = id;
-    grabbed_ball_count++;
-    last_rfid_id = id;
-    return 1U;
 }
 
 static void BallSequence_ClearGrabbedIds(void)
@@ -93,7 +106,6 @@ static void BallSequence_ClearGrabbedIds(void)
         grabbed_ball_id[index] = 0U;
     }
     grabbed_ball_count = 0U;
-    last_rfid_id = 0U;
 }
 
 void BallSequence_Init(void)
@@ -108,182 +120,101 @@ BallSequenceStatus BallSequence_Run(void)
 {
     uint8_t round;
     uint8_t round_count;
+    uint32_t rfid_id = 0U;
     BallSequenceStatus status;
-    ServoActionStatus servo_status;
     WarehouseStatus warehouse_status;
     GrayAlignStatus gray_status;
-    uint8_t cancel_after_return;
-    uint8_t rfid_id;
 
     BallSequence_LastStatus = BALL_SEQUENCE_OK;
     BallSequence_Round = 0U;
-    BallSequence_ClearGrabbedIds();
-    RFID_Clear();
-    round_count = WarehouseControl_RemainingBallCount();
-    if (round_count > BALL_GRAB_MAX)
+    /* A retry continues the cache. Only explicit initialization starts a new batch. */
+    if (grabbed_ball_count >= BALL_GRAB_MAX)
     {
-        round_count = BALL_GRAB_MAX;
+        return BallSequence_Finish(BALL_SEQUENCE_OK);
+    }
+    round_count = WarehouseControl_RemainingBallCount();
+    if (round_count > (BALL_GRAB_MAX - grabbed_ball_count))
+    {
+        round_count = (uint8_t)(BALL_GRAB_MAX - grabbed_ball_count);
     }
     if (round_count == 0U)
     {
-        BallSequence_State = BALL_SEQUENCE_ERROR;
-        BallSequence_LastStatus = BALL_SEQUENCE_ERROR_TURNTABLE;
-        return BallSequence_LastStatus;
-    }
-
-    /* Align the chassis to MID2-IN2-IN1-MID1 = 0-1-1-0 first. */
-    BallSequence_State = BALL_SEQUENCE_ALIGNING;
-    gray_status = GrayAlign_Run();
-    if (gray_status == GRAY_ALIGN_CANCELED)
-    {
-        BallSequence_State = BALL_SEQUENCE_CANCELED;
-        BallSequence_LastStatus = BALL_SEQUENCE_CANCELED_BY_STOP;
-        return BallSequence_LastStatus;
-    }
-    if (gray_status != GRAY_ALIGN_OK)
-    {
-        BallSequence_State = BALL_SEQUENCE_ERROR;
-        BallSequence_LastStatus = BALL_SEQUENCE_ERROR_GRAY_ALIGN;
-        return BallSequence_LastStatus;
-    }
-
-    /* Group 1 is the return/recognition-ready posture and runs after alignment. */
-    BallSequence_State = BALL_SEQUENCE_RETURN_RUNNING;
-    ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
-    servo_status = ServoAction_RunGroup(SERVO_ACTION_RETURN_GROUP,
-                                        1U,
-                                        SERVO_ACTION_RETURN_TIMEOUT_MS);
-    if (servo_status != SERVO_ACTION_OK)
-    {
-        BallSequence_State = BALL_SEQUENCE_ERROR;
-        BallSequence_LastStatus = BALL_SEQUENCE_ERROR_SERVO;
-        ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
-        return BallSequence_LastStatus;
+        return BallSequence_Finish(BALL_SEQUENCE_ERROR_TURNTABLE);
     }
     if (MotionControl_StopRequested != 0U)
     {
-        BallSequence_State = BALL_SEQUENCE_CANCELED;
-        BallSequence_LastStatus = BALL_SEQUENCE_CANCELED_BY_STOP;
-        return BallSequence_LastStatus;
+        return BallSequence_Finish(BALL_SEQUENCE_CANCELED_BY_STOP);
     }
 
-    for (round = 1U; round <= round_count; round++)
+    BallSequence_State = BALL_SEQUENCE_ALIGNING;
+    gray_status = GrayAlign_Run();
+    if (gray_status != GRAY_ALIGN_OK)
     {
-        BallSequence_Round = round;
+        return BallSequence_Finish((gray_status == GRAY_ALIGN_CANCELED) ?
+            BALL_SEQUENCE_CANCELED_BY_STOP : BALL_SEQUENCE_ERROR_GRAY_ALIGN);
+    }
+    if (BallSequence_RunGroup(SERVO_ACTION_RETURN_GROUP) != SERVO_ACTION_OK)
+    {
+        return BallSequence_Finish(BALL_SEQUENCE_ERROR_SERVO);
+    }
+
+    for (round = 0U; round < round_count; round++)
+    {
+        if (MotionControl_StopRequested != 0U)
+        {
+            return BallSequence_Finish(BALL_SEQUENCE_CANCELED_BY_STOP);
+        }
+        BallSequence_Round = (uint8_t)(grabbed_ball_count + 1U);
         BallSequence_State = BALL_SEQUENCE_WAITING_MAIXCAM;
         if (MaixCamLink_SendRequest(BALL_SEQUENCE_TARGET_COLOR) != MAIXCAM_LINK_OK)
         {
-            BallSequence_State = BALL_SEQUENCE_ERROR;
-            BallSequence_LastStatus = BALL_SEQUENCE_ERROR_MAIX_UART;
-            return BallSequence_LastStatus;
+            return BallSequence_Finish(BALL_SEQUENCE_ERROR_MAIX_UART);
         }
-
         status = BallSequence_WaitForMaixCam();
-        if (status == BALL_SEQUENCE_CANCELED_BY_STOP)
-        {
-            BallSequence_State = BALL_SEQUENCE_CANCELED;
-            BallSequence_LastStatus = status;
-            ServoAction_SequenceState = SERVO_SEQUENCE_WAITING_MOTION;
-            return status;
-        }
-        if (status != BALL_SEQUENCE_OK)
-        {
-            BallSequence_State = BALL_SEQUENCE_TIMEOUT;
-            BallSequence_LastStatus = status;
-            ServoAction_SequenceState = SERVO_SEQUENCE_WAITING_MOTION;
-            return status;
-        }
+        if (status != BALL_SEQUENCE_OK) return BallSequence_Finish(status);
 
-        BallSequence_State = BALL_SEQUENCE_GRAB_RUNNING;
-        ServoAction_SequenceState = SERVO_SEQUENCE_GRAB_RUNNING;
-        servo_status = ServoAction_RunGroup(SERVO_ACTION_GRAB_GROUP,
-                                            1U,
-                                            SERVO_ACTION_GRAB_TIMEOUT_MS);
-        if (servo_status != SERVO_ACTION_OK)
-        {
-            BallSequence_State = BALL_SEQUENCE_ERROR;
-            BallSequence_LastStatus = BALL_SEQUENCE_ERROR_SERVO;
-            ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
-            return BallSequence_LastStatus;
-        }
-
-        /* Read the ID while the just-grabbed ball is still in the arm. */
+        /* Retain a one-shot report received DURING the clamp action. */
         RFID_Clear();
+        if (BallSequence_RunGroup(SERVO_ACTION_GRAB_GROUP) != SERVO_ACTION_OK)
+        {
+            return BallSequence_Finish(BALL_SEQUENCE_ERROR_SERVO);
+        }
         BallSequence_State = BALL_SEQUENCE_WAITING_RFID;
         status = BallSequence_WaitForRfid(&rfid_id);
-        warehouse_status = WAREHOUSE_STATUS_OK;
-        cancel_after_return = (status == BALL_SEQUENCE_OK) ? 0U : 1U;
         if (status == BALL_SEQUENCE_OK)
         {
-            if (BallSequence_SaveRfidId(rfid_id) == 0U)
+            warehouse_status = WarehouseControl_HandleActionGroup2Completed();
+            if (warehouse_status == WAREHOUSE_STATUS_OK)
             {
-                status = BALL_SEQUENCE_ERROR_RFID_TIMEOUT;
-                cancel_after_return = 1U;
+                /* Match the existing warehouse completion criterion; not a hardware acknowledgement. */
+                grabbed_ball_id[grabbed_ball_count++] = rfid_id;
             }
             else
             {
-                /* Group 2 completion triggers exactly one turn only after ID capture. */
-                warehouse_status = WarehouseControl_HandleActionGroup2Completed();
-                cancel_after_return =
-                    (warehouse_status == WAREHOUSE_STATUS_CANCELED) ? 1U : 0U;
+                status = (warehouse_status == WAREHOUSE_STATUS_CANCELED) ?
+                    BALL_SEQUENCE_CANCELED_BY_STOP : BALL_SEQUENCE_ERROR_TURNTABLE;
             }
         }
-
-        /* A STOP during clamp/turn still runs group 1 return before aborting. */
-        BallSequence_State = BALL_SEQUENCE_RETURN_RUNNING;
-        ServoAction_SequenceState = SERVO_SEQUENCE_RETURN_RUNNING;
-        servo_status = ServoAction_RunGroup(SERVO_ACTION_RETURN_GROUP,
-                                            1U,
-                                            SERVO_ACTION_RETURN_TIMEOUT_MS);
-        if (servo_status != SERVO_ACTION_OK)
+        /* Always return after a completed clamp, including RFID timeout/STOP. */
+        if (BallSequence_RunGroup(SERVO_ACTION_RETURN_GROUP) != SERVO_ACTION_OK)
         {
-            BallSequence_State = BALL_SEQUENCE_ERROR;
-            BallSequence_LastStatus = BALL_SEQUENCE_ERROR_SERVO;
-            ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
-            return BallSequence_LastStatus;
+            return BallSequence_Finish(BALL_SEQUENCE_ERROR_SERVO);
         }
-
-        ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
-        if (status != BALL_SEQUENCE_OK)
-        {
-            BallSequence_State = (status == BALL_SEQUENCE_CANCELED_BY_STOP) ?
-                                 BALL_SEQUENCE_CANCELED : BALL_SEQUENCE_TIMEOUT;
-            BallSequence_LastStatus = status;
-            return status;
-        }
-        if ((warehouse_status != WAREHOUSE_STATUS_OK) &&
-            (warehouse_status != WAREHOUSE_STATUS_CANCELED))
-        {
-            BallSequence_State = BALL_SEQUENCE_ERROR;
-            BallSequence_LastStatus = BALL_SEQUENCE_ERROR_TURNTABLE;
-            return BallSequence_LastStatus;
-        }
-        if (cancel_after_return != 0U)
-        {
-            BallSequence_State = BALL_SEQUENCE_CANCELED;
-            BallSequence_LastStatus = BALL_SEQUENCE_CANCELED_BY_STOP;
-            return BallSequence_LastStatus;
-        }
+        if (status != BALL_SEQUENCE_OK) return BallSequence_Finish(status);
         if (MotionControl_StopRequested != 0U)
         {
-            BallSequence_State = BALL_SEQUENCE_CANCELED;
-            BallSequence_LastStatus = BALL_SEQUENCE_CANCELED_BY_STOP;
-            return BallSequence_LastStatus;
+            return BallSequence_Finish(BALL_SEQUENCE_CANCELED_BY_STOP);
         }
     }
-
-    BallSequence_State = BALL_SEQUENCE_COMPLETE;
-    BallSequence_LastStatus = BALL_SEQUENCE_OK;
-    ServoAction_SequenceState = SERVO_SEQUENCE_DONE;
-    return BallSequence_LastStatus;
+    return BallSequence_Finish(BALL_SEQUENCE_OK);
 }
 
-uint8_t *BALL_Get_Grabbed_ID(void)
+uint32_t *BALL_Get_Grabbed_ID(void)
 {
     return grabbed_ball_id;
 }
 
-uint8_t *BALL_Get_ID_List(void)
+uint32_t *BALL_Get_ID_List(void)
 {
     return BALL_Get_Grabbed_ID();
 }

@@ -36,8 +36,9 @@
 /* Camera, RFID, BALL and gray alignment. */
 #define MAIXCAM_BAUDRATE                 115200U
 #define MAIXCAM_REQUEST_TIMEOUT_MS       10000U
-#define RFID_BAUDRATE                    115200U
-#define BALL_ID_MAX                          9U
+#define RFID_BAUDRATE                      9600U
+#define RFID_READER_ADDRESS                0x20U
+#define RFID_FRAME_GAP_MS                   100U
 #define BALL_GRAB_MAX                        5U
 #define BALL_SEQUENCE_ROUND_COUNT       BALL_GRAB_MAX
 #define BALL_SEQUENCE_WAIT_PERIOD_MS         1U
