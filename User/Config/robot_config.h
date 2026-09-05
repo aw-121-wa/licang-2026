@@ -19,7 +19,7 @@
 /* Measured: the nominal positive wheel rotation turns this chassis clockwise. */
 #define MOTION_OMEGA_TO_WHEEL_SIGN          (-1.0f)
 #define MOTION_CRUISE_RPM          450.0f
-#define MOTION_DIAGONAL_CRUISE_RPM 255.0f
+#define MOTION_DIAGONAL_CRUISE_RPM 300.0f
 #define LATERAL_FORWARD_COMPENSATION       0.0f
 /* Distance calibration: new gain = old gain * requested / measured. */
 #define FORWARD_DISTANCE_GAIN              1.04f
@@ -29,6 +29,14 @@
 #define MOTION_FINAL_DECEL_RPM_PER_S       40.0f
 #define MOTION_FINAL_APPROACH_RPM          20.0f
 #define MOTION_HEADING_SLEW_RPM_PER_S     120.0f
+#define HEADING_KP_FORWARD                 1.85f
+#define HEADING_KD_FORWARD                 0.08f
+#define HEADING_MAX_FORWARD               5.2f
+#define HEADING_KP_LATERAL                 2.8f
+#define HEADING_KD_LATERAL                 0.85f
+#define HEADING_MAX_LATERAL                8.0f
+#define HEADING_PREDICT_MS                50.0f
+#define HEADING_LATERAL_OMEGA_SCALE        0.7f
 #define MOTION_DISTANCE_TOLERANCE_MM        0.5f
 
 /* Servo action groups and waits. */

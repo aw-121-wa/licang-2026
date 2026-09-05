@@ -27,12 +27,9 @@
 #define ROTATE_TIMEOUT_MS                8000U
 #define ROTATE_MAX_ANGLE_DEG              360.0f
 
-#define HEADING_KP_RPM_PER_DEG             1.85f
-#define HEADING_KD_RPM_PER_DEG_PER_S       0.08f
 #define HEADING_RATE_FILTER_MS             40.0f
 #define HEADING_RATE_MAX_GAP_MS             200U
 #define HEADING_DEADBAND_DEG                0.15f
-#define HEADING_MAX_CORRECTION_RPM          5.2f
 #define HEADING_MAX_TRANSLATION_RATIO       0.25f
 #define HEADING_CORRECTION_SIGN             1.0f
 
@@ -104,7 +101,7 @@ static float Motion_Approach(float value, float target, float step)
     return (value - step > target) ? value - step : target;
 }
 
-static float Motion_HeadingCorrection(float translation_rpm, float minimum_limit)
+static float Motion_HeadingCorrection(float translation_rpm, uint8_t lateral, float minimum_limit)
 {
     float error;
     uint32_t sample_tick;
@@ -114,9 +111,13 @@ static float Motion_HeadingCorrection(float translation_rpm, float minimum_limit
     sample_tick = Jy61P_GetLastTick();
     if (primask == 0U) { __enable_irq(); }
     float correction;
+    float kp = lateral ? HEADING_KP_LATERAL : HEADING_KP_FORWARD;
+    float kd = lateral ? HEADING_KD_LATERAL : HEADING_KD_FORWARD;
+    float max_output = lateral ? HEADING_MAX_LATERAL : HEADING_MAX_FORWARD;
+    float predicted_error;
     float relative_limit = Motion_Absolute(translation_rpm) *
                            HEADING_MAX_TRANSLATION_RATIO;
-    float limit = HEADING_MAX_CORRECTION_RPM;
+    float limit = max_output;
 
     /* Differentiate only fresh samples, using their actual arrival interval.
        Keep rate damping between samples; repeated control calls are not data. */
@@ -140,11 +141,12 @@ static float Motion_HeadingCorrection(float translation_rpm, float minimum_limit
         heading_rate_deg_s = 0.0f;
     }
     if (Motion_Absolute(error) <= HEADING_DEADBAND_DEG) { error = 0.0f; }
-    correction = HEADING_KP_RPM_PER_DEG * error +
-                 HEADING_KD_RPM_PER_DEG_PER_S * heading_rate_deg_s;
+    predicted_error = error + heading_rate_deg_s * (HEADING_PREDICT_MS / 1000.0f);
+    correction = kp * predicted_error + kd * heading_rate_deg_s;
     correction *= HEADING_CORRECTION_SIGN;
 
     if (relative_limit < minimum_limit) { relative_limit = minimum_limit; }
+    if (max_output < limit) { limit = max_output; }
     if (relative_limit < limit) { limit = relative_limit; }
     if (correction > limit) { correction = limit; }
     else if (correction < -limit) { correction = -limit; }
@@ -157,7 +159,7 @@ static float Motion_HeadingCorrection(float translation_rpm, float minimum_limit
 float MotionControl_GetHeadingCorrection(float translation_rpm)
 {
     /* Preserve the existing limit for gray alignment and pillar control. */
-    return Motion_HeadingCorrection(translation_rpm, 0.0f);
+    return Motion_HeadingCorrection(translation_rpm, 0U, 0.0f);
 }
 
 static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
@@ -191,6 +193,11 @@ static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
         return status;
     }
 
+    if ((Motion_Absolute(MotionControl_ForwardUnit) < Motion_Absolute(MotionControl_LeftUnit)) &&
+        (Motion_Absolute(MotionControl_LeftUnit) > 0.0001f))
+    {
+        omega_rpm *= HEADING_LATERAL_OMEGA_SCALE;
+    }
     MecanumKinematics_Solve(forward_rpm, left_rpm,
                             omega_rpm * MOTION_OMEGA_TO_WHEEL_SIGN,
                             &wheel_values);
@@ -501,7 +508,8 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         }
         if (MotionControl_ImuHeadingHoldActive != 0U)
         {
-            float desired = MotionControl_GetHeadingCorrection(base_rpm);
+            uint8_t lateral = (Motion_Absolute(forward_unit) < Motion_Absolute(left_unit)) ? 1U : 0U;
+            float desired = Motion_HeadingCorrection(base_rpm, lateral, 0.0f);
             /* Release obsolete correction immediately; slew only its buildup. */
             if (correction_rpm * desired <= 0.0f) { correction_rpm = 0.0f; }
             else if (Motion_Absolute(desired) < Motion_Absolute(correction_rpm))
