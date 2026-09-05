@@ -11,130 +11,54 @@
  */
 static const PathStep PathSequence_CommandQueue[] =
 {
-    /* STEP 0: 左前20°，1800 mm */
+    /* STEP 0: 向右 550 mm */
     {
         PATH_STEP_MOVE,
-        1800U,
-        20.0f,
-        MOTION_DIAGONAL_CRUISE_RPM,
-        0U
-    },
-
-    /* STEP 1: 前进2300 mm */
-    {
-        PATH_STEP_MOVE,
-        2300U,
-        0.0f,
+        550U,
+        -90.0f,
         MOTION_CRUISE_RPM,
         0U
     },
-
-    /* STEP 2: 原地逆时针旋转178° */
-    {
-        PATH_STEP_ROTATE,
-        0U,
-        178.0f,
-        0.0f,
-        0U
-    },
-
-    /* STEP 3: 当前已有 BALL 流程 */
-    {
-        PATH_STEP_BALL,
-        0U,
-        0.0f,
-        0.0f,
-        0U
-    },
-
-    /* STEP 4: BALL 成功后再次原地逆时针旋转178° */
-    {
-        PATH_STEP_ROTATE,
-        0U,
-        178.0f,
-        0.0f,
-        0U
-    },
-
-    /* STEP 5: 后退1810 mm，180°表示后退方向 */
+    /* STEP 1: 向后 3850 mm */
     {
         PATH_STEP_MOVE,
-        1810U,
+        3850U,
         180.0f,
         MOTION_CRUISE_RPM,
         0U
     },
-
-    /* STEP 6: 当前已有 RZ 流程 */
+    /* STEP 2: 原地左转 178° */
     {
-        PATH_STEP_RZ,
+        PATH_STEP_ROTATE,
         0U,
-        0.0f,
+        178.0f,
         0.0f,
         0U
     },
-
-    /* STEP 7: RZ成功后阻塞等待第一次动作组0回位完成 */
+    /* STEP 3: 再次原地左转 178° */
     {
-        PATH_STEP_SERVO_GROUP,
+        PATH_STEP_ROTATE,
         0U,
+        178.0f,
         0.0f,
-        0.0f,
-        SERVO_ACTION_START_GROUP
+        0U
     },
-
-    /* STEP 8: 第一次动作组0完成后前进330 mm */
+    /* STEP 4: 向左 1100 mm */
     {
         PATH_STEP_MOVE,
-        330U,
-        0.0f,
-        MOTION_CRUISE_RPM,
-        0U
-    },
-
-    /* STEP 9: 执行完整 STAIR 流程 */
-    {
-        PATH_STEP_STAIR,
-        0U,
-        0.0f,
-        0.0f,
-        0U
-    },
-
-    /* STEP 10: STAIR成功后阻塞等待第二次动作组0回位完成 */
-    {
-        PATH_STEP_SERVO_GROUP,
-        0U,
-        0.0f,
-        0.0f,
-        SERVO_ACTION_START_GROUP
-    },
-
-    {
-        PATH_STEP_MOVE,
-        2200U,
-        153.0f,
-        MOTION_CRUISE_RPM,
-        0U
-    },
-
-    /* STEP 11: 第二次动作组0完成后向左横移1600 mm */
-    /*{
-        PATH_STEP_MOVE,
-        1650U,
+        1100U,
         90.0f,
         MOTION_CRUISE_RPM,
         0U
     },
-
-    /* STEP 12: 完成现有路径后执行仓库搬运流程 */
-    /*{
-        PATH_STEP_CANGKU,
-        0U,
+    /* STEP 5: 向前 1360 mm */
+    {
+        PATH_STEP_MOVE,
+        1360U,
         0.0f,
-        0.0f,
+        MOTION_CRUISE_RPM,
         0U
-    }*/
+    }
 };
 
 #define PATH_SEQUENCE_STEP_COUNT \
@@ -154,19 +78,12 @@ static void PathSequence_SetStepState(uint32_t step_index)
 {
     switch (step_index)
     {
-    case 0U: PathSequence_State = PATH_SEQUENCE_LF20_1800; break;
-    case 1U: PathSequence_State = PATH_SEQUENCE_F2300;      break;
+    case 0U: PathSequence_State = PATH_SEQUENCE_RIGHT_550;  break;
+    case 1U: PathSequence_State = PATH_SEQUENCE_BACK3850;   break;
     case 2U: PathSequence_State = PATH_SEQUENCE_ROTATE1_178;break;
-    case 3U: PathSequence_State = PATH_SEQUENCE_BALL;       break;
-    case 4U: PathSequence_State = PATH_SEQUENCE_ROTATE2_178;break;
-    case 5U: PathSequence_State = PATH_SEQUENCE_BACK1820;   break;
-    case 6U: PathSequence_State = PATH_SEQUENCE_RZ;         break;
-    case 7U: PathSequence_State = PATH_SEQUENCE_GROUP0;      break;
-    case 8U: PathSequence_State = PATH_SEQUENCE_F330;        break;
-    case 9U: PathSequence_State = PATH_SEQUENCE_STAIR;       break;
-    case 10U:PathSequence_State = PATH_SEQUENCE_GROUP0;      break;
-    case 11U:PathSequence_State = PATH_SEQUENCE_LEFT_2000;   break;
-    case 12U:PathSequence_State = PATH_SEQUENCE_CANGKU;      break;
+    case 3U: PathSequence_State = PATH_SEQUENCE_ROTATE2_178;break;
+    case 4U: PathSequence_State = PATH_SEQUENCE_LEFT_1100;  break;
+    case 5U: PathSequence_State = PATH_SEQUENCE_F1360;      break;
     default: PathSequence_State = PATH_SEQUENCE_IDLE;       break;
     }
 }
@@ -203,6 +120,18 @@ static uint8_t PathSequence_StopPending(void)
 
 static uint8_t PathSequence_IsReadyForAction(void)
 {
+    uint32_t i;
+    uint8_t needs_action = 0U;
+    for (i = 0U; i < PATH_SEQUENCE_STEP_COUNT; i++)
+    {
+        if (PathSequence_CommandQueue[i].type != PATH_STEP_MOVE &&
+            PathSequence_CommandQueue[i].type != PATH_STEP_ROTATE)
+        {
+            needs_action = 1U;
+            break;
+        }
+    }
+    if (needs_action == 0U) return 1U;
     return ((WarehouseControl_IsReadyForAction() != 0U) &&
             ((ServoAction_SequenceState == SERVO_SEQUENCE_WAITING_MOTION) ||
              (ServoAction_SequenceState == SERVO_SEQUENCE_DONE))) ? 1U : 0U;
@@ -368,6 +297,10 @@ const char *PathSequence_StateName(PathSequenceState state)
     switch (state)
     {
     case PATH_SEQUENCE_IDLE:          return "IDLE";
+    case PATH_SEQUENCE_RIGHT_550:     return "RIGHT_550";
+    case PATH_SEQUENCE_BACK3850:      return "BACK3850";
+    case PATH_SEQUENCE_LEFT_1100:     return "LEFT_1100";
+    case PATH_SEQUENCE_F1360:         return "F1360";
     case PATH_SEQUENCE_LF20_1800:     return "LF20_1800";
     case PATH_SEQUENCE_F2300:         return "F2300";
     case PATH_SEQUENCE_ROTATE1_178:   return "ROTATE1_178";

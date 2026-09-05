@@ -40,8 +40,7 @@
 - `User/Device/turntable/turntable_control.*`：仓库转盘一格相对运动、启用、停止及集中等待策略。
 - `User/Robot/warehouse_control.*`：机械臂组 2（夹取）完成后的仓库协同和六球计数状态机，由现有 `ChassisTask` 调用，不新建重复任务。
 - `User/Robot/stair_sequence.*`：独立 UART5 `STAIR` 阶梯测试流程；复用灰度校准、MaixCAM、舵机组 5–12 和转盘接口，不进入仓库球计数状态机。
-- `User/Robot/path_sequence.*`：固定比赛路线的一站式动作编排；由一个 `PATH` 命令触发，内部按编译期静态表顺序调用既有运动、BALL 和 RZ API。
-- PATH 现有固定步骤完成后追加 `CANGKU` 仓库搬运流程；该步骤直接调用 `CangkuSequence_Run()`，不重复展开仓库动作。
+- `User/Robot/path_sequence.*`：固定比赛路线的一站式动作编排；由一个 `PATH` 命令触发，当前静态表依次右移 550 mm、后退 3850 mm、左转 178° 两次、左移 1100 mm、前进 1360 mm。
 - PATH 在 RZ 成功后阻塞等待第一次动作组 0 回位完成，再前进 330 mm、同步执行完整 STAIR（第三、第二、第一部分）；STAIR 成功完成后再次阻塞等待动作组 0 回位完成，再以极坐标 +90° 向左横移 1600 mm，随后执行 `CANGKU` 仓库搬运流程并进入 DONE。任一动作组或 CANGKU 步骤失败时 PATH 立即结束并报告对应错误。
 - `.vscode/`：IntelliSense 与 Keil 构建任务。
 

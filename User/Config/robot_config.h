@@ -18,7 +18,7 @@
 /* Body motion parameters. */
 /* Measured: the nominal positive wheel rotation turns this chassis clockwise. */
 #define MOTION_OMEGA_TO_WHEEL_SIGN          (-1.0f)
-#define MOTION_CRUISE_RPM          450.0f
+#define MOTION_CRUISE_RPM          460.0f
 #define MOTION_DIAGONAL_CRUISE_RPM 300.0f
 #define LATERAL_FORWARD_COMPENSATION       0.0f
 /* Distance calibration: new gain = old gain * requested / measured. */
