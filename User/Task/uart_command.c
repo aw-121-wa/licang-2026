@@ -1,4 +1,5 @@
 #include "uart_command.h"
+#include "task.h"
 #include "jy61p.h"
 #include "ball_sequence.h"
 #include "motion_control.h"
@@ -24,6 +25,7 @@ static char command_rx_line[UART_CMD_BUFFER_SIZE];
 static uint16_t command_rx_length = 0U;
 static uint8_t command_rx_overflow = 0U;
 static QueueHandle_t command_line_queue = 0;
+static volatile uint32_t stop_generation = 0U;
 
 QueueHandle_t ChassisCommandQueue = 0;
 volatile uint32_t UartCommand_RxByteCount = 0U;
@@ -191,52 +193,41 @@ static uint8_t UartCommand_ParseType(const char *text,
     return 1U;
 }
 
-static uint8_t UartCommand_IsChassisAvailable(void)
-{
-    if ((ChassisTask_Ready == 0U) ||
-        (ChassisCommand_Busy != 0U) ||
-        (ChassisCommandQueue == 0))
-    {
-        return 0U;
-    }
-    if (uxQueueMessagesWaiting(ChassisCommandQueue) != 0U)
-    {
-        return 0U;
-    }
-    return 1U;
-}
-
 static uint8_t UartCommand_SubmitMotion(const ChassisCommand *command)
 {
-    if ((command == 0) || (UartCommand_IsChassisAvailable() == 0U))
+    ChassisCommand queued;
+    if ((command == 0) || (ChassisCommandQueue == 0)) { return 0U; }
+    queued = *command;
+    queued.stop_generation = stop_generation;
+    return (xQueueSend(ChassisCommandQueue, &queued, 0U) == pdPASS) ? 1U : 0U;
+}
+
+static void UartCommand_StopQueue(void)
+{
+    taskENTER_CRITICAL();
+    stop_generation++;
+    MotionControl_RequestStop();
+    if (ChassisCommandQueue != 0) { (void)xQueueReset(ChassisCommandQueue); }
+    taskEXIT_CRITICAL();
+}
+
+uint8_t UartCommand_WaitNext(ChassisCommand *command)
+{
+    if ((command == 0) || (ChassisCommandQueue == 0)) { return 0U; }
+    while (xQueueReceive(ChassisCommandQueue, command, portMAX_DELAY) == pdPASS)
     {
-        return 0U;
+        taskENTER_CRITICAL();
+        if (command->stop_generation == stop_generation)
+        {
+            /* A later queued command must not clear STOP on the active command. */
+            ChassisCommand_Busy = 1U;
+            MotionControl_ClearStopRequest();
+            taskEXIT_CRITICAL();
+            return 1U;
+        }
+        taskEXIT_CRITICAL();
     }
-    if (((command->type == CHASSIS_CMD_GRAB) ||
-         (command->type == CHASSIS_CMD_BALL) ||
-         (command->type == CHASSIS_CMD_PATH)) &&
-        (WarehouseControl_IsReadyForAction() == 0U))
-    {
-        return 0U;
-    }
-    if ((command->type == CHASSIS_CMD_CANGKU) &&
-        (Turntable_IsReady() == 0U))
-    {
-        return 0U;
-    }
-    if ((ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION) &&
-        (ServoAction_SequenceState != SERVO_SEQUENCE_DONE))
-    {
-        return 0U;
-    }
-    MotionControl_ClearStopRequest();
-    ChassisCommand_Busy = 1U;
-    if (xQueueSend(ChassisCommandQueue, command, 0U) != pdPASS)
-    {
-        ChassisCommand_Busy = 0U;
-        return 0U;
-    }
-    return 1U;
+    return 0U;
 }
 
 static void UartCommand_SendStatus(void)
@@ -344,7 +335,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
     char *argument;
     char *distance_text;
     char *angle_text;
-    ChassisCommand chassis_command;
+    ChassisCommand chassis_command = {0};
 
     if (line->too_long != 0U)
     {
@@ -368,13 +359,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
             UartCommand_Send("ERR FORMAT\r\n");
             return;
         }
-        MotionControl_RequestStop();
-        if ((ChassisCommandQueue != 0) &&
-            (uxQueueMessagesWaiting(ChassisCommandQueue) != 0U))
-        {
-            (void)xQueueReset(ChassisCommandQueue);
-            ChassisCommand_Busy = 0U;
-        }
+        UartCommand_StopQueue();
         UartCommand_Send("OK STOP\r\n");
         return;
     }
@@ -418,18 +403,12 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
             UartCommand_Send("ERR FORMAT\r\n");
             return;
         }
-        if ((ServoAction_SequenceState != SERVO_SEQUENCE_WAITING_MOTION) &&
-            (ServoAction_SequenceState != SERVO_SEQUENCE_DONE))
-        {
-            UartCommand_Send("ERR GRAB_NOT_READY\r\n");
-            return;
-        }
         chassis_command.type = CHASSIS_CMD_GRAB;
         chassis_command.distance_mm = 0U;
         chassis_command.angle_deg = 0.0f;
         if (UartCommand_SubmitMotion(&chassis_command) == 0U)
         {
-            UartCommand_Send("ERR BUSY\r\n");
+            UartCommand_Send("ERR QUEUE_FULL\r\n");
         }
         else
         {
@@ -450,7 +429,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         chassis_command.angle_deg = 0.0f;
         if (UartCommand_SubmitMotion(&chassis_command) == 0U)
         {
-            UartCommand_Send("ERR BUSY\r\n");
+            UartCommand_Send("ERR QUEUE_FULL\r\n");
         }
         else
         {
@@ -473,7 +452,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         chassis_command.angle_deg = 0.0f;
         if (UartCommand_SubmitMotion(&chassis_command) == 0U)
         {
-            UartCommand_Send("ERR BUSY\r\n");
+            UartCommand_Send("ERR QUEUE_FULL\r\n");
         }
         else
         {
@@ -495,7 +474,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         chassis_command.angle_deg = 0.0f;
         if (UartCommand_SubmitMotion(&chassis_command) == 0U)
         {
-            UartCommand_Send("ERR BUSY\r\n");
+            UartCommand_Send("ERR QUEUE_FULL\r\n");
         }
         else
         {
@@ -516,7 +495,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         chassis_command.angle_deg = 0.0f;
         if (UartCommand_SubmitMotion(&chassis_command) == 0U)
         {
-            UartCommand_Send("ERR BUSY\r\n");
+            UartCommand_Send("ERR QUEUE_FULL\r\n");
         }
         else
         {
@@ -541,7 +520,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         chassis_command.distance_mm = 0U;
         if (UartCommand_SubmitMotion(&chassis_command) == 0U)
         {
-            UartCommand_Send("ERR BUSY\r\n");
+            UartCommand_Send("ERR QUEUE_FULL\r\n");
         }
         else
         {
@@ -587,7 +566,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
     }
     if (UartCommand_SubmitMotion(&chassis_command) == 0U)
     {
-        UartCommand_Send("ERR BUSY\r\n");
+        UartCommand_Send("ERR QUEUE_FULL\r\n");
     }
     else
     {

@@ -50,6 +50,7 @@ void StartChassisTask(void *argument)
   ServoActionStatus servo_result;
   WarehouseStatus warehouse_result;
   ChassisCommand command;
+  uint8_t motion_prepared;
 
   (void)argument;
   ChassisCommand_Busy = 1U;
@@ -67,41 +68,36 @@ void StartChassisTask(void *argument)
 
   /* 发送出发姿态，但不依赖舵控板的完成回传；部分舵控板不提供该帧。 */
   servo_result = ServoAction_StartGroupNoWait(SERVO_ACTION_START_GROUP, 1U);
-  if (servo_result != SERVO_ACTION_OK)
-  {
-    ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
-    ChassisTask_Ready = 0U;
-    ChassisCommand_Busy = 0U;
-    ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
-    for (;;)
-    {
-      osDelay(1000U);
-    }
-  }
+  ServoAction_SequenceState = (servo_result == SERVO_ACTION_OK) ?
+      SERVO_SEQUENCE_WAITING_MOTION : SERVO_SEQUENCE_ERROR;
 
   result = MotionControl_PrepareForMove();
+  motion_prepared = (result < MOTION_ERROR_IMU_STARTUP) ? 1U : 0U;
   ChassisCommand_LastStatus = result;
-  if (result < MOTION_ERROR_IMU_STARTUP)
-  {
-    ServoAction_SequenceState = SERVO_SEQUENCE_WAITING_MOTION;
-    ChassisTask_Ready = 1U;
-    ChassisCommand_Busy = 0U;
-    MotionControl_State = MOTION_STATUS_IDLE;
-  }
-  else
-  {
-    ChassisCommand_Busy = 0U;
-  }
+  ChassisTask_Ready = 1U;
+  ChassisCommand_Busy = 0U;
 
   for (;;)
   {
-    if ((ChassisCommandQueue != 0) &&
-        (xQueueReceive(ChassisCommandQueue, &command, portMAX_DELAY) == pdPASS))
+    if (UartCommand_WaitNext(&command) != 0U)
     {
-      if (ChassisTask_Ready == 0U)
+      /* Retry failed startup on a new command instead of latching the whole task. */
+      if ((motion_prepared == 0U) && (command.type != CHASSIS_CMD_GRAB))
+      {
+        result = MotionControl_PrepareForMove();
+        motion_prepared = (result < MOTION_ERROR_IMU_STARTUP) ? 1U : 0U;
+        if (motion_prepared == 0U)
+        {
+          ChassisCommand_LastStatus = result;
+          ChassisCommand_Busy = 0U;
+          continue;
+        }
+      }
+
+      if (MotionControl_StopRequested != 0U)
       {
         ChassisCommand_Busy = 0U;
-        ChassisCommand_LastStatus = MotionControl_State;
+        ChassisCommand_LastStatus = MOTION_STATUS_FINISHED;
         continue;
       }
 
@@ -195,15 +191,11 @@ void StartChassisTask(void *argument)
           }
         }
 
-        /* Keep PATH retryable unless an action-group driver entered ERROR. */
-        ChassisTask_Ready =
-            (ServoAction_SequenceState == SERVO_SEQUENCE_ERROR) ? 0U : 1U;
       }
       else if (command.type == CHASSIS_CMD_BALL)
       {
         ball_result = BallSequence_Run();
         result = ChassisTask_FromBallStatus(ball_result);
-        ChassisTask_Ready = (ball_result == BALL_SEQUENCE_ERROR_SERVO) ? 0U : 1U;
       }
       else if (command.type == CHASSIS_CMD_RZ)
       {
@@ -212,52 +204,42 @@ void StartChassisTask(void *argument)
             (rz_result == ROUND_PILLAR_CANCELED))
         {
           result = MOTION_STATUS_FINISHED;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_IMU)
         {
           result = MOTION_ERROR_IMU_LOST;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_MOTOR)
         {
           result = MOTION_ERROR_MOTOR_UART;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_SERVO)
         {
           result = MOTION_ERROR_MOTOR_UART;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_TURNTABLE)
         {
           result = MOTION_ERROR_MOTOR_UART;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_MAIX_UART)
         {
           result = MOTION_ERROR_MAIX_UART;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_MAIX_TIMEOUT)
         {
           result = MOTION_ERROR_MAIX_TIMEOUT;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_APPROACH_TIMEOUT)
         {
           result = MOTION_ERROR_RZ_TIMEOUT;
-          ChassisTask_Ready = 1U;
         }
         else if (rz_result == ROUND_PILLAR_ERROR_ORBIT_TIMEOUT)
         {
           result = MOTION_ERROR_RZ_TIMEOUT;
-          ChassisTask_Ready = 1U;
         }
         else
         {
           result = MOTION_ERROR_RZ_TIMEOUT;
-          ChassisTask_Ready = 1U;
         }
       }
       else if (command.type == CHASSIS_CMD_STAIR)
@@ -284,8 +266,6 @@ void StartChassisTask(void *argument)
         {
           result = MOTION_ERROR_MOTOR_UART;
         }
-        /* STAIR is a retryable test flow; keep the chassis command path open. */
-        ChassisTask_Ready = 1U;
       }
       else if (command.type == CHASSIS_CMD_CANGKU)
       {
@@ -315,8 +295,6 @@ void StartChassisTask(void *argument)
         {
           result = MOTION_ERROR_MOTOR_UART;
         }
-        ChassisTask_Ready =
-            (ServoAction_SequenceState == SERVO_SEQUENCE_ERROR) ? 0U : 1U;
       }
       else if (command.type == CHASSIS_CMD_GRAB)
       {
@@ -385,20 +363,17 @@ void StartChassisTask(void *argument)
             {
               ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
             }
-            ChassisTask_Ready = 1U;
           }
           else
           {
             ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
             ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
-            ChassisTask_Ready = 0U;
           }
         }
         else
         {
           ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
           ChassisCommand_LastStatus = MOTION_ERROR_MOTOR_UART;
-          ChassisTask_Ready = 0U;
         }
         ChassisCommand_Busy = 0U;
       }

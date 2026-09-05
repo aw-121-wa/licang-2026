@@ -3,6 +3,7 @@
 #include "mecanum_kinematics.h"
 #include "motor_control.h"
 #include <math.h>
+#include <float.h>
 
 #define GYRO_STARTUP_TIMEOUT_MS           2000U
 #define GYRO_ONLINE_TIMEOUT_MS            500U
@@ -12,7 +13,6 @@
 
 /* F6 speed-mode control: software ramp and command-RPM time integration. */
 #define MOTION_CONTROL_PERIOD_MS           20U
-#define MOTION_RAMP_TIME_MS               300U
 #define MOTION_PI                          3.1415926f
 
 /* IMU closed-loop in-place rotation. Positive omega is counter-clockwise. */
@@ -26,9 +26,6 @@
 #define ROTATE_RAMP_TIME_MS               250U
 #define ROTATE_TIMEOUT_MS                8000U
 #define ROTATE_MAX_ANGLE_DEG              360.0f
-
-#define FORWARD_DISTANCE_GAIN              1.000f
-#define LEFT_DISTANCE_GAIN                 1.000f
 
 #define HEADING_KP_RPM_PER_DEG             2.0f
 #define HEADING_KD_RPM_PER_DEG             0.15f
@@ -65,6 +62,26 @@ volatile uint32_t MotionControl_RotateElapsedMs = 0U;
 
 static float previous_heading_error = 0.0f;
 
+/* Applied command velocity, not encoder feedback. Updated only on successful sync. */
+static float applied_forward_rpm;
+static float applied_left_rpm;
+static float applied_omega_rpm;
+static uint8_t distance_tracking;
+static uint32_t distance_tick;
+
+static void Motion_IntegrateUntil(uint32_t tick)
+{
+    if (distance_tracking != 0U)
+    {
+        float along_rpm = applied_forward_rpm * MotionControl_ForwardUnit +
+                          applied_left_rpm * MotionControl_LeftUnit;
+        MotionControl_TraveledMm += along_rpm *
+            (MOTION_PI * MOTOR_WHEEL_DIAMETER_MM / 60000.0f) *
+            (float)(tick - distance_tick);
+        distance_tick = tick;
+    }
+}
+
 static float Motion_Absolute(float value)
 {
     return (value < 0.0f) ? -value : value;
@@ -76,7 +93,13 @@ static int32_t Motion_RoundToInt(float value)
                              (int32_t)(value - 0.5f);
 }
 
-float MotionControl_GetHeadingCorrection(float translation_rpm)
+static float Motion_Approach(float value, float target, float step)
+{
+    if (value < target) { return (value + step < target) ? value + step : target; }
+    return (value - step > target) ? value - step : target;
+}
+
+static float Motion_HeadingCorrection(float translation_rpm, float minimum_limit)
 {
     float error = -Jy61P_GetContinuousYaw();
     float correction;
@@ -94,6 +117,7 @@ float MotionControl_GetHeadingCorrection(float translation_rpm)
     correction *= HEADING_CORRECTION_SIGN;
     previous_heading_error = error;
 
+    if (relative_limit < minimum_limit) { relative_limit = minimum_limit; }
     if (relative_limit < limit) { limit = relative_limit; }
     if (correction > limit) { correction = limit; }
     else if (correction < -limit) { correction = -limit; }
@@ -101,6 +125,12 @@ float MotionControl_GetHeadingCorrection(float translation_rpm)
     MotionControl_HeadingErrorDeg = error;
     MotionControl_HeadingCorrectionRpm = correction;
     return correction;
+}
+
+float MotionControl_GetHeadingCorrection(float translation_rpm)
+{
+    /* Preserve the existing limit for gray alignment and pillar control. */
+    return Motion_HeadingCorrection(translation_rpm, 0.0f);
 }
 
 static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
@@ -111,6 +141,7 @@ static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
 {
     MecanumWheelValues wheel_values;
     MotorWheelSpeedsRpmX10 wheel_speeds;
+    HAL_StatusTypeDef status;
 
     MecanumKinematics_Solve(forward_rpm, left_rpm, omega_rpm,
                             &wheel_values);
@@ -138,7 +169,22 @@ static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
         wheel_values.rear_left * (float)MOTOR_SPEED_COMMAND_SCALE);
     wheel_speeds.rear_right = (int16_t)Motion_RoundToInt(
         wheel_values.rear_right * (float)MOTOR_SPEED_COMMAND_SCALE);
-    return MotorControl_SetWheelSpeeds(&wheel_speeds);
+    status = MotorControl_SetWheelSpeeds(&wheel_speeds);
+    if (status == HAL_OK)
+    {
+        /* Old command remains active while all four wheel frames are queued. */
+        Motion_IntegrateUntil(MotorControl_LastSpeedSyncTick);
+        applied_forward_rpm = (wheel_speeds.front_left + wheel_speeds.front_right +
+            wheel_speeds.rear_left + wheel_speeds.rear_right) /
+            (4.0f * MOTOR_SPEED_COMMAND_SCALE);
+        applied_left_rpm = (-wheel_speeds.front_left + wheel_speeds.front_right +
+            wheel_speeds.rear_left - wheel_speeds.rear_right) /
+            (4.0f * MOTOR_SPEED_COMMAND_SCALE);
+        applied_omega_rpm = (-wheel_speeds.front_left + wheel_speeds.front_right -
+            wheel_speeds.rear_left + wheel_speeds.rear_right) /
+            (4.0f * MOTOR_SPEED_COMMAND_SCALE);
+    }
+    return status;
 }
 
 HAL_StatusTypeDef MotionControl_SetBodySpeed(float forward_rpm,
@@ -202,6 +248,10 @@ static void Motion_WaitControlPeriod(uint32_t *next_tick)
 void MotionControl_Init(UART_HandleTypeDef *motor_uart,
                         UART_HandleTypeDef *imu_uart)
 {
+    distance_tracking = 0U;
+    applied_forward_rpm = 0.0f;
+    applied_left_rpm = 0.0f;
+    applied_omega_rpm = 0.0f;
     MotorControl_Init(motor_uart);
     Jy61P_Init(imu_uart);
     previous_heading_error = 0.0f;
@@ -263,6 +313,99 @@ static MotionControlStatus Motion_SegmentFail(MotionControlStatus error)
     return MotionControl_State;
 }
 
+/* In RPM*ms units: reserve the slow tail before solving the fast brake phase. */
+static float Motion_BrakingSpeed(float remaining_rpm_ms, float end_rpm,
+                                 float horizon_ms)
+{
+    float decel = MOTION_DECELERATION_RPM_PER_S / 1000.0f;
+    float terminal_squared = end_rpm * end_rpm;
+    if (end_rpm <= 0.0001f)
+    {
+        float tail_decel = MOTION_FINAL_DECEL_RPM_PER_S / 1000.0f;
+        float tail_speed = MOTION_FINAL_APPROACH_RPM;
+        float tail_distance = tail_speed * tail_speed / (2.0f * tail_decel);
+        if (remaining_rpm_ms > tail_distance + tail_speed * horizon_ms)
+        {
+            remaining_rpm_ms -= tail_distance;
+            terminal_squared = tail_speed * tail_speed;
+        }
+        else { decel = tail_decel; }
+    }
+    return sqrtf(decel * decel * horizon_ms * horizon_ms + terminal_squared +
+                 2.0f * decel * remaining_rpm_ms) - decel * horizon_ms;
+}
+
+/* Normal completion only. STOP, visual interception and faults stay immediate. */
+static MotionControlStatus Motion_SoftStop(void)
+{
+    float speed = sqrtf(applied_forward_rpm * applied_forward_rpm +
+                         applied_left_rpm * applied_left_rpm);
+    float correction = applied_omega_rpm;
+    uint32_t last_tick = HAL_GetTick();
+    uint32_t next_tick = last_tick;
+    uint32_t settle_start = last_tick;
+    uint8_t settling = 0U;
+
+    for (;;)
+    {
+        uint32_t now = HAL_GetTick();
+        float dt_s = (float)(now - last_tick) / 1000.0f;
+        float desired = 0.0f;
+        float wheel_scale = 1.0f;
+        uint32_t remaining_ms = MOTION_STOP_HEADING_HOLD_MS;
+        last_tick = now;
+        if (MotionControl_HandleStopRequest() != 0U) { return MotionControl_State; }
+        if ((MotionControl_ImuHeadingHoldActive != 0U) &&
+            (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U))
+        {
+            return Motion_SegmentFail(MOTION_ERROR_IMU_LOST);
+        }
+        speed = Motion_Approach(speed, 0.0f, MOTION_FINAL_DECEL_RPM_PER_S * dt_s);
+        if ((speed == 0.0f) && (settling == 0U))
+        {
+            settling = 1U;
+            settle_start = now;
+        }
+        if (settling != 0U)
+        {
+            uint32_t elapsed = now - settle_start;
+            remaining_ms = (elapsed < MOTION_STOP_HEADING_HOLD_MS) ?
+                MOTION_STOP_HEADING_HOLD_MS - elapsed : 0U;
+        }
+        if (MotionControl_ImuHeadingHoldActive != 0U)
+        {
+            float limit = MOTION_STOP_HEADING_LIMIT_RPM;
+            desired = Motion_HeadingCorrection(0.0f, limit);
+            if (remaining_ms < MOTION_STOP_HEADING_FADE_MS)
+            {
+                limit *= (float)remaining_ms / MOTION_STOP_HEADING_FADE_MS;
+            }
+            if (desired > limit) { desired = limit; }
+            if (desired < -limit) { desired = -limit; }
+        }
+        else { remaining_ms = 0U; }
+        correction = Motion_Approach(correction, desired,
+                                      MOTION_HEADING_SLEW_RPM_PER_S * dt_s);
+        if (MotionControl_SetBodySpeedWithScale(
+                speed * MotionControl_ForwardUnit, speed * MotionControl_LeftUnit,
+                correction, &wheel_scale) != HAL_OK)
+        {
+            return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+        }
+        MotionControl_BaseRpm = speed;
+        MotionControl_WheelScale = wheel_scale;
+        MotionControl_EffectiveBaseRpm = applied_forward_rpm * MotionControl_ForwardUnit +
+                                         applied_left_rpm * MotionControl_LeftUnit;
+        MotionControl_HeadingCorrectionRpm = correction;
+        if ((speed == 0.0f) && (correction == 0.0f) && (remaining_ms == 0U))
+        {
+            MotionControl_State = MOTION_STATUS_FINISHED;
+            return MotionControl_State;
+        }
+        Motion_WaitControlPeriod(&next_tick);
+    }
+}
+
 static MotionControlStatus MotionControl_RunPolarSegment(
     float distance_mm,
     float forward_unit,
@@ -277,22 +420,20 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     const float wheel_mm_per_rpm_ms =
         MOTION_PI * (float)MOTOR_WHEEL_DIAMETER_MM / 60000.0f;
     float target_mm;
-    float peak_rpm;
-    float acceleration_time_ms;
-    float deceleration_time_ms;
-    float acceleration_distance;
-    float deceleration_distance;
-    float previous_effective_base_rpm = 0.0f;
+    float base_rpm = start_rpm;
     float final_scale = 1.0f;
-    uint32_t stage_start;
-    uint32_t last_integral_tick;
+    float send_time_ms = 20.0f;
+    float correction_rpm = applied_omega_rpm;
+    uint32_t last_control_tick;
     uint32_t next_tick;
-        uint8_t stage = 0U; /* 0 accelerate, 1 cruise, 2 decelerate. */
 
     if (!(distance_mm > 0.0f) ||
         ((forward_unit * forward_unit) +
          (left_unit * left_unit) <= 0.0001f) ||
-        !(start_rpm >= 0.0f) || !(cruise_rpm > 0.0f) ||
+        !(start_rpm >= 0.0f) || !(cruise_rpm >= 0.1f) ||
+        !(cruise_rpm <= FLT_MAX) ||
+        !(start_rpm <= MOTOR_SPEED_LIMIT_RPM) ||
+        !(end_rpm <= MOTOR_SPEED_LIMIT_RPM) ||
         !(end_rpm >= 0.0f) || (cruise_rpm < start_rpm) ||
         (cruise_rpm < end_rpm))
     {
@@ -301,37 +442,6 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     }
 
     target_mm = distance_mm;
-    peak_rpm = cruise_rpm;
-    acceleration_time_ms = (peak_rpm > start_rpm) ?
-                           (float)MOTION_RAMP_TIME_MS : 0.0f;
-    deceleration_time_ms = (peak_rpm > end_rpm) ?
-                           (float)MOTION_RAMP_TIME_MS : 0.0f;
-    acceleration_distance = ((start_rpm + peak_rpm) * 0.5f) *
-                             wheel_mm_per_rpm_ms * acceleration_time_ms;
-    deceleration_distance = ((peak_rpm + end_rpm) * 0.5f) *
-                             wheel_mm_per_rpm_ms * deceleration_time_ms;
-
-    /* For short segments, lower the peak while preserving both terminal speeds. */
-    if (target_mm < (acceleration_distance + deceleration_distance) &&
-        ((acceleration_time_ms + deceleration_time_ms) > 0.0f))
-    {
-        peak_rpm = ((2.0f * target_mm / wheel_mm_per_rpm_ms) -
-                    (start_rpm * acceleration_time_ms) -
-                    (end_rpm * deceleration_time_ms)) /
-                   (acceleration_time_ms + deceleration_time_ms);
-        if (peak_rpm < start_rpm) { peak_rpm = start_rpm; }
-        if (peak_rpm < end_rpm) { peak_rpm = end_rpm; }
-        if (peak_rpm > cruise_rpm) { peak_rpm = cruise_rpm; }
-        acceleration_time_ms = (peak_rpm > start_rpm) ?
-                               (float)MOTION_RAMP_TIME_MS : 0.0f;
-        deceleration_time_ms = (peak_rpm > end_rpm) ?
-                               (float)MOTION_RAMP_TIME_MS : 0.0f;
-        acceleration_distance = ((start_rpm + peak_rpm) * 0.5f) *
-                                 wheel_mm_per_rpm_ms * acceleration_time_ms;
-        deceleration_distance = ((peak_rpm + end_rpm) * 0.5f) *
-                                 wheel_mm_per_rpm_ms * deceleration_time_ms;
-    }
-
     MotionControl_State = move_status;
     MotionControl_TargetAngleDeg = atan2f(left_unit, forward_unit) *
                                    180.0f / MOTION_PI;
@@ -343,30 +453,26 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     MotionControl_TraveledMm = 0.0f;
     MotionControl_TargetDistanceMm = target_mm;
 
-    stage_start = HAL_GetTick();
-    last_integral_tick = stage_start;
-    next_tick = stage_start;
+    last_control_tick = HAL_GetTick();
+    next_tick = last_control_tick;
+    distance_tick = last_control_tick;
+    distance_tracking = 1U;
 
-    while (stage < 3U)
+    for (;;)
     {
         uint32_t now = HAL_GetTick();
-        uint32_t elapsed_ms = now - last_integral_tick;
-        uint32_t stage_elapsed_ms = now - stage_start;
-        float base_rpm;
-        float correction_rpm = 0.0f;
+        uint32_t elapsed_ms = now - last_control_tick;
+        uint32_t send_start;
         float wheel_scale = 1.0f;
+        float remaining_mm;
+        float brake_limit;
+        float horizon_ms;
         uint8_t stop_result;
 
+        Motion_IntegrateUntil(now);
+        last_control_tick = now;
         stop_result = MotionControl_HandleStopRequest();
-        if (stop_result != 0U)
-        {
-            return MotionControl_State;
-        }
-
-        MotionControl_TraveledMm +=
-            Motion_Absolute(previous_effective_base_rpm) *
-            wheel_mm_per_rpm_ms * (float)elapsed_ms;
-        last_integral_tick = now;
+        if (stop_result != 0U) { return MotionControl_State; }
 
         /* Application callbacks run only after the normal STOP check. */
         if ((early_stop_check != 0) && (early_stop_check() != 0U))
@@ -391,44 +497,20 @@ static MotionControlStatus MotionControl_RunPolarSegment(
             return MotionControl_State;
         }
 
-        if (stage == 0U)
-        {
-            if ((acceleration_time_ms == 0.0f) ||
-                ((float)stage_elapsed_ms >= acceleration_time_ms))
-            {
-                base_rpm = peak_rpm;
-                stage = 1U;
-            }
-            else
-            {
-                base_rpm = start_rpm +
-                           ((peak_rpm - start_rpm) *
-                            ((float)stage_elapsed_ms / acceleration_time_ms));
-            }
-        }
-        else if (stage == 1U)
-        {
-            base_rpm = peak_rpm;
-            if (MotionControl_TraveledMm >=
-                (target_mm - deceleration_distance))
-            {
-                stage = 2U;
-                stage_start = now;
-            }
-        }
-        else
-        {
-            if ((deceleration_time_ms == 0.0f) ||
-                ((float)stage_elapsed_ms >= deceleration_time_ms) ||
-                (MotionControl_TraveledMm >= target_mm))
-            {
-                stage = 3U;
-                break;
-            }
-            base_rpm = peak_rpm +
-                       ((end_rpm - peak_rpm) *
-                        ((float)stage_elapsed_ms / deceleration_time_ms));
-        }
+        remaining_mm = target_mm - MotionControl_TraveledMm;
+        if (remaining_mm <= MOTION_DISTANCE_TOLERANCE_MM) { break; }
+
+        /* Brake from remaining distance, including one control/transport interval.
+           This remains valid when wheel saturation stretches the movement time. */
+        horizon_ms = (send_time_ms > MOTION_CONTROL_PERIOD_MS) ?
+                      send_time_ms : (float)MOTION_CONTROL_PERIOD_MS;
+        horizon_ms += send_time_ms;
+        brake_limit = Motion_BrakingSpeed(remaining_mm / wheel_mm_per_rpm_ms,
+                                          end_rpm, horizon_ms);
+        if (brake_limit < end_rpm) { brake_limit = end_rpm; }
+        base_rpm += MOTION_ACCELERATION_RPM_PER_S * (float)elapsed_ms / 1000.0f;
+        if (base_rpm > cruise_rpm) { base_rpm = cruise_rpm; }
+        if (base_rpm > brake_limit) { base_rpm = brake_limit; }
 
         if ((MotionControl_ImuHeadingHoldActive != 0U) &&
             (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U))
@@ -437,9 +519,14 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         }
         if (MotionControl_ImuHeadingHoldActive != 0U)
         {
-            correction_rpm = MotionControl_GetHeadingCorrection(base_rpm);
+            float desired = Motion_HeadingCorrection(base_rpm,
+                (end_rpm <= 0.0001f) ? MOTION_STOP_HEADING_LIMIT_RPM : 0.0f);
+            correction_rpm = Motion_Approach(correction_rpm, desired,
+                MOTION_HEADING_SLEW_RPM_PER_S * (float)elapsed_ms / 1000.0f);
+            MotionControl_HeadingCorrectionRpm = correction_rpm;
         }
 
+        send_start = HAL_GetTick();
         if (MotionControl_SetBodySpeedWithScale(
                 base_rpm * MotionControl_ForwardUnit,
                 base_rpm * MotionControl_LeftUnit,
@@ -448,10 +535,11 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         {
             return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
         }
-        previous_effective_base_rpm = base_rpm * wheel_scale;
+        send_time_ms = (float)(HAL_GetTick() - send_start);
         MotionControl_BaseRpm = base_rpm;
         MotionControl_WheelScale = wheel_scale;
-        MotionControl_EffectiveBaseRpm = previous_effective_base_rpm;
+        MotionControl_EffectiveBaseRpm = applied_forward_rpm * forward_unit +
+                                         applied_left_rpm * left_unit;
         Motion_WaitControlPeriod(&next_tick);
     }
 
@@ -459,6 +547,8 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     {
         return MotionControl_State;
     }
+
+    if (end_rpm <= 0.0001f) { return Motion_SoftStop(); }
 
     /* Publish the terminal speed without inserting a zero-speed gap. */
     {
@@ -485,13 +575,8 @@ static MotionControlStatus MotionControl_RunPolarSegment(
 
     MotionControl_BaseRpm = end_rpm;
     MotionControl_WheelScale = final_scale;
-    MotionControl_EffectiveBaseRpm = end_rpm * final_scale;
-    if (end_rpm <= 0.0001f)
-    {
-        MotionControl_State = MOTION_STATUS_FINISHED;
-        MotionControl_BaseRpm = 0.0f;
-        MotionControl_EffectiveBaseRpm = 0.0f;
-    }
+    MotionControl_EffectiveBaseRpm = applied_forward_rpm * forward_unit +
+                                     applied_left_rpm * left_unit;
     return MotionControl_State;
 }
 
@@ -563,10 +648,13 @@ MotionControlStatus MotionControl_MovePolarSegmentMmUntil(
     move_status = ((Motion_Absolute(forward_unit) > 0.0001f) &&
                    (Motion_Absolute(left_unit) > 0.0001f)) ?
                   MOTION_STATUS_DIAGONAL : MOTION_STATUS_POLAR_MOVE;
-    return MotionControl_RunPolarSegment(
+    move_status = MotionControl_RunPolarSegment(
         corrected_distance, forward_unit, left_unit,
         start_rpm, cruise_rpm, end_rpm, move_status,
         early_stop_check, early_stopped);
+    Motion_IntegrateUntil(HAL_GetTick());
+    distance_tracking = 0U;
+    return move_status;
 }
 
 MotionControlStatus MotionControl_MovePolarSegmentMm(

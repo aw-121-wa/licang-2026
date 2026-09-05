@@ -30,5 +30,7 @@ HAL_StatusTypeDef MotorControl_SetWheelSpeeds(
 
 extern volatile uint32_t MotorControl_TxCount;
 extern volatile HAL_StatusTypeDef MotorControl_LastUartStatus;
+/* Host transmit-complete time of the last successful F6 synchronization. */
+extern volatile uint32_t MotorControl_LastSpeedSyncTick;
 
 #endif

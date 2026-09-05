@@ -19,6 +19,18 @@
 #define MOTION_CRUISE_RPM          130.0f
 #define MOTION_DIAGONAL_CRUISE_RPM  85.0f
 #define LATERAL_FORWARD_COMPENSATION       0.0f
+/* Distance calibration: new gain = old gain * requested / measured. */
+#define FORWARD_DISTANCE_GAIN              0.125f
+#define LEFT_DISTANCE_GAIN                 0.125f
+#define MOTION_ACCELERATION_RPM_PER_S     300.0f
+#define MOTION_DECELERATION_RPM_PER_S     120.0f
+#define MOTION_FINAL_DECEL_RPM_PER_S       40.0f
+#define MOTION_FINAL_APPROACH_RPM          20.0f
+#define MOTION_STOP_HEADING_LIMIT_RPM       3.0f
+#define MOTION_HEADING_SLEW_RPM_PER_S      30.0f
+#define MOTION_STOP_HEADING_HOLD_MS        300U
+#define MOTION_STOP_HEADING_FADE_MS        100U
+#define MOTION_DISTANCE_TOLERANCE_MM        0.5f
 
 /* Servo action groups and waits. */
 #define SERVO_ACTION_BAUDRATE             9600U

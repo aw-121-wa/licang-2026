@@ -14,4 +14,6 @@ static inline void __enable_irq(void) { test_primask = 0U; }
 #define __HAL_UART_CLEAR_OREFLAG(h) ((void)(h))
 HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *, uint8_t *, uint16_t);
 uint32_t HAL_GetTick(void);
+void HAL_Delay(uint32_t);
+HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *, uint8_t *, uint16_t, uint32_t);
 #endif

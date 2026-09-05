@@ -14,17 +14,18 @@
 
 ## 硬件与接口
 
-- 1号电机：左前轮。
-- 2号电机：右前轮。
+- 1号电机：右前轮。
+- 2号电机：左前轮。
 - 3号电机：左后轮。
 - 4号电机：右后轮。
 - USART3，115200：四台电机驱动器通信。
-- USART2，PD5/PD6，9600：JY60 通信（软件层保留 `Jy61P_*` 兼容 API）。
+- USART2，PD5/PD6：JY60 通信（软件层保留 `Jy61P_*` 兼容 API）。当前用户将波特率改为 115200，旧资料/CubeMX 配置为 9600；实际 IMU 配置尚待确认，本次保留用户设置。
 - UART5，PC12/PD2，115200：PC/VOFA ASCII 比赛调试接口（PC12=TX，PD2=RX）。
 - USART6，PC6/PC7，115200：仓库转盘专用张大头闭环步进电机（PC6=TX，PC7=RX，地址 `0x05`）。
 - 麦轮直径：75 mm。
 - 麦轮坐标：车头方向为 `+X`，车体左侧为 `+Y`，逆时针旋转为 `+Omega`。
-- 当前 X 型麦轮方向矩阵：前进 `++++`，左移 `-++-`，逆时针 `-+-+`。
+- 当前 X 型麦轮方向矩阵按左前、右前、左后、右后排列：前进 `++++`，左移 `-++-`，逆时针 `-+-+`。按地址 1、2、3、4 排列时，左移为 `+-+-`，逆时针为 `+--+`。
+- BSP 将逻辑左前映射到地址 2、右前映射到地址 1；前进编码保持左侧 CCW、右侧 CW。
 
 ## 模块结构
 
@@ -51,6 +52,10 @@
 - 四个速度命令先缓存，全部发送成功后才发送广播同步触发。
 - 锁头修正每20 ms叠加到麦轮逆解旋转分量，并限制绝对值和相对平移速度比例。
 - 软件线性加减速用于降低速度模式启停冲击。
+- 2026-09-05 距离控制使用剩余距离制动包络，加速度 300 RPM/s，常规减速度 120 RPM/s；20 RPM 以下按 40 RPM/s 放缓末段。进入 0.5 mm 指令积分容差后，正常零末速度动作继续收完残余速度，再结束。
+- 正常定距停车复用现有航向 PD：低速仍保留最多 3 RPM 修正额度，修正变化率限制为 30 RPM/s；平移归零后保留 300 ms 锁头窗口，最后 100 ms 渐退到零。沿用原航向基准，不把停车偏角重置为零。STOP、视觉提前命中、通信/IMU 失败仍直接停车；非零末速度衔接不进入锁头等待。
+- 距离积分按四轮同步发送完成时刻切换速度，并从实际编码的 0.1 RPM 轮速反解平移分量；发送期间仍积分上一条速度。该时刻不等于驱动器确认，仍未读取编码器反馈。
+- `robot_config.h` 中 `FORWARD_DISTANCE_GAIN` 和 `LEFT_DISTANCE_GAIN` 分别用于纵向、横向距离标定；当前均为 1.0，尚未实测。操作见 [底盘距离标定](docs/CHASSIS_CALIBRATION.md)。
 - IMU 启动无数据、运动中离线或电机串口发送失败时停止运动。
 - 通用麦轮限幅保持四轮比例。
 - 平移方向统一使用极坐标：0°前进、+90°左移、180°后退、-90°右移，角度范围为 -180°～+180°。
@@ -61,7 +66,10 @@
 - 平移统一使用 `MotionControl_MovePolarSegmentMm()`；纯横移额外使用唯一的 `LATERAL_FORWARD_COMPENSATION` 前后偏差补偿，初值为 `0.0f`。
 - `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `User/Algorithm/motion_control.c` 保留一套。
 - FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
-- UART5 接收使用单字节 `HAL_UART_Receive_IT()`；UART5 中断只收字节和投递行缓冲，运动命令统一由 `ChassisTask` 执行。任务只维护 Ready、Busy 和 LastStatus。
+- UART5 接收使用单字节 `HAL_UART_Receive_IT()`；UART5 中断只收字节和投递行缓冲，运动命令统一由 `ChassisTask` 执行。Ready、Busy 和 LastStatus 仅作诊断，不拦截入队。
+- 2026-09-05 删除舵机启动失败时底盘任务的永久等待，以及舵机/仓库/转盘状态对指令入队的跨模块拦截；运行中可排队，队列容量仍为 4，满时回复 ERR QUEUE_FULL。OK 表示已入队，不代表完成。
+- STOP 清空待执行队列，保留当前动作的停止请求；只有底盘任务领取 STOP 之后的新命令时才清理旧请求。出队与 STOP 使用代次校验，避免被清空的旧命令开始执行。
+- 启动时 IMU/电机准备失败不再永久锁住任务，后续命令可重试准备；实际运动的 IMU、UART、STOP、参数校验和动作完成判断继续有效。
 
 ## UART5 现场 STATUS
 
@@ -88,7 +96,7 @@
 - UART4 connects to MaixCAM at 115200-8-N-1: PC10=TX and PC11=RX. Use 3.3 V TTL, cross-connect TX/RX and share GND.
 - `User/Device/camera/maixcam_link.*` owns UART4 byte reception and accepts only an ASCII reply line `1` as a MaixCAM acknowledgement; outgoing request is one byte, `1` for red or `2` for blue. The deployed `licang_BLUE_RED_BALL.py` accepts a new command after the prior request state is cleared and checks from the next frame for a color/shape-qualified complete target inside the yellow ROI. AUTO calibration updates only the measured ball dimensions and center, leaving the ROI unchanged; MANUAL ROI defines the yellow search area directly with two touch points. AUTO-calibrated size limits apply in both ROI modes. No green target rectangle or multi-frame confirmation is used.
 - UART5 command `BALL` first runs action group 1 (return/recognition posture). It then runs the remaining rounds of the current six-ball warehouse batch: request MaixCAM, wait up to 10 s for reply `1`, run action group 2 (clamp), turn the warehouse one slot, then run action group 1 (return). The sixth group-2 completion also turns one slot and is followed by group 1 return.
-- `GRAB` remains a separate single cycle: group 2 (clamp) -> one turntable slot -> group 1 (return). While a BALL batch runs, all ordinary chassis, `GRAB` and new `BALL` commands remain busy.
+- `GRAB` remains a separate single cycle: group 2 (clamp) -> one turntable slot -> group 1 (return). During BALL, later commands may queue and execute serially after it finishes.
 - MaixCAM timeout or UART4 transmission failure starts no servo action and allows a later `BALL` retry. A group 1/2 communication failure retains the existing arm error lock. `STOP` cancels an acknowledgement wait immediately; during group 2/turntable it still completes group 1 (return) before ending the remaining batch.
 
 ## BALL gray alignment (2026-08-25)

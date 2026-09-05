@@ -1,7 +1,7 @@
 #include "motor_control.h"
 
-#define MOTOR_LF 1U
-#define MOTOR_RF 2U
+#define MOTOR_LF 2U
+#define MOTOR_RF 1U
 #define MOTOR_LR 3U
 #define MOTOR_RR 4U
 #define MOTOR_CW 0U
@@ -19,8 +19,10 @@
 static UART_HandleTypeDef *motor_uart = NULL;
 volatile uint32_t MotorControl_TxCount = 0U;
 volatile HAL_StatusTypeDef MotorControl_LastUartStatus = HAL_OK;
+volatile uint32_t MotorControl_LastSpeedSyncTick = 0U;
 
-static HAL_StatusTypeDef Motor_Send(const uint8_t *data, uint16_t len)
+static HAL_StatusTypeDef Motor_SendTimed(const uint8_t *data, uint16_t len,
+                                       volatile uint32_t *sent_tick)
 {
     HAL_StatusTypeDef status;
     if (motor_uart == NULL)
@@ -30,9 +32,18 @@ static HAL_StatusTypeDef Motor_Send(const uint8_t *data, uint16_t len)
     }
     status = HAL_UART_Transmit(motor_uart, (uint8_t *)data, len, 100U);
     MotorControl_LastUartStatus = status;
-    if (status == HAL_OK) { MotorControl_TxCount++; }
+    if (status == HAL_OK)
+    {
+        MotorControl_TxCount++;
+        if (sent_tick != NULL) { *sent_tick = HAL_GetTick(); }
+    }
     HAL_Delay(2U);
     return status;
+}
+
+static HAL_StatusTypeDef Motor_Send(const uint8_t *data, uint16_t len)
+{
+    return Motor_SendTimed(data, len, NULL);
 }
 
 static HAL_StatusTypeDef Motor_Enable(uint8_t address)
@@ -119,6 +130,12 @@ static HAL_StatusTypeDef Motor_SyncTrigger(void)
     return Motor_Send(command, sizeof(command));
 }
 
+static HAL_StatusTypeDef Motor_SpeedSyncTrigger(void)
+{
+    const uint8_t command[4] = {0x00U, 0xFFU, 0x66U, ZDT_CHECK_BYTE};
+    return Motor_SendTimed(command, sizeof(command), &MotorControl_LastSpeedSyncTick);
+}
+
 static uint32_t Motor_AbsolutePulses(int32_t pulses)
 {
     return (pulses < 0) ? (uint32_t)(-(int64_t)pulses) : (uint32_t)pulses;
@@ -137,6 +154,7 @@ void MotorControl_Init(UART_HandleTypeDef *huart)
     motor_uart = huart;
     MotorControl_TxCount = 0U;
     MotorControl_LastUartStatus = HAL_OK;
+    MotorControl_LastSpeedSyncTick = HAL_GetTick();
 }
 
 HAL_StatusTypeDef MotorControl_EnableAll(void)
@@ -202,5 +220,5 @@ HAL_StatusTypeDef MotorControl_SetWheelSpeeds(
     if (Motor_Speed(MOTOR_RF, DIR_RF_FORWARD, speeds->front_right) != HAL_OK) { return HAL_ERROR; }
     if (Motor_Speed(MOTOR_LR, DIR_LR_FORWARD, speeds->rear_left) != HAL_OK) { return HAL_ERROR; }
     if (Motor_Speed(MOTOR_RR, DIR_RR_FORWARD, speeds->rear_right) != HAL_OK) { return HAL_ERROR; }
-    return Motor_SyncTrigger();
+    return Motor_SpeedSyncTrigger();
 }

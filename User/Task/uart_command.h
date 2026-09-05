@@ -32,6 +32,7 @@ typedef struct
     ChassisCommandType type;
     uint32_t distance_mm;
     float angle_deg;
+    uint32_t stop_generation;
 } ChassisCommand;
 
 extern QueueHandle_t ChassisCommandQueue;
@@ -45,6 +46,8 @@ extern volatile MotionControlStatus ChassisCommand_LastStatus;
 void UartCommand_CreateQueues(void);
 void UartCommand_Init(UART_HandleTypeDef *huart);
 void UartCommand_Task(void *argument);
+/* Consumer claims commands atomically relative to STOP. */
+uint8_t UartCommand_WaitNext(ChassisCommand *command);
 void UartCommand_UartRxCpltCallback(UART_HandleTypeDef *huart);
 void UartCommand_UartErrorCallback(UART_HandleTypeDef *huart);
 
