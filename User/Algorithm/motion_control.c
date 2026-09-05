@@ -12,7 +12,7 @@
 #define MOTION_STOP_IF_IMU_LOST              1U
 
 /* F6 speed-mode control: software ramp and command-RPM time integration. */
-#define MOTION_CONTROL_PERIOD_MS           20U
+#define MOTION_CONTROL_PERIOD_MS           10U
 #define MOTION_PI                          3.1415926f
 
 /* IMU closed-loop in-place rotation. Positive omega is counter-clockwise. */
@@ -27,12 +27,12 @@
 #define ROTATE_TIMEOUT_MS                8000U
 #define ROTATE_MAX_ANGLE_DEG              360.0f
 
-#define HEADING_KP_RPM_PER_DEG             2.0f
+#define HEADING_KP_RPM_PER_DEG             1.85f
 #define HEADING_KD_RPM_PER_DEG_PER_S       0.08f
 #define HEADING_RATE_FILTER_MS             40.0f
 #define HEADING_RATE_MAX_GAP_MS             200U
 #define HEADING_DEADBAND_DEG                0.15f
-#define HEADING_MAX_CORRECTION_RPM          8.0f
+#define HEADING_MAX_CORRECTION_RPM          5.2f
 #define HEADING_MAX_TRANSLATION_RATIO       0.25f
 #define HEADING_CORRECTION_SIGN             1.0f
 

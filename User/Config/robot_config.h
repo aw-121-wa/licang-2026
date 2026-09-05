@@ -23,7 +23,7 @@
 #define LATERAL_FORWARD_COMPENSATION       0.0f
 /* Distance calibration: new gain = old gain * requested / measured. */
 #define FORWARD_DISTANCE_GAIN              1.04f
-#define LEFT_DISTANCE_GAIN                 1.0f
+#define LEFT_DISTANCE_GAIN                 1.04f
 #define MOTION_ACCELERATION_RPM_PER_S     600.0f
 #define MOTION_DECELERATION_RPM_PER_S     120.0f
 #define MOTION_FINAL_DECEL_RPM_PER_S       40.0f
