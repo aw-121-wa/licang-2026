@@ -230,10 +230,40 @@ uint8_t UartCommand_WaitNext(ChassisCommand *command)
     return 0U;
 }
 
+/* Integer-only formatting also works with newlib-nano without _printf_float. */
+static void UartCommand_FormatNumber(char *buffer, size_t size, float value,
+                                     unsigned decimals)
+{
+    double magnitude = (double)value;
+    unsigned long scale = decimals ? 100UL : 1UL;
+    unsigned long rounded;
+    const char *sign = value < 0.0f ? "-" : "";
+    if (magnitude < 0.0) { magnitude = -magnitude; }
+    if (!(magnitude <= 4294960000.0 / scale))
+    {
+        (void)snprintf(buffer, size, "INVALID");
+        return;
+    }
+    rounded = (unsigned long)(magnitude * scale + 0.5);
+    if (rounded == 0UL) { sign = ""; }
+    if (decimals)
+    {
+        (void)snprintf(buffer, size, "%s%lu.%02lu", sign,
+                       rounded / scale, rounded % scale);
+    }
+    else { (void)snprintf(buffer, size, "%s%lu", sign, rounded); }
+}
+
 static void UartCommand_SendStatus(void)
 {
     char response[560];
     const char *state;
+    char numbers[5][24];
+    UartCommand_FormatNumber(numbers[0], sizeof(numbers[0]), Jy61P_GetContinuousYaw(), 2);
+    UartCommand_FormatNumber(numbers[1], sizeof(numbers[1]), MotionControl_HeadingErrorDeg, 2);
+    UartCommand_FormatNumber(numbers[2], sizeof(numbers[2]), MotionControl_HeadingCorrectionRpm, 2);
+    UartCommand_FormatNumber(numbers[3], sizeof(numbers[3]), MotionControl_TraveledMm, 0);
+    UartCommand_FormatNumber(numbers[4], sizeof(numbers[4]), MotionControl_TargetDistanceMm, 0);
 
     if (ChassisCommand_Busy != 0U)
     {
@@ -249,9 +279,9 @@ static void UartCommand_SendStatus(void)
         state = "IDLE";
     }
     (void)snprintf(response, sizeof(response),
-                   "STATE=%s\r\nIMU=%s\r\nYAW=%.2f\r\n"
-                   "HEAD_ERR=%.2f\r\nHEAD_CORR=%.2f\r\n"
-                   "DIST=%.0f\r\nTARGET=%.0f\r\nLAST=%u\r\n"
+                   "STATE=%s\r\nIMU=%s\r\nYAW=%s\r\n"
+                   "HEAD_ERR=%s\r\nHEAD_CORR=%s\r\n"
+                   "DIST=%s\r\nTARGET=%s\r\nLAST=%u\r\n"
                    "BALL_STATE=%s\r\nBALL_ROUND=%u\r\n"
                    "PATH_STATE=%s\r\nPATH_STEP=%u\r\nPATH_LAST=%s\r\n"
                    "PATH_BALL_LAST=%s\r\n"
@@ -261,11 +291,7 @@ static void UartCommand_SendStatus(void)
                    "TURNTABLE_STATE=%s\r\nTURNTABLE_LAST=%s\r\n",
                    state,
                    (Jy61P_IsOnline(500U) != 0U) ? "ONLINE" : "OFFLINE",
-                   (double)Jy61P_GetContinuousYaw(),
-                   (double)MotionControl_HeadingErrorDeg,
-                   (double)MotionControl_HeadingCorrectionRpm,
-                   (double)MotionControl_TraveledMm,
-                   (double)MotionControl_TargetDistanceMm,
+                   numbers[0], numbers[1], numbers[2], numbers[3], numbers[4],
                    (unsigned)ChassisCommand_LastStatus,
                    BallSequence_StateName(BallSequence_State),
                    BallSequence_Round,

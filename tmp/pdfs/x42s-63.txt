@@ -1,0 +1,29 @@
+ZDT_X42S 第二代闭环步进电机用户手册 张大头闭环伺服
+63
+Ocp_TF：过流保护标志，0/1 分别表示没触发/触发了过流保护；
+Otp_TF：过热保护标志，0/1 分别表示没触发/触发了过热保护；
+Org_CF/Org_SF：回零失败标志/正在回零标志；
+默认状态：回零失败标志 Org_CF 为 0，正在回零标志 Org_SF 为 0；
+正在回零：回零失败标志 Org_CF 为 0，正在回零标志 Org_SF 为 1；
+回零失败：回零失败标志 Org_CF 为 1，正在回零标志 Org_SF 为 0；
+回零成功：回零失败标志 Org_CF 为 0，正在回零标志 Org_SF 为 0；
+Cal_Rdy：校准表就绪标志，0/1 分别表示未校准/已校准；
+Enc_Rdy：编码器就绪标志，0/1 分别表示编码器异常/编码器正常；
+例如，发送 01 3B 6B 读取回零状态标志，假设返回 01 3B 03 6B，其中 03 为回
+零状态标志，03 二进制数为 00000011，即 Cal_Rdy 和 Enc_Rdy 为 1，其余为 0。
+在程序中，可以通过以下方式进行判断每个标志位的状态：
+if(回零状态标志 & 0x01) { Enc_Rdy = true; } else { Enc_Rdy = false; }
+if(回零状态标志 & 0x02) { Cal_Rdy = true; } else { Cal_Rdy = false; }
+if(回零状态标志 & 0x04) { Org_SF = true; } else { Org_SF = false; }
+if(回零状态标志 & 0x08) { Org_CF = true; } else { Org_CF = false; }
+if(回零状态标志 & 0x10) { Otp_TF = true; } else { Otp_TF = false; }
+if(回零状态标志 & 0x20) { Ocp_TF = true; } else { Ocp_TF = false; }
+在程序中，可以通过以下方式进行判断回零的状态：
+int org_state = 回零状态标志 & 0x0C;
+if(org_state == 0x04) { 正在回零 }
+if(org_state == 0x08) { 回零失败 }
+if(org_state == 0x00) { 回零成功 }
+5.4.5 读取回零参数
+主机发送（主机→电机）
+地址 功能码 校验码
+Addr 22 6B

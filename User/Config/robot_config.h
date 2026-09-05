@@ -12,24 +12,23 @@
 #define MOTOR_MOVE_ACCELERATION             0U
 #define MOTOR_SEGMENT_SETTLE_MARGIN_MS    100U
 #define MOTOR_SPEED_ACCELERATION            0U
-#define MOTOR_SPEED_LIMIT_RPM             150U
+#define MOTOR_SPEED_LIMIT_RPM             460U
 #define MOTOR_SPEED_COMMAND_SCALE          10U
 
 /* Body motion parameters. */
-#define MOTION_CRUISE_RPM          130.0f
-#define MOTION_DIAGONAL_CRUISE_RPM  85.0f
+/* Measured: the nominal positive wheel rotation turns this chassis clockwise. */
+#define MOTION_OMEGA_TO_WHEEL_SIGN          (-1.0f)
+#define MOTION_CRUISE_RPM          450.0f
+#define MOTION_DIAGONAL_CRUISE_RPM 255.0f
 #define LATERAL_FORWARD_COMPENSATION       0.0f
 /* Distance calibration: new gain = old gain * requested / measured. */
-#define FORWARD_DISTANCE_GAIN              0.125f
-#define LEFT_DISTANCE_GAIN                 0.125f
-#define MOTION_ACCELERATION_RPM_PER_S     300.0f
+#define FORWARD_DISTANCE_GAIN              1.04f
+#define LEFT_DISTANCE_GAIN                 1.0f
+#define MOTION_ACCELERATION_RPM_PER_S     600.0f
 #define MOTION_DECELERATION_RPM_PER_S     120.0f
 #define MOTION_FINAL_DECEL_RPM_PER_S       40.0f
 #define MOTION_FINAL_APPROACH_RPM          20.0f
-#define MOTION_STOP_HEADING_LIMIT_RPM       3.0f
-#define MOTION_HEADING_SLEW_RPM_PER_S      30.0f
-#define MOTION_STOP_HEADING_HOLD_MS        300U
-#define MOTION_STOP_HEADING_FADE_MS        100U
+#define MOTION_HEADING_SLEW_RPM_PER_S     120.0f
 #define MOTION_DISTANCE_TOLERANCE_MM        0.5f
 
 /* Servo action groups and waits. */

@@ -118,12 +118,6 @@ static HAL_StatusTypeDef Motor_Speed(uint8_t address,
     return Motor_Send(command, sizeof(command));
 }
 
-static HAL_StatusTypeDef Motor_Stop(uint8_t address)
-{
-    const uint8_t command[5] = {address, 0xFEU, 0x98U, ZDT_SYNC_WAIT, ZDT_CHECK_BYTE};
-    return Motor_Send(command, sizeof(command));
-}
-
 static HAL_StatusTypeDef Motor_SyncTrigger(void)
 {
     const uint8_t command[4] = {0x00U, 0xFFU, 0x66U, ZDT_CHECK_BYTE};
@@ -170,13 +164,10 @@ HAL_StatusTypeDef MotorControl_EnableAll(void)
 
 HAL_StatusTypeDef MotorControl_StopAll(void)
 {
-    HAL_StatusTypeDef status = HAL_OK;
-    if (Motor_Stop(MOTOR_LF) != HAL_OK) { status = HAL_ERROR; }
-    if (Motor_Stop(MOTOR_RF) != HAL_OK) { status = HAL_ERROR; }
-    if (Motor_Stop(MOTOR_LR) != HAL_OK) { status = HAL_ERROR; }
-    if (Motor_Stop(MOTOR_RR) != HAL_OK) { status = HAL_ERROR; }
-    if (Motor_SyncTrigger() != HAL_OK) { status = HAL_ERROR; }
-    return status;
+    /* One immediate broadcast: no per-wheel delay and no FF that could
+       execute an older partially queued movement after a UART failure. */
+    const uint8_t command[5] = {0x00U, 0xFEU, 0x98U, 0x00U, ZDT_CHECK_BYTE};
+    return Motor_SendTimed(command, sizeof(command), &MotorControl_LastSpeedSyncTick);
 }
 
 uint32_t MotorControl_DistanceMmToPulses(uint32_t distance_mm)

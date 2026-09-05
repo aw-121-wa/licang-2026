@@ -30,6 +30,15 @@ BaseType_t xQueueSend(QueueHandle_t q, const void *p, TickType_t t)
 UBaseType_t uxQueueMessagesWaiting(QueueHandle_t q) { (void)q; return count; }
 int main(void)
 {
+    char number[24];
+    UartCommand_FormatNumber(number, sizeof(number), -12.345f, 2);
+    assert(strcmp(number, "-12.35") == 0);
+    UartCommand_FormatNumber(number, sizeof(number), 0.0f, 2);
+    assert(strcmp(number, "0.00") == 0);
+    UartCommand_FormatNumber(number, sizeof(number), 999.75f, 0);
+    assert(strcmp(number, "1000") == 0);
+    UartCommand_FormatNumber(number, sizeof(number), -0.125f, 2);
+    assert(strcmp(number, "-0.13") == 0);
     ChassisCommand c = {0};
     ChassisCommandQueue = items;
     ChassisTask_Ready = 0;

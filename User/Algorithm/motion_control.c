@@ -28,7 +28,9 @@
 #define ROTATE_MAX_ANGLE_DEG              360.0f
 
 #define HEADING_KP_RPM_PER_DEG             2.0f
-#define HEADING_KD_RPM_PER_DEG             0.15f
+#define HEADING_KD_RPM_PER_DEG_PER_S       0.08f
+#define HEADING_RATE_FILTER_MS             40.0f
+#define HEADING_RATE_MAX_GAP_MS             200U
 #define HEADING_DEADBAND_DEG                0.15f
 #define HEADING_MAX_CORRECTION_RPM          8.0f
 #define HEADING_MAX_TRANSLATION_RATIO       0.25f
@@ -61,6 +63,9 @@ volatile uint8_t MotionControl_RotateSettleCount = 0U;
 volatile uint32_t MotionControl_RotateElapsedMs = 0U;
 
 static float previous_heading_error = 0.0f;
+static float heading_rate_deg_s;
+static uint32_t heading_sample_tick;
+static uint8_t heading_sample_valid;
 
 /* Applied command velocity, not encoder feedback. Updated only on successful sync. */
 static float applied_forward_rpm;
@@ -101,21 +106,43 @@ static float Motion_Approach(float value, float target, float step)
 
 static float Motion_HeadingCorrection(float translation_rpm, float minimum_limit)
 {
-    float error = -Jy61P_GetContinuousYaw();
+    float error;
+    uint32_t sample_tick;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    error = -Jy61P_GetContinuousYaw();
+    sample_tick = Jy61P_GetLastTick();
+    if (primask == 0U) { __enable_irq(); }
     float correction;
     float relative_limit = Motion_Absolute(translation_rpm) *
                            HEADING_MAX_TRANSLATION_RATIO;
     float limit = HEADING_MAX_CORRECTION_RPM;
 
-    if (Motion_Absolute(error) <= HEADING_DEADBAND_DEG)
+    /* Differentiate only fresh samples, using their actual arrival interval.
+       Keep rate damping between samples; repeated control calls are not data. */
+    if ((heading_sample_valid == 0U) || (sample_tick != heading_sample_tick))
     {
-        error = 0.0f;
+        uint32_t dt_ms = sample_tick - heading_sample_tick;
+        if ((heading_sample_valid != 0U) && (dt_ms > 0U) &&
+            (dt_ms <= HEADING_RATE_MAX_GAP_MS))
+        {
+            float rate = (error - previous_heading_error) * 1000.0f / (float)dt_ms;
+            float alpha = (float)dt_ms / (HEADING_RATE_FILTER_MS + (float)dt_ms);
+            heading_rate_deg_s += alpha * (rate - heading_rate_deg_s);
+        }
+        else { heading_rate_deg_s = 0.0f; }
+        previous_heading_error = error;
+        heading_sample_tick = sample_tick;
+        heading_sample_valid = 1U;
     }
-    correction = (HEADING_KP_RPM_PER_DEG * error) +
-                 (HEADING_KD_RPM_PER_DEG *
-                  (error - previous_heading_error));
+    if ((uint32_t)(HAL_GetTick() - sample_tick) > HEADING_RATE_MAX_GAP_MS)
+    {
+        heading_rate_deg_s = 0.0f;
+    }
+    if (Motion_Absolute(error) <= HEADING_DEADBAND_DEG) { error = 0.0f; }
+    correction = HEADING_KP_RPM_PER_DEG * error +
+                 HEADING_KD_RPM_PER_DEG_PER_S * heading_rate_deg_s;
     correction *= HEADING_CORRECTION_SIGN;
-    previous_heading_error = error;
 
     if (relative_limit < minimum_limit) { relative_limit = minimum_limit; }
     if (relative_limit < limit) { limit = relative_limit; }
@@ -143,7 +170,29 @@ static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
     MotorWheelSpeedsRpmX10 wheel_speeds;
     HAL_StatusTypeDef status;
 
-    MecanumKinematics_Solve(forward_rpm, left_rpm, omega_rpm,
+    if ((forward_rpm == 0.0f) && (left_rpm == 0.0f) && (omega_rpm == 0.0f))
+    {
+        HAL_StatusTypeDef stopped;
+        status = MotorControl_StopAll();
+        stopped = status;
+        if (stopped != HAL_OK) { stopped = MotorControl_StopAll(); }
+        if (stopped == HAL_OK)
+        {
+            Motion_IntegrateUntil(MotorControl_LastSpeedSyncTick);
+            applied_forward_rpm = applied_left_rpm = applied_omega_rpm = 0.0f;
+            MotionControl_LastFrontLeftRpm = MotionControl_LastFrontRightRpm = 0.0f;
+            MotionControl_LastRearLeftRpm = MotionControl_LastRearRightRpm = 0.0f;
+            MotionControl_BaseRpm = MotionControl_EffectiveBaseRpm = 0.0f;
+            MotionControl_HeadingCorrectionRpm = 0.0f;
+            MotionControl_WheelScale = 1.0f;
+            if (wheel_scale != 0) { *wheel_scale = 1.0f; }
+        }
+        /* A recovered transmission still reports the original fault. */
+        return status;
+    }
+
+    MecanumKinematics_Solve(forward_rpm, left_rpm,
+                            omega_rpm * MOTION_OMEGA_TO_WHEEL_SIGN,
                             &wheel_values);
     if (wheel_scale != 0)
     {
@@ -182,7 +231,7 @@ static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
             (4.0f * MOTOR_SPEED_COMMAND_SCALE);
         applied_omega_rpm = (-wheel_speeds.front_left + wheel_speeds.front_right -
             wheel_speeds.rear_left + wheel_speeds.rear_right) /
-            (4.0f * MOTOR_SPEED_COMMAND_SCALE);
+            (4.0f * MOTOR_SPEED_COMMAND_SCALE * MOTION_OMEGA_TO_WHEEL_SIGN);
     }
     return status;
 }
@@ -199,6 +248,8 @@ void MotionControl_ResetHeadingReference(void)
 {
     Jy61P_ResetContinuousYaw();
     previous_heading_error = 0.0f;
+    heading_rate_deg_s = 0.0f;
+    heading_sample_valid = 0U;
     MotionControl_HeadingErrorDeg = 0.0f;
     MotionControl_HeadingCorrectionRpm = 0.0f;
 }
@@ -255,6 +306,8 @@ void MotionControl_Init(UART_HandleTypeDef *motor_uart,
     MotorControl_Init(motor_uart);
     Jy61P_Init(imu_uart);
     previous_heading_error = 0.0f;
+    heading_rate_deg_s = 0.0f;
+    heading_sample_valid = 0U;
     MotionControl_HeadingErrorDeg = 0.0f;
     MotionControl_HeadingCorrectionRpm = 0.0f;
     MotionControl_ImuHeadingHoldActive = 0U;
@@ -333,77 +386,6 @@ static float Motion_BrakingSpeed(float remaining_rpm_ms, float end_rpm,
     }
     return sqrtf(decel * decel * horizon_ms * horizon_ms + terminal_squared +
                  2.0f * decel * remaining_rpm_ms) - decel * horizon_ms;
-}
-
-/* Normal completion only. STOP, visual interception and faults stay immediate. */
-static MotionControlStatus Motion_SoftStop(void)
-{
-    float speed = sqrtf(applied_forward_rpm * applied_forward_rpm +
-                         applied_left_rpm * applied_left_rpm);
-    float correction = applied_omega_rpm;
-    uint32_t last_tick = HAL_GetTick();
-    uint32_t next_tick = last_tick;
-    uint32_t settle_start = last_tick;
-    uint8_t settling = 0U;
-
-    for (;;)
-    {
-        uint32_t now = HAL_GetTick();
-        float dt_s = (float)(now - last_tick) / 1000.0f;
-        float desired = 0.0f;
-        float wheel_scale = 1.0f;
-        uint32_t remaining_ms = MOTION_STOP_HEADING_HOLD_MS;
-        last_tick = now;
-        if (MotionControl_HandleStopRequest() != 0U) { return MotionControl_State; }
-        if ((MotionControl_ImuHeadingHoldActive != 0U) &&
-            (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U))
-        {
-            return Motion_SegmentFail(MOTION_ERROR_IMU_LOST);
-        }
-        speed = Motion_Approach(speed, 0.0f, MOTION_FINAL_DECEL_RPM_PER_S * dt_s);
-        if ((speed == 0.0f) && (settling == 0U))
-        {
-            settling = 1U;
-            settle_start = now;
-        }
-        if (settling != 0U)
-        {
-            uint32_t elapsed = now - settle_start;
-            remaining_ms = (elapsed < MOTION_STOP_HEADING_HOLD_MS) ?
-                MOTION_STOP_HEADING_HOLD_MS - elapsed : 0U;
-        }
-        if (MotionControl_ImuHeadingHoldActive != 0U)
-        {
-            float limit = MOTION_STOP_HEADING_LIMIT_RPM;
-            desired = Motion_HeadingCorrection(0.0f, limit);
-            if (remaining_ms < MOTION_STOP_HEADING_FADE_MS)
-            {
-                limit *= (float)remaining_ms / MOTION_STOP_HEADING_FADE_MS;
-            }
-            if (desired > limit) { desired = limit; }
-            if (desired < -limit) { desired = -limit; }
-        }
-        else { remaining_ms = 0U; }
-        correction = Motion_Approach(correction, desired,
-                                      MOTION_HEADING_SLEW_RPM_PER_S * dt_s);
-        if (MotionControl_SetBodySpeedWithScale(
-                speed * MotionControl_ForwardUnit, speed * MotionControl_LeftUnit,
-                correction, &wheel_scale) != HAL_OK)
-        {
-            return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
-        }
-        MotionControl_BaseRpm = speed;
-        MotionControl_WheelScale = wheel_scale;
-        MotionControl_EffectiveBaseRpm = applied_forward_rpm * MotionControl_ForwardUnit +
-                                         applied_left_rpm * MotionControl_LeftUnit;
-        MotionControl_HeadingCorrectionRpm = correction;
-        if ((speed == 0.0f) && (correction == 0.0f) && (remaining_ms == 0U))
-        {
-            MotionControl_State = MOTION_STATUS_FINISHED;
-            return MotionControl_State;
-        }
-        Motion_WaitControlPeriod(&next_tick);
-    }
 }
 
 static MotionControlStatus MotionControl_RunPolarSegment(
@@ -519,10 +501,17 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         }
         if (MotionControl_ImuHeadingHoldActive != 0U)
         {
-            float desired = Motion_HeadingCorrection(base_rpm,
-                (end_rpm <= 0.0001f) ? MOTION_STOP_HEADING_LIMIT_RPM : 0.0f);
+            float desired = MotionControl_GetHeadingCorrection(base_rpm);
+            /* Release obsolete correction immediately; slew only its buildup. */
+            if (correction_rpm * desired <= 0.0f) { correction_rpm = 0.0f; }
+            else if (Motion_Absolute(desired) < Motion_Absolute(correction_rpm))
+            { correction_rpm = desired; }
             correction_rpm = Motion_Approach(correction_rpm, desired,
                 MOTION_HEADING_SLEW_RPM_PER_S * (float)elapsed_ms / 1000.0f);
+            /* Slew limiting must not retain a large correction as speed falls. */
+            float limit = base_rpm * HEADING_MAX_TRANSLATION_RATIO;
+            if (correction_rpm > limit) { correction_rpm = limit; }
+            if (correction_rpm < -limit) { correction_rpm = -limit; }
             MotionControl_HeadingCorrectionRpm = correction_rpm;
         }
 
@@ -548,7 +537,15 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         return MotionControl_State;
     }
 
-    if (end_rpm <= 0.0001f) { return Motion_SoftStop(); }
+    if (end_rpm <= 0.0001f)
+    {
+        if (MotionControl_SetBodySpeedWithScale(0.0f, 0.0f, 0.0f, 0) != HAL_OK)
+        {
+            return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+        }
+        MotionControl_State = MOTION_STATUS_FINISHED;
+        return MotionControl_State;
+    }
 
     /* Publish the terminal speed without inserting a zero-speed gap. */
     {
@@ -866,6 +863,8 @@ MotionControlStatus MotionControl_PrepareForMove(void)
     else
     {
         previous_heading_error = 0.0f;
+    heading_rate_deg_s = 0.0f;
+    heading_sample_valid = 0U;
     }
     HAL_Delay(100U);
 
