@@ -22,7 +22,7 @@
 /* Forward and backward UART commands only. */
 #define MOTION_LONGITUDINAL_CRUISE_RPM    640.0f
 /* Pure lateral translation remains at the existing tuned speed. */
-#define MOTION_CRUISE_RPM          480.0f
+#define MOTION_CRUISE_RPM          400.0f
 /* Diagonal translation remains unchanged. */
 #define MOTION_DIAGONAL_CRUISE_RPM 300.0f
 #define LATERAL_FORWARD_COMPENSATION       0.0f
@@ -30,7 +30,7 @@
 #define FORWARD_DISTANCE_GAIN              1.04f
 #define LEFT_DISTANCE_GAIN                 1.04f
 #define MOTION_ACCELERATION_RPM_PER_S     600.0f
-#define MOTION_DECELERATION_RPM_PER_S     120.0f
+#define MOTION_DECELERATION_RPM_PER_S     160.0f
 #define MOTION_FINAL_DECEL_RPM_PER_S       40.0f
 #define MOTION_FINAL_APPROACH_RPM          20.0f
 #define MOTION_HEADING_SLEW_RPM_PER_S     120.0f

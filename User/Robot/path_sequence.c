@@ -31,7 +31,7 @@ static const PathStep PathSequence_CommandQueue[] =
     {
         PATH_STEP_ROTATE,
         0U,
-        178.0f,
+        180.0f,
         0.0f,
         0U
     },
@@ -39,7 +39,7 @@ static const PathStep PathSequence_CommandQueue[] =
     {
         PATH_STEP_ROTATE,
         0U,
-        178.0f,
+        180.0f,
         0.0f,
         0U
     },

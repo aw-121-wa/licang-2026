@@ -66,7 +66,9 @@ HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *h, uint8_t *p,
         float v = (queued[0]+queued[1]+queued[2]+queued[3])*0.25f;
         if (brake_test && last_speed > v + 0.11f) {
             if (brake_start_x == 1000) brake_start_x = (float)x;
-            float allowed = (last_speed <= 20.1f ? 40.0f : 140.0f) * (tick-sync_tick)/1000.0f + 0.11f;
+            float allowed = (last_speed <= 20.1f ? MOTION_FINAL_DECEL_RPM_PER_S :
+                             MOTION_DECELERATION_RPM_PER_S) *
+                            (tick-sync_tick)/1000.0f + 0.11f;
             assert(last_speed-v <= allowed);
         }
         last_speed = v; sync_tick = tick;
