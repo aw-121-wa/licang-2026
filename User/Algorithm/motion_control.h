@@ -47,6 +47,14 @@ MotionControlStatus MotionControl_MovePolarSegmentMm(
     float start_rpm,
     float cruise_rpm,
     float end_rpm);
+/* Use only for a caller with an explicit, motion-specific wheel limit. */
+MotionControlStatus MotionControl_MovePolarSegmentMmWithWheelLimit(
+    uint32_t distance_mm,
+    float angle_deg,
+    float start_rpm,
+    float cruise_rpm,
+    float end_rpm,
+    float wheel_limit_rpm);
 /* Optional application callback checked inside the 20 ms motion loop. */
 typedef uint8_t (*MotionControlEarlyStopCheck)(void);
 MotionControlStatus MotionControl_MovePolarSegmentMmUntil(

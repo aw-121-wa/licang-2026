@@ -10,6 +10,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ChassisRuntimeTest(unittest.TestCase):
+    def test_path_home_reverses_successful_path_and_invalidates_ready_state(self):
+        compiler = shutil.which("gcc")
+        self.assertIsNotNone(compiler, "Host gcc is required")
+        with tempfile.TemporaryDirectory(prefix="path-home-tests-") as temp:
+            binary = str(Path(temp) / ("path-home.exe" if os.name == "nt" else "path-home"))
+            args = [compiler, "-std=c99", "-O2", "-Wall", "-Wextra", "-Werror"]
+            for directory in ("User/Robot", "User/Algorithm", "User/BSP",
+                              "User/Config", "User/Device/servo",
+                              "User/Device/turntable", "tests/host"):
+                args += ["-I", directory]
+            args += ["tests/host/path_home_runtime.c", "-lm", "-o", binary]
+            compiled = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(compiled.returncode, 0, compiled.stdout + compiled.stderr)
+            run = subprocess.run([binary], capture_output=True, text=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+
     def test_distance_and_failures(self):
         compiler = shutil.which("gcc")
         self.assertIsNotNone(compiler, "Host gcc is required")
@@ -27,7 +43,7 @@ class ChassisRuntimeTest(unittest.TestCase):
             for scenario in ("forward", "lateral", "short", "slow", "diagonal", "overrun",
                              "jitter", "wrap", "stop", "offline", "uart", "early",
                              "sync_fail", "heading", "invalid", "terminal", "brake", "hard_heading", "stop_protocol",
-                             "rotate_ccw", "rotate_cw", "rotate_sequence", "active_omega", "fast", "heading_damping", "global_heading"):
+                             "rotate_ccw", "rotate_cw", "rotate_sequence", "active_omega", "longitudinal_limit", "lateral_limit", "fast", "heading_damping", "global_heading"):
                 with self.subTest(scenario=scenario):
                     run = subprocess.run([binary, scenario], capture_output=True, text=True, timeout=10)
                     self.assertEqual(run.returncode, 0, run.stdout + run.stderr)

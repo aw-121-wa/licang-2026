@@ -5,9 +5,11 @@
 static ChassisCommand items[4];
 static unsigned count, cleared;
 static unsigned stopped, stop_on_receive;
+static unsigned home_invalidated;
 volatile ServoActionSequenceState ServoAction_SequenceState = SERVO_SEQUENCE_ERROR;
 uint8_t WarehouseControl_IsReadyForAction(void) { return 0; }
 uint8_t Turntable_IsReady(void) { return 0; }
+void PathSequence_InvalidateHome(void) { home_invalidated++; }
 void MotionControl_ClearStopRequest(void) { cleared++; stopped = 0; }
 void MotionControl_RequestStop(void) { stopped = 1; }
 BaseType_t xQueueReset(QueueHandle_t q) { (void)q; count = 0; return pdPASS; }
@@ -55,7 +57,7 @@ int main(void)
     assert(count == 4 && items[0].type == CHASSIS_CMD_FORWARD);
     assert(cleared == 0); /* Enqueue must never cancel an active STOP. */
     UartCommand_StopQueue();
-    assert(count == 0 && stopped && ChassisCommand_Busy);
+    assert(count == 0 && stopped && ChassisCommand_Busy && home_invalidated == 1);
     assert(UartCommand_SubmitMotion(&c));
     assert(stopped); /* New input during cancellation cannot restart the active motion. */
     assert(UartCommand_WaitNext(&c));
@@ -64,5 +66,6 @@ int main(void)
     stop_on_receive = 1; /* STOP between dequeue and claiming the command. */
     assert(!UartCommand_WaitNext(&c));
     assert(stopped && cleared == 1);
+
     return 0;
 }

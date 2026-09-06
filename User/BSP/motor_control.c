@@ -87,7 +87,8 @@ static HAL_StatusTypeDef Motor_Position(uint8_t address, uint8_t forward_directi
 
 static HAL_StatusTypeDef Motor_Speed(uint8_t address,
                                      uint8_t forward_direction,
-                                     int16_t signed_rpm_x10)
+                                     int16_t signed_rpm_x10,
+                                     uint16_t speed_limit_rpm)
 {
     uint8_t command[8];
     uint8_t direction = forward_direction;
@@ -102,9 +103,9 @@ static HAL_StatusTypeDef Motor_Speed(uint8_t address,
     {
         magnitude = (uint16_t)signed_rpm_x10;
     }
-    if (magnitude > (MOTOR_SPEED_LIMIT_RPM * MOTOR_SPEED_COMMAND_SCALE))
+    if (magnitude > (speed_limit_rpm * MOTOR_SPEED_COMMAND_SCALE))
     {
-        magnitude = MOTOR_SPEED_LIMIT_RPM * MOTOR_SPEED_COMMAND_SCALE;
+        magnitude = speed_limit_rpm * MOTOR_SPEED_COMMAND_SCALE;
     }
 
     command[0] = address;
@@ -204,12 +205,21 @@ HAL_StatusTypeDef MotorControl_MoveWheels(const MotorWheelPulses *pulses)
 HAL_StatusTypeDef MotorControl_SetWheelSpeeds(
     const MotorWheelSpeedsRpmX10 *speeds)
 {
+    return MotorControl_SetWheelSpeedsWithLimit(
+        speeds, MOTOR_SPEED_LIMIT_RPM);
+}
+
+HAL_StatusTypeDef MotorControl_SetWheelSpeedsWithLimit(
+    const MotorWheelSpeedsRpmX10 *speeds,
+    uint16_t speed_limit_rpm)
+{
     if (speeds == NULL) { return HAL_ERROR; }
+    if (speed_limit_rpm == 0U) { return HAL_ERROR; }
 
     /* Queue all four F6 commands; do not trigger a partial speed update. */
-    if (Motor_Speed(MOTOR_LF, DIR_LF_FORWARD, speeds->front_left) != HAL_OK) { return HAL_ERROR; }
-    if (Motor_Speed(MOTOR_RF, DIR_RF_FORWARD, speeds->front_right) != HAL_OK) { return HAL_ERROR; }
-    if (Motor_Speed(MOTOR_LR, DIR_LR_FORWARD, speeds->rear_left) != HAL_OK) { return HAL_ERROR; }
-    if (Motor_Speed(MOTOR_RR, DIR_RR_FORWARD, speeds->rear_right) != HAL_OK) { return HAL_ERROR; }
+    if (Motor_Speed(MOTOR_LF, DIR_LF_FORWARD, speeds->front_left, speed_limit_rpm) != HAL_OK) { return HAL_ERROR; }
+    if (Motor_Speed(MOTOR_RF, DIR_RF_FORWARD, speeds->front_right, speed_limit_rpm) != HAL_OK) { return HAL_ERROR; }
+    if (Motor_Speed(MOTOR_LR, DIR_LR_FORWARD, speeds->rear_left, speed_limit_rpm) != HAL_OK) { return HAL_ERROR; }
+    if (Motor_Speed(MOTOR_RR, DIR_RR_FORWARD, speeds->rear_right, speed_limit_rpm) != HAL_OK) { return HAL_ERROR; }
     return Motor_SpeedSyncTrigger();
 }

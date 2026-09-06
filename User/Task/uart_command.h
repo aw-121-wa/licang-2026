@@ -24,6 +24,7 @@ typedef enum
     CHASSIS_CMD_RZ,
     CHASSIS_CMD_STAIR,
     CHASSIS_CMD_PATH,
+    CHASSIS_CMD_HOME,
     CHASSIS_CMD_CANGKU
 } ChassisCommandType;
 

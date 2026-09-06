@@ -13,12 +13,17 @@
 #define MOTOR_SEGMENT_SETTLE_MARGIN_MS    100U
 #define MOTOR_SPEED_ACCELERATION            0U
 #define MOTOR_SPEED_LIMIT_RPM             460U
+#define MOTOR_LONGITUDINAL_SPEED_LIMIT_RPM 520U
 #define MOTOR_SPEED_COMMAND_SCALE          10U
 
 /* Body motion parameters. */
 /* Measured: the nominal positive wheel rotation turns this chassis clockwise. */
 #define MOTION_OMEGA_TO_WHEEL_SIGN          (-1.0f)
-#define MOTION_CRUISE_RPM          460.0f
+/* Forward and backward UART commands only. */
+#define MOTION_LONGITUDINAL_CRUISE_RPM    640.0f
+/* Pure lateral translation remains at the existing tuned speed. */
+#define MOTION_CRUISE_RPM          480.0f
+/* Diagonal translation remains unchanged. */
 #define MOTION_DIAGONAL_CRUISE_RPM 300.0f
 #define LATERAL_FORWARD_COMPENSATION       0.0f
 /* Distance calibration: new gain = old gain * requested / measured. */

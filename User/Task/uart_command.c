@@ -207,6 +207,7 @@ static void UartCommand_StopQueue(void)
     taskENTER_CRITICAL();
     stop_generation++;
     MotionControl_RequestStop();
+    PathSequence_InvalidateHome();
     if (ChassisCommandQueue != 0) { (void)xQueueReset(ChassisCommandQueue); }
     taskEXIT_CRITICAL();
 }
@@ -285,7 +286,7 @@ static void UartCommand_SendStatus(void)
                    "DIST=%s\r\nTARGET=%s\r\nLAST=%u\r\n"
                    "BALL_STATE=%s\r\nBALL_ROUND=%u\r\n"
                    "PATH_STATE=%s\r\nPATH_STEP=%u\r\nPATH_LAST=%s\r\n"
-                   "PATH_BALL_LAST=%s\r\n"
+                   "PATH_BALL_LAST=%s\r\nHOME_READY=%u\r\n"
                    "WAREHOUSE_STATE=%s\r\nWAREHOUSE_BALL=%u\r\n"
                    "STOP=%u\r\nSTOPPED=%u\r\n"
                    "STAIR_STATE=%s\r\nSTAIR_LAST=%s\r\n"
@@ -300,6 +301,7 @@ static void UartCommand_SendStatus(void)
                    PathSequence_CurrentStep,
                    PathSequence_StatusName(PathSequence_LastStatus),
                    BallSequence_StatusName(PathSequence_LastBallStatus),
+                   (unsigned)PathSequence_IsHomeReady(),
                    WarehouseControl_StateName((WarehouseState)Warehouse_State),
                    Warehouse_BallCount,
                    MotionControl_StopRequested,
@@ -351,7 +353,7 @@ static void UartCommand_SendHelp(void)
         "LF <mm> <deg>\r\nRF <mm> <deg>\r\n"
         "LR <mm> <deg>\r\nRR <mm> <deg>\r\n"
         "ROT CCW <deg>\r\nROT CW <deg>\r\n"
-        "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\nPATH\r\nCANGKU\r\n"
+        "GRAB\r\nBALL\r\nRZ\r\nSTAIR\r\nPATH\r\nHOME\r\nCANGKU\r\n"
         "STOP\r\nSTATUS\r\nRFID\r\nHELP\r\n"
         "ARM: G0=start, G1=return, G2=clamp; GRAB=G2->turn->G1, BALL=max 5 IDs\r\n");
 }
@@ -488,7 +490,7 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         }
         return;
     }
-    if (strcmp(command, "PATH") == 0)
+    if ((strcmp(command, "PATH") == 0) || (strcmp(command, "HOME") == 0))
     {
         if (strtok(0, " \t") != 0)
         {
@@ -496,7 +498,8 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
             UartCommand_Send("ERR FORMAT\r\n");
             return;
         }
-        chassis_command.type = CHASSIS_CMD_PATH;
+        chassis_command.type = (strcmp(command, "PATH") == 0) ?
+                               CHASSIS_CMD_PATH : CHASSIS_CMD_HOME;
         chassis_command.distance_mm = 0U;
         chassis_command.angle_deg = 0.0f;
         if (UartCommand_SubmitMotion(&chassis_command) == 0U)
@@ -505,7 +508,8 @@ static void UartCommand_ProcessLine(UartCommandLine *line)
         }
         else
         {
-            UartCommand_Send("OK PATH\r\n");
+            UartCommand_Send((chassis_command.type == CHASSIS_CMD_PATH) ?
+                             "OK PATH\r\n" : "OK HOME\r\n");
         }
         return;
     }

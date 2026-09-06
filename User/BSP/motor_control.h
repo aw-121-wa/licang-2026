@@ -27,6 +27,9 @@ uint32_t MotorControl_DistanceMmToPulses(uint32_t distance_mm);
 HAL_StatusTypeDef MotorControl_MoveWheels(const MotorWheelPulses *pulses);
 HAL_StatusTypeDef MotorControl_SetWheelSpeeds(
     const MotorWheelSpeedsRpmX10 *speeds);
+HAL_StatusTypeDef MotorControl_SetWheelSpeedsWithLimit(
+    const MotorWheelSpeedsRpmX10 *speeds,
+    uint16_t speed_limit_rpm);
 
 extern volatile uint32_t MotorControl_TxCount;
 extern volatile HAL_StatusTypeDef MotorControl_LastUartStatus;

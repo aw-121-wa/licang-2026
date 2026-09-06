@@ -46,7 +46,7 @@
 
 ## 已确定的设计决策
 
-- 用户确认旋转方向修正后不再越纠越偏。按最新提速要求，普通平移巡航由 150 提至 450 RPM、斜行由 85 提至 255 RPM；单轮限速 460 RPM，为直行航向修正留余量。影响 UART5 平移及引用巡航参数的 PATH/CANGKU；ROT、灰度、STAIR 搜索和 RZ 专用速度沿用原值。S_Vel_IS 保持 Enable，加减速度和广播硬停沿用现值，短距离不保证达到巡航速度。
+- 用户确认旋转方向修正后不再越纠越偏。普通 UART5 前进/后退巡航为 640 RPM，专用单轮上限为 520 RPM；普通左/右移保持 480 RPM 与 460 RPM 上限，斜移保持 300 RPM 与 460 RPM 上限。PATH、CANGKU、ROT、灰度、STAIR 搜索和 RZ 专用速度与上限均沿用原值。S_Vel_IS 保持 Enable，加减速度和广播硬停沿用现值，短距离不保证达到巡航速度。
 
 - 行走使用 `F6` 速度模式，每20 ms更新四轮速度；不用多条短 `FD` 位置命令，避免反复减速到位造成卡顿。
 - 四台驱动器的 `S_Vel_IS` 已由用户开启；程序直接按0.1 RPM单位编码，100 RPM编码为1000，不在上电时重复修改驱动器配置。
@@ -64,7 +64,7 @@
 - 平移方向统一使用极坐标：0°前进、+90°左移、180°后退、-90°右移，角度范围为 -180°～+180°。
 - 指定的极坐标距离表示实际平移轨迹长度；每个控制周期把轮速限幅后的有效平移 RPM 纳入距离积分。
 - 现场运动测试只通过 UART5 命令完成；不再保留 PATH 编辑器、独立上电测试和旧的运动包装接口。
-- UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、PATH、STOP、STATUS、HELP。
+- UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、PATH、HOME、STOP、STATUS、HELP。`HOME` 只在最近一次 PATH 完整成功后可用，按 PATH 指令表倒序取逆返回，任何后续底盘动作、STOP 或故障都会使其失效。
 - `PATH` 不是动态路径编辑器；它只运行 `User/Robot/path_sequence.c` 中的固定比赛指令表，并以单条 `CHASSIS_CMD_PATH` 占用底盘命令队列。
 - 平移统一使用 `MotionControl_MovePolarSegmentMm()`；纯横移额外使用唯一的 `LATERAL_FORWARD_COMPENSATION` 前后偏差补偿，初值为 `0.0f`。
 - `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `User/Algorithm/motion_control.c` 保留一套。主动旋转和绕柱独占 omega，完成后再更新 `HeadingTarget`。
@@ -79,7 +79,7 @@
 - 2026-09-06 STATUS 增加 `HEAD_TARGET`。GCC newlib-nano 未链接浮点 printf 时 YAW/HEAD_TARGET/HEAD_ERR/HEAD_CORR/DIST/TARGET 仍使用整数格式化输出，角度与修正保留两位、距离取整，不依赖 `_printf_float`。非有限或超范围数据输出 INVALID。
 - 用户已确认 X42S 使用 Emm 固件，保持 8 字节 F6 格式和 S_Vel_IS=Enable 的 0.1 RPM 编码；不是 X 固件的 9 字节 F6。
 
-- `STATUS` 只输出 `STATE`、`IMU`、`YAW`、`HEAD_TARGET`、`HEAD_ERR`、`HEAD_CORR`、`DIST`、`TARGET`、`LAST`、`BALL_STATE`、`BALL_ROUND`、`PATH_STATE`、`PATH_STEP`、`PATH_LAST`、`PATH_BALL_LAST`、`WAREHOUSE_STATE`、`WAREHOUSE_BALL`、`STOP`、`STOPPED`、`STAIR_STATE`、`STAIR_LAST`、`TURNTABLE_STATE` 和 `TURNTABLE_LAST`。
+- `STATUS` 只输出 `STATE`、`IMU`、`YAW`、`HEAD_TARGET`、`HEAD_ERR`、`HEAD_CORR`、`DIST`、`TARGET`、`LAST`、`BALL_STATE`、`BALL_ROUND`、`PATH_STATE`、`PATH_STEP`、`PATH_LAST`、`PATH_BALL_LAST`、`HOME_READY`、`WAREHOUSE_STATE`、`WAREHOUSE_BALL`、`STOP`、`STOPPED`、`STAIR_STATE`、`STAIR_LAST`、`TURNTABLE_STATE` 和 `TURNTABLE_LAST`。
 - MaixCAM、机械臂和转盘的实际错误处理仍保留，但不再为 STATUS 保存或输出仅用于调试的收发计数、动作计数和预计时间统计。
 
 ## 用户工作偏好

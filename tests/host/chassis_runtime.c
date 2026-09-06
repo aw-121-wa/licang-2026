@@ -53,7 +53,7 @@ HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *h, uint8_t *p,
         /* Physical address map: 1 RF, 2 LF, 3 LR, 4 RR. */
         unsigned i = p[0] == 1 ? 1 : p[0] == 2 ? 0 : p[0]-1;
         float v = (float)((p[3]<<8)|p[4])/10;
-        assert(v <= MOTOR_SPEED_LIMIT_RPM);
+        assert(v <= MOTOR_LONGITUDINAL_SPEED_LIMIT_RPM);
         if (v > peak_wheel_rpm) peak_wheel_rpm = v;
         queued[i] = p[2] == ((i==0 || i==2) ? 1 : 0) ? v : -v;
     } else if (p[1] == 0xFE) {
@@ -164,6 +164,23 @@ int main(int argc, char **argv)
         assert(fabsf(MotionControl_LastFrontRightRpm + 9.0f) < 0.01f);
         assert(fabsf(MotionControl_LastRearLeftRpm - 11.0f) < 0.01f);
         assert(fabsf(MotionControl_LastRearRightRpm + 9.0f) < 0.01f);
+        return 0;
+    }
+    if (!strcmp(argv[1], "longitudinal_limit")) {
+        assert(MotionControl_MovePolarSegmentMmWithWheelLimit(
+            10000U, 0.0f, 0.0f, MOTION_LONGITUDINAL_CRUISE_RPM, 0.0f,
+            MOTOR_LONGITUDINAL_SPEED_LIMIT_RPM) == MOTION_STATUS_FINISHED);
+        printf("longitudinal peak=%.1f\n", peak_wheel_rpm);
+        assert(peak_wheel_rpm >= 499.9f);
+        assert(peak_wheel_rpm <= MOTOR_LONGITUDINAL_SPEED_LIMIT_RPM);
+        return 0;
+    }
+    if (!strcmp(argv[1], "lateral_limit")) {
+        assert(MotionControl_MovePolarSegmentMm(
+            10000U, 90.0f, 0.0f, MOTION_CRUISE_RPM, 0.0f) ==
+            MOTION_STATUS_FINISHED);
+        assert(peak_wheel_rpm >= 459.9f);
+        assert(peak_wheel_rpm <= MOTOR_SPEED_LIMIT_RPM);
         return 0;
     }
     if (!strcmp(argv[1], "stop_protocol")) {

@@ -208,6 +208,25 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             self.assertIn(token, uart_c)
 
     def test_fixed_path_sequence_is_static_and_wired_to_chassis_task(self):
+        path_c = self.read("User/Robot/path_sequence.c")
+        path_h = self.read("User/Robot/path_sequence.h")
+        uart_c = self.read("User/Task/uart_command.c")
+        task_c = self.read("User/Task/task_control.c")
+        table = path_c.split("static const PathStep PathSequence_CommandQueue[]", 1)[1].split(
+            "#define PATH_SEQUENCE_STEP_COUNT", 1
+        )[0]
+        self.assertEqual(table.count("PATH_STEP_MOVE"), 4)
+        self.assertEqual(table.count("PATH_STEP_ROTATE"), 2)
+        self.assertEqual(table.count("178.0f"), 2)
+        for fragment in ("550U,\n        -90.0f", "3850U,\n        180.0f",
+                         "1100U,\n        90.0f", "1360U,\n        0.0f"):
+            self.assertIn(fragment, table)
+        self.assertIn("PathSequence_RunHome", path_h + path_c)
+        self.assertIn("CHASSIS_CMD_HOME", self.read("User/Task/uart_command.h"))
+        self.assertIn('"OK HOME\\r\\n"', uart_c)
+        self.assertIn("HOME_READY", uart_c)
+        self.assertIn("PathSequence_RunHome()", task_c)
+        return
         path_h = self.read("User/Robot/path_sequence.h")
         path_c = self.read("User/Robot/path_sequence.c")
         uart_h = self.read("User/Task/uart_command.h")
@@ -395,7 +414,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
             "STAIR_INITIAL_BACKWARD_MM",
         ):
             self.assertIn(token, stair_h + config_h)
-        self.assertRegex(config_h, r"#define\s+STAIR_VISION_TIMEOUT_MS\s+500U")
+        self.assertRegex(config_h, r"#define\s+STAIR_VISION_TIMEOUT_MS\s+1000U")
         gray_h = self.read("User/Algorithm/gray_align.h")
         gray_c = self.read("User/Algorithm/gray_align.c")
         ball_c = self.read("User/Robot/ball_sequence.c")

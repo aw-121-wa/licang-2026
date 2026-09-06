@@ -73,6 +73,17 @@ volatile RoundPillarStatus PathSequence_LastRzStatus = ROUND_PILLAR_OK;
 volatile StairSequenceStatus PathSequence_LastStairStatus = STAIR_SEQUENCE_OK;
 volatile CangkuSequenceStatus PathSequence_LastCangkuStatus = CANGKU_STATUS_OK;
 volatile MotionControlStatus PathSequence_LastMotionStatus = MOTION_STATUS_IDLE;
+static uint8_t PathSequence_HomeReady = 0U;
+
+void PathSequence_InvalidateHome(void)
+{
+    PathSequence_HomeReady = 0U;
+}
+
+uint8_t PathSequence_IsHomeReady(void)
+{
+    return PathSequence_HomeReady;
+}
 
 static void PathSequence_SetStepState(uint32_t step_index)
 {
@@ -99,6 +110,7 @@ static void PathSequence_StopChassis(void)
 static PathSequenceStatus PathSequence_Cancel(void)
 {
     PathSequence_StopChassis();
+    PathSequence_InvalidateHome();
     PathSequence_State = PATH_SEQUENCE_CANCELED;
     PathSequence_LastStatus = PATH_SEQUENCE_STATUS_CANCELED;
     return PATH_SEQUENCE_STATUS_CANCELED;
@@ -107,6 +119,7 @@ static PathSequenceStatus PathSequence_Cancel(void)
 static PathSequenceStatus PathSequence_Fail(PathSequenceStatus status)
 {
     PathSequence_StopChassis();
+    PathSequence_InvalidateHome();
     PathSequence_State = PATH_SEQUENCE_ERROR;
     PathSequence_LastStatus = status;
     return status;
@@ -116,6 +129,32 @@ static uint8_t PathSequence_StopPending(void)
 {
     return ((MotionControl_StopRequested != 0U) ||
             (MotionControl_WasStopped() != 0U)) ? 1U : 0U;
+}
+
+static float PathSequence_InverseMoveAngle(float angle_deg)
+{
+    float inverse = angle_deg + 180.0f;
+
+    if (inverse > 180.0f)
+    {
+        inverse -= 360.0f;
+    }
+    return inverse;
+}
+
+static uint8_t PathSequence_IsHomeReversible(void)
+{
+    uint32_t i;
+
+    for (i = 0U; i < PATH_SEQUENCE_STEP_COUNT; i++)
+    {
+        if ((PathSequence_CommandQueue[i].type != PATH_STEP_MOVE) &&
+            (PathSequence_CommandQueue[i].type != PATH_STEP_ROTATE))
+        {
+            return 0U;
+        }
+    }
+    return 1U;
 }
 
 static uint8_t PathSequence_IsReadyForAction(void)
@@ -141,6 +180,7 @@ PathSequenceStatus PathSequence_Run(void)
 {
     uint32_t i;
 
+    PathSequence_InvalidateHome();
     PathSequence_State = PATH_SEQUENCE_IDLE;
     PathSequence_CurrentStep = 0U;
     PathSequence_LastStatus = PATH_SEQUENCE_OK;
@@ -289,6 +329,81 @@ PathSequenceStatus PathSequence_Run(void)
     PathSequence_StopChassis();
     PathSequence_State = PATH_SEQUENCE_DONE;
     PathSequence_LastStatus = PATH_SEQUENCE_OK;
+    PathSequence_HomeReady = 1U;
+    return PATH_SEQUENCE_OK;
+}
+
+PathSequenceStatus PathSequence_RunHome(void)
+{
+    int32_t i;
+
+    if ((PathSequence_HomeReady == 0U) ||
+        (PathSequence_StopPending() != 0U))
+    {
+        return PathSequence_Fail(PATH_SEQUENCE_ERROR_HOME_NOT_READY);
+    }
+    if (PathSequence_IsHomeReversible() == 0U)
+    {
+        return PathSequence_Fail(PATH_SEQUENCE_ERROR_HOME_UNSUPPORTED);
+    }
+
+    PathSequence_LastStatus = PATH_SEQUENCE_OK;
+    PathSequence_LastMotionStatus = MOTION_STATUS_IDLE;
+
+    for (i = (int32_t)PATH_SEQUENCE_STEP_COUNT - 1; i >= 0; i--)
+    {
+        const PathStep *step = &PathSequence_CommandQueue[i];
+
+        PathSequence_CurrentStep =
+            (uint8_t)((int32_t)PATH_SEQUENCE_STEP_COUNT - 1 - i);
+        if (step->type == PATH_STEP_MOVE)
+        {
+            PathSequence_State = PATH_SEQUENCE_HOME_MOVE;
+            PathSequence_LastMotionStatus =
+                MotionControl_MovePolarSegmentMm(
+                    step->distance_mm,
+                    PathSequence_InverseMoveAngle(step->angle_deg),
+                    0.0f,
+                    step->cruise_rpm,
+                    0.0f);
+            if (MotionControl_WasStopped() != 0U)
+            {
+                return PathSequence_Cancel();
+            }
+            if (PathSequence_LastMotionStatus >= MOTION_ERROR_IMU_STARTUP)
+            {
+                return PathSequence_Fail(PATH_SEQUENCE_ERROR_MOTION);
+            }
+        }
+        else if (step->type == PATH_STEP_ROTATE)
+        {
+            PathSequence_State = PATH_SEQUENCE_HOME_ROTATE;
+            PathSequence_LastMotionStatus =
+                MotionControl_RotateDeg(-step->angle_deg);
+            if (MotionControl_WasStopped() != 0U)
+            {
+                return PathSequence_Cancel();
+            }
+            if (PathSequence_LastMotionStatus >= MOTION_ERROR_IMU_STARTUP)
+            {
+                return PathSequence_Fail(PATH_SEQUENCE_ERROR_ROTATE);
+            }
+        }
+        else
+        {
+            return PathSequence_Fail(PATH_SEQUENCE_ERROR_HOME_UNSUPPORTED);
+        }
+
+        if (PathSequence_StopPending() != 0U)
+        {
+            return PathSequence_Cancel();
+        }
+    }
+
+    PathSequence_StopChassis();
+    PathSequence_State = PATH_SEQUENCE_HOME_DONE;
+    PathSequence_LastStatus = PATH_SEQUENCE_OK;
+    PathSequence_InvalidateHome();
     return PATH_SEQUENCE_OK;
 }
 
@@ -301,6 +416,9 @@ const char *PathSequence_StateName(PathSequenceState state)
     case PATH_SEQUENCE_BACK3850:      return "BACK3850";
     case PATH_SEQUENCE_LEFT_1100:     return "LEFT_1100";
     case PATH_SEQUENCE_F1360:         return "F1360";
+    case PATH_SEQUENCE_HOME_MOVE:     return "HOME_MOVE";
+    case PATH_SEQUENCE_HOME_ROTATE:   return "HOME_ROTATE";
+    case PATH_SEQUENCE_HOME_DONE:     return "HOME_DONE";
     case PATH_SEQUENCE_LF20_1800:     return "LF20_1800";
     case PATH_SEQUENCE_F2300:         return "F2300";
     case PATH_SEQUENCE_ROTATE1_178:   return "ROTATE1_178";
@@ -333,6 +451,8 @@ const char *PathSequence_StatusName(PathSequenceStatus status)
     case PATH_SEQUENCE_ERROR_SERVO:    return "SERVO";
     case PATH_SEQUENCE_ERROR_STAIR:    return "STAIR";
     case PATH_SEQUENCE_ERROR_CANGKU:   return "CANGKU";
+    case PATH_SEQUENCE_ERROR_HOME_NOT_READY: return "HOME_NOT_READY";
+    case PATH_SEQUENCE_ERROR_HOME_UNSUPPORTED: return "HOME_UNSUPPORTED";
     default:                           return "UNKNOWN";
     }
 }

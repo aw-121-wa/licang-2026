@@ -36,6 +36,9 @@ typedef enum
     PATH_SEQUENCE_BACK3850,
     PATH_SEQUENCE_LEFT_1100,
     PATH_SEQUENCE_F1360,
+    PATH_SEQUENCE_HOME_MOVE,
+    PATH_SEQUENCE_HOME_ROTATE,
+    PATH_SEQUENCE_HOME_DONE,
 
     PATH_SEQUENCE_LF20_1800,
     PATH_SEQUENCE_F2300,
@@ -68,7 +71,9 @@ typedef enum
     PATH_SEQUENCE_ERROR_RZ,
     PATH_SEQUENCE_ERROR_SERVO,
     PATH_SEQUENCE_ERROR_STAIR,
-    PATH_SEQUENCE_ERROR_CANGKU
+    PATH_SEQUENCE_ERROR_CANGKU,
+    PATH_SEQUENCE_ERROR_HOME_NOT_READY,
+    PATH_SEQUENCE_ERROR_HOME_UNSUPPORTED
 } PathSequenceStatus;
 
 extern volatile PathSequenceState PathSequence_State;
@@ -81,6 +86,9 @@ extern volatile CangkuSequenceStatus PathSequence_LastCangkuStatus;
 extern volatile MotionControlStatus PathSequence_LastMotionStatus;
 
 PathSequenceStatus PathSequence_Run(void);
+PathSequenceStatus PathSequence_RunHome(void);
+void PathSequence_InvalidateHome(void);
+uint8_t PathSequence_IsHomeReady(void);
 const char *PathSequence_StateName(PathSequenceState state);
 const char *PathSequence_StatusName(PathSequenceStatus status);
 

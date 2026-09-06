@@ -101,13 +101,22 @@ void StartChassisTask(void *argument)
         continue;
       }
 
+      if ((command.type != CHASSIS_CMD_PATH) &&
+          (command.type != CHASSIS_CMD_HOME) &&
+          (command.type != CHASSIS_CMD_GRAB))
+      {
+        PathSequence_InvalidateHome();
+      }
+
       if (command.type == CHASSIS_CMD_ROTATE)
       {
         result = MotionControl_RotateDeg(command.angle_deg);
       }
-      else if (command.type == CHASSIS_CMD_PATH)
+      else if ((command.type == CHASSIS_CMD_PATH) ||
+               (command.type == CHASSIS_CMD_HOME))
       {
-        path_result = PathSequence_Run();
+        path_result = (command.type == CHASSIS_CMD_PATH) ?
+                      PathSequence_Run() : PathSequence_RunHome();
         if ((path_result == PATH_SEQUENCE_OK) ||
             (path_result == PATH_SEQUENCE_STATUS_CANCELED))
         {
@@ -164,6 +173,11 @@ void StartChassisTask(void *argument)
         {
           /* PATH keeps the servo failure distinct; the command API exposes the UART fault class. */
           result = MOTION_ERROR_MOTOR_UART;
+        }
+        else if ((path_result == PATH_SEQUENCE_ERROR_HOME_NOT_READY) ||
+                 (path_result == PATH_SEQUENCE_ERROR_HOME_UNSUPPORTED))
+        {
+          result = MOTION_ERROR_INVALID_ARGUMENT;
         }
         else
         {
@@ -305,11 +319,16 @@ void StartChassisTask(void *argument)
       {
         float angle_deg = 0.0f;
         float cruise_rpm = MOTION_CRUISE_RPM;
+        float wheel_limit_rpm = (float)MOTOR_SPEED_LIMIT_RPM;
 
         switch (command.type)
         {
-        case CHASSIS_CMD_FORWARD:     angle_deg = 0.0f;   break;
-        case CHASSIS_CMD_BACKWARD:    angle_deg = 180.0f; break;
+        case CHASSIS_CMD_FORWARD:     angle_deg = 0.0f;
+                                      cruise_rpm = MOTION_LONGITUDINAL_CRUISE_RPM;
+                                      wheel_limit_rpm = (float)MOTOR_LONGITUDINAL_SPEED_LIMIT_RPM; break;
+        case CHASSIS_CMD_BACKWARD:    angle_deg = 180.0f;
+                                      cruise_rpm = MOTION_LONGITUDINAL_CRUISE_RPM;
+                                      wheel_limit_rpm = (float)MOTOR_LONGITUDINAL_SPEED_LIMIT_RPM; break;
         case CHASSIS_CMD_LEFT:        angle_deg = 90.0f;  break;
         case CHASSIS_CMD_RIGHT:       angle_deg = -90.0f; break;
         case CHASSIS_CMD_LEFT_FRONT:  angle_deg = command.angle_deg;
@@ -322,8 +341,9 @@ void StartChassisTask(void *argument)
                                       cruise_rpm = MOTION_DIAGONAL_CRUISE_RPM; break;
         default:                      angle_deg = 0.0f; break;
         }
-        result = MotionControl_MovePolarSegmentMm(
-            command.distance_mm, angle_deg, 0.0f, cruise_rpm, 0.0f);
+        result = MotionControl_MovePolarSegmentMmWithWheelLimit(
+            command.distance_mm, angle_deg, 0.0f, cruise_rpm, 0.0f,
+            wheel_limit_rpm);
       }
       ChassisCommand_LastStatus = result;
       if ((result < MOTION_ERROR_IMU_STARTUP) ||

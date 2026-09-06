@@ -134,7 +134,8 @@ class CangkuSequenceContractTest(unittest.TestCase):
         table = path_c.split(
             "static const PathStep PathSequence_CommandQueue[]", 1
         )[1].split("#define PATH_SEQUENCE_STEP_COUNT", 1)[0]
-        self.assertLess(table.index("/* STEP 11"), table.index("/* STEP 12"))
+        self.assertEqual(table.count("/* STEP"), 6)
+        self.assertNotIn("PATH_STEP_CANGKU", table)
 
 
 if __name__ == "__main__":
