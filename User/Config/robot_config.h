@@ -20,9 +20,9 @@
 /* Measured: the nominal positive wheel rotation turns this chassis clockwise. */
 #define MOTION_OMEGA_TO_WHEEL_SIGN          (-1.0f)
 /* Forward and backward UART commands only. */
-#define MOTION_LONGITUDINAL_CRUISE_RPM    640.0f
+#define MOTION_LONGITUDINAL_CRUISE_RPM    320.0f
 /* Pure lateral translation remains at the existing tuned speed. */
-#define MOTION_CRUISE_RPM          400.0f
+#define MOTION_CRUISE_RPM          360.0f
 /* Diagonal translation remains unchanged. */
 #define MOTION_DIAGONAL_CRUISE_RPM 300.0f
 #define LATERAL_FORWARD_COMPENSATION       0.0f
