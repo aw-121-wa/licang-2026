@@ -52,8 +52,6 @@ static GrayAlignStatus GrayAlign_RunInternal(uint32_t timeout_ms,
         (void)GrayAlign_Stop();
         return GRAY_ALIGN_ERROR_IMU;
     }
-    MotionControl_ResetHeadingReference();
-
     for (;;)
     {
         uint32_t now = HAL_GetTick();
@@ -97,7 +95,6 @@ static GrayAlignStatus GrayAlign_RunInternal(uint32_t timeout_ms,
             }
             if ((uint32_t)(now - stable_since) >= GRAY_ALIGN_STABLE_MS)
             {
-                MotionControl_ResetHeadingReference();
                 return GRAY_ALIGN_OK;
             }
         }

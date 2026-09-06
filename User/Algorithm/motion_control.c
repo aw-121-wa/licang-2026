@@ -38,6 +38,7 @@ volatile uint8_t MotionControl_StopRequested = 0U;
 volatile uint8_t MotionControl_StoppedByRequest = 0U;
 volatile float MotionControl_HeadingErrorDeg = 0.0f;
 volatile float MotionControl_HeadingCorrectionRpm = 0.0f;
+volatile float MotionControl_HeadingTargetDeg = 0.0f;
 volatile uint8_t MotionControl_ImuHeadingHoldActive = 0U;
 volatile uint32_t MotionControl_PeriodOverrunCount = 0U;
 volatile float MotionControl_TargetAngleDeg = 0.0f;
@@ -63,6 +64,7 @@ static float previous_heading_error = 0.0f;
 static float heading_rate_deg_s;
 static uint32_t heading_sample_tick;
 static uint8_t heading_sample_valid;
+static uint8_t motion_heading_target_valid;
 
 /* Applied command velocity, not encoder feedback. Updated only on successful sync. */
 static float applied_forward_rpm;
@@ -101,13 +103,32 @@ static float Motion_Approach(float value, float target, float step)
     return (value - step > target) ? value - step : target;
 }
 
+static void MotionControl_ResetHeadingControllerState(void)
+{
+    previous_heading_error = 0.0f;
+    heading_rate_deg_s = 0.0f;
+    heading_sample_valid = 0U;
+    MotionControl_HeadingErrorDeg = 0.0f;
+    MotionControl_HeadingCorrectionRpm = 0.0f;
+}
+
 static float Motion_HeadingCorrection(float translation_rpm, uint8_t lateral, float minimum_limit)
 {
     float error;
     uint32_t sample_tick;
-    uint32_t primask = __get_PRIMASK();
+    uint32_t primask;
+
+    if ((MotionControl_ImuHeadingHoldActive == 0U) ||
+        (motion_heading_target_valid == 0U))
+    {
+        MotionControl_HeadingErrorDeg = 0.0f;
+        MotionControl_HeadingCorrectionRpm = 0.0f;
+        return 0.0f;
+    }
+
+    primask = __get_PRIMASK();
     __disable_irq();
-    error = -Jy61P_GetContinuousYaw();
+    error = MotionControl_HeadingTargetDeg - Jy61P_GetContinuousYaw();
     sample_tick = Jy61P_GetLastTick();
     if (primask == 0U) { __enable_irq(); }
     float correction;
@@ -193,8 +214,8 @@ static HAL_StatusTypeDef MotionControl_SetBodySpeedWithScale(
         return status;
     }
 
-    if ((Motion_Absolute(MotionControl_ForwardUnit) < Motion_Absolute(MotionControl_LeftUnit)) &&
-        (Motion_Absolute(MotionControl_LeftUnit) > 0.0001f))
+    if ((Motion_Absolute(forward_rpm) < Motion_Absolute(left_rpm)) &&
+        (Motion_Absolute(left_rpm) > 0.0001f))
     {
         omega_rpm *= HEADING_LATERAL_OMEGA_SCALE;
     }
@@ -253,12 +274,30 @@ HAL_StatusTypeDef MotionControl_SetBodySpeed(float forward_rpm,
 
 void MotionControl_ResetHeadingReference(void)
 {
-    Jy61P_ResetContinuousYaw();
-    previous_heading_error = 0.0f;
-    heading_rate_deg_s = 0.0f;
-    heading_sample_valid = 0U;
-    MotionControl_HeadingErrorDeg = 0.0f;
-    MotionControl_HeadingCorrectionRpm = 0.0f;
+    MotionControl_CaptureHeadingTarget();
+}
+
+void MotionControl_CaptureHeadingTarget(void)
+{
+    if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) == 0U)
+    {
+        return;
+    }
+    MotionControl_HeadingTargetDeg = Jy61P_GetContinuousYaw();
+    motion_heading_target_valid = 1U;
+    MotionControl_ResetHeadingControllerState();
+}
+
+void MotionControl_SetHeadingTarget(float heading_deg)
+{
+    MotionControl_HeadingTargetDeg = heading_deg;
+    motion_heading_target_valid = 1U;
+    MotionControl_ResetHeadingControllerState();
+}
+
+float MotionControl_GetHeadingTarget(void)
+{
+    return MotionControl_HeadingTargetDeg;
 }
 
 /* Returns 0 when no request is pending, 1 when stopped, and 2 on UART error. */
@@ -312,11 +351,9 @@ void MotionControl_Init(UART_HandleTypeDef *motor_uart,
     applied_omega_rpm = 0.0f;
     MotorControl_Init(motor_uart);
     Jy61P_Init(imu_uart);
-    previous_heading_error = 0.0f;
-    heading_rate_deg_s = 0.0f;
-    heading_sample_valid = 0U;
-    MotionControl_HeadingErrorDeg = 0.0f;
-    MotionControl_HeadingCorrectionRpm = 0.0f;
+    MotionControl_HeadingTargetDeg = 0.0f;
+    motion_heading_target_valid = 0U;
+    MotionControl_ResetHeadingControllerState();
     MotionControl_ImuHeadingHoldActive = 0U;
     MotionControl_PeriodOverrunCount = 0U;
     MotionControl_TargetAngleDeg = 0.0f;
@@ -678,6 +715,7 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
 {
     uint32_t start_tick;
     uint32_t next_tick;
+    float rotate_start_heading;
 
     if ((Motion_Absolute(angle_deg) <= 0.0f) ||
         (Motion_Absolute(angle_deg) > ROTATE_MAX_ANGLE_DEG))
@@ -691,15 +729,16 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
         return MotionControl_State;
     }
 
-    /* Each rotation is measured relative to the heading at its start. */
+    /* Each rotation uses the global continuous yaw at its start. */
+    rotate_start_heading = Jy61P_GetContinuousYaw();
     MotionControl_State = MOTION_STATUS_ROTATING;
-    MotionControl_RotateTargetDeg = angle_deg;
-    MotionControl_RotateCurrentDeg = 0.0f;
+    MotionControl_RotateTargetDeg = rotate_start_heading + angle_deg;
+    MotionControl_RotateCurrentDeg = rotate_start_heading;
     MotionControl_RotateErrorDeg = angle_deg;
     MotionControl_RotateCommandRpm = 0.0f;
     MotionControl_RotateSettleCount = 0U;
     MotionControl_RotateElapsedMs = 0U;
-    MotionControl_ResetHeadingReference();
+    MotionControl_ResetHeadingControllerState();
     MotionControl_BaseRpm = 0.0f;
     MotionControl_EffectiveBaseRpm = 0.0f;
     MotionControl_WheelScale = 1.0f;
@@ -722,7 +761,7 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
         {
             if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) != 0U)
             {
-                MotionControl_ResetHeadingReference();
+                MotionControl_CaptureHeadingTarget();
             }
             MotionControl_RotateTargetDeg = 0.0f;
             MotionControl_RotateCurrentDeg = 0.0f;
@@ -743,7 +782,7 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
             MotionControl_State = Motion_SegmentFail(MOTION_ERROR_ROTATE_TIMEOUT);
             if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) != 0U)
             {
-                MotionControl_ResetHeadingReference();
+                MotionControl_CaptureHeadingTarget();
             }
             MotionControl_RotateTargetDeg = 0.0f;
             MotionControl_RotateCurrentDeg = 0.0f;
@@ -766,14 +805,19 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
             if (MotionControl_SetBodySpeedWithScale(0.0f, 0.0f, 0.0f,
                                                     &wheel_scale) != HAL_OK)
             {
-                return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+                MotionControl_State = Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+                if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) != 0U)
+                {
+                    MotionControl_CaptureHeadingTarget();
+                }
+                return MotionControl_State;
             }
             MotionControl_WheelScale = wheel_scale;
             MotionControl_RotateSettleCount++;
             if (MotionControl_RotateSettleCount >= ROTATE_SETTLE_CYCLES)
             {
-                /* The settled heading becomes the reference for the next move. */
-                MotionControl_ResetHeadingReference();
+                /* Keep the theoretical target to avoid accumulating stop error. */
+                MotionControl_SetHeadingTarget(MotionControl_RotateTargetDeg);
                 MotionControl_RotateTargetDeg = 0.0f;
                 MotionControl_RotateCurrentDeg = 0.0f;
                 MotionControl_RotateErrorDeg = 0.0f;
@@ -831,7 +875,12 @@ MotionControlStatus MotionControl_RotateDeg(float angle_deg)
                     &wheel_scale) != HAL_OK)
             {
                 MotionControl_RotateCommandRpm = 0.0f;
-                return Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+                MotionControl_State = Motion_SegmentFail(MOTION_ERROR_MOTOR_UART);
+                if (Jy61P_IsOnline(GYRO_ONLINE_TIMEOUT_MS) != 0U)
+                {
+                    MotionControl_CaptureHeadingTarget();
+                }
+                return MotionControl_State;
             }
             MotionControl_WheelScale = wheel_scale;
         }
@@ -866,13 +915,13 @@ MotionControlStatus MotionControl_PrepareForMove(void)
 
     if (MotionControl_ImuHeadingHoldActive != 0U)
     {
-        MotionControl_ResetHeadingReference();
+        Jy61P_ResetContinuousYaw();
+        MotionControl_SetHeadingTarget(0.0f);
     }
     else
     {
-        previous_heading_error = 0.0f;
-    heading_rate_deg_s = 0.0f;
-    heading_sample_valid = 0U;
+        motion_heading_target_valid = 0U;
+        MotionControl_ResetHeadingControllerState();
     }
     HAL_Delay(100U);
 

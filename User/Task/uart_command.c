@@ -256,14 +256,15 @@ static void UartCommand_FormatNumber(char *buffer, size_t size, float value,
 
 static void UartCommand_SendStatus(void)
 {
-    char response[560];
+    char response[600];
     const char *state;
-    char numbers[5][24];
+    char numbers[6][24];
     UartCommand_FormatNumber(numbers[0], sizeof(numbers[0]), Jy61P_GetContinuousYaw(), 2);
-    UartCommand_FormatNumber(numbers[1], sizeof(numbers[1]), MotionControl_HeadingErrorDeg, 2);
-    UartCommand_FormatNumber(numbers[2], sizeof(numbers[2]), MotionControl_HeadingCorrectionRpm, 2);
-    UartCommand_FormatNumber(numbers[3], sizeof(numbers[3]), MotionControl_TraveledMm, 0);
-    UartCommand_FormatNumber(numbers[4], sizeof(numbers[4]), MotionControl_TargetDistanceMm, 0);
+    UartCommand_FormatNumber(numbers[1], sizeof(numbers[1]), MotionControl_GetHeadingTarget(), 2);
+    UartCommand_FormatNumber(numbers[2], sizeof(numbers[2]), MotionControl_HeadingErrorDeg, 2);
+    UartCommand_FormatNumber(numbers[3], sizeof(numbers[3]), MotionControl_HeadingCorrectionRpm, 2);
+    UartCommand_FormatNumber(numbers[4], sizeof(numbers[4]), MotionControl_TraveledMm, 0);
+    UartCommand_FormatNumber(numbers[5], sizeof(numbers[5]), MotionControl_TargetDistanceMm, 0);
 
     if (ChassisCommand_Busy != 0U)
     {
@@ -280,7 +281,7 @@ static void UartCommand_SendStatus(void)
     }
     (void)snprintf(response, sizeof(response),
                    "STATE=%s\r\nIMU=%s\r\nYAW=%s\r\n"
-                   "HEAD_ERR=%s\r\nHEAD_CORR=%s\r\n"
+                   "HEAD_TARGET=%s\r\nHEAD_ERR=%s\r\nHEAD_CORR=%s\r\n"
                    "DIST=%s\r\nTARGET=%s\r\nLAST=%u\r\n"
                    "BALL_STATE=%s\r\nBALL_ROUND=%u\r\n"
                    "PATH_STATE=%s\r\nPATH_STEP=%u\r\nPATH_LAST=%s\r\n"
@@ -291,7 +292,7 @@ static void UartCommand_SendStatus(void)
                    "TURNTABLE_STATE=%s\r\nTURNTABLE_LAST=%s\r\n",
                    state,
                    (Jy61P_IsOnline(500U) != 0U) ? "ONLINE" : "OFFLINE",
-                   numbers[0], numbers[1], numbers[2], numbers[3], numbers[4],
+                   numbers[0], numbers[1], numbers[2], numbers[3], numbers[4], numbers[5],
                    (unsigned)ChassisCommand_LastStatus,
                    BallSequence_StateName(BallSequence_State),
                    BallSequence_Round,

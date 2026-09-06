@@ -105,6 +105,8 @@ int main(int argc, char **argv)
     if (!strcmp(argv[1], "hard_heading")) { yaw_test = 1; yaw = 3; }
     MotionControl_Init(&h, &h);
     MotionControl_ImuHeadingHoldActive = 1;
+    /* Model MotionControl_PrepareForMove() after the mocked IMU is online. */
+    MotionControl_SetHeadingTarget(0.0f);
     if (!strcmp(argv[1], "heading_damping")) {
         manual_sample = 1;
         tick = sample_tick = 100;
@@ -122,12 +124,46 @@ int main(int argc, char **argv)
         assert(fabsf(MotionControl_GetHeadingCorrection(450)) < 0.01f);
         return 0;
     }
+    if (!strcmp(argv[1], "global_heading")) {
+        yaw = 12.0f;
+        MotionControl_SetHeadingTarget(15.0f);
+        assert(fabsf(MotionControl_GetHeadingTarget() - 15.0f) < 0.01f);
+        assert(fabsf(MotionControl_GetHeadingCorrection(450) - 5.2f) < 0.01f);
+        MotionControl_ResetHeadingReference();
+        assert(fabsf(yaw - 12.0f) < 0.01f);
+        assert(fabsf(MotionControl_GetHeadingTarget() - 12.0f) < 0.01f);
+        assert(fabsf(MotionControl_GetHeadingCorrection(450)) < 0.01f);
+        return 0;
+    }
     if (!strcmp(argv[1], "rotate_ccw") || !strcmp(argv[1], "rotate_cw")) {
         float target = !strcmp(argv[1], "rotate_ccw") ? 10.0f : -10.0f;
         yaw_test = 1;
         assert(MotionControl_RotateDeg(target) == MOTION_STATUS_FINISHED);
         assert(fabsf(physical_yaw - target) < 0.9f);
         assert(last_command == 0xFE);
+        return 0;
+    }
+    if (!strcmp(argv[1], "rotate_sequence")) {
+        float second_start_yaw;
+
+        yaw_test = 1;
+        assert(MotionControl_RotateDeg(10.0f) == MOTION_STATUS_FINISHED);
+        assert(fabsf(MotionControl_GetHeadingTarget() - 10.0f) < 0.01f);
+        second_start_yaw = yaw;
+        assert(MotionControl_RotateDeg(10.0f) == MOTION_STATUS_FINISHED);
+        assert(fabsf(MotionControl_GetHeadingTarget() -
+                     (second_start_yaw + 10.0f)) < 0.01f);
+        assert(fabsf(yaw - MotionControl_GetHeadingTarget()) < 0.9f);
+        return 0;
+    }
+    if (!strcmp(argv[1], "active_omega")) {
+        MotionControl_ForwardUnit = 0.0f;
+        MotionControl_LeftUnit = 1.0f;
+        assert(MotionControl_SetBodySpeed(1.0f, 0.0f, 10.0f) == HAL_OK);
+        assert(fabsf(MotionControl_LastFrontLeftRpm - 11.0f) < 0.01f);
+        assert(fabsf(MotionControl_LastFrontRightRpm + 9.0f) < 0.01f);
+        assert(fabsf(MotionControl_LastRearLeftRpm - 11.0f) < 0.01f);
+        assert(fabsf(MotionControl_LastRearRightRpm + 9.0f) < 0.01f);
         return 0;
     }
     if (!strcmp(argv[1], "stop_protocol")) {

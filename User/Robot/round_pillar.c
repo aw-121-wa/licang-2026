@@ -184,38 +184,57 @@ static RoundPillarStatus RoundPillar_HandleDetectedBall(
     return ROUND_PILLAR_OK;
 }
 
+static RoundPillarStatus RoundPillar_AbortOrbit(RoundPillarStatus status)
+{
+    (void)RoundPillar_Stop();
+    if (Jy61P_IsOnline(500U) != 0U)
+    {
+        MotionControl_CaptureHeadingTarget();
+    }
+    return status;
+}
+
 static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
 {
     uint32_t orbit_start_tick;
     uint32_t handling_start_tick;
     float current_yaw;
+    float orbit_start_yaw;
+    float orbit_target_yaw;
+    uint8_t reached;
     uint8_t grab_count = 0U;
     RoundPillarStatus status;
 
-    MotionControl_ResetHeadingReference();
+    orbit_start_yaw = Jy61P_GetContinuousYaw();
+    orbit_target_yaw = orbit_start_yaw + RZ_ORBIT_TARGET_DEG;
     orbit_start_tick = HAL_GetTick();
     MotionControl_State = MOTION_STATUS_ROTATING;
     if (MaixCamLink_SendRequest(MAIXCAM_COLOR_RED) != MAIXCAM_LINK_OK)
     {
-        return ROUND_PILLAR_ERROR_MAIX_UART;
+        return RoundPillar_AbortOrbit(ROUND_PILLAR_ERROR_MAIX_UART);
     }
-    current_yaw = Jy61P_GetContinuousYaw();
 
-    while (current_yaw < RZ_ORBIT_TARGET_DEG)
+    for (;;)
     {
         status = RoundPillar_CheckStopAndImu();
         if (status != ROUND_PILLAR_OK)
         {
-            return status;
+            return RoundPillar_AbortOrbit(status);
         }
         if ((uint32_t)(HAL_GetTick() - orbit_start_tick) >=
             RZ_ORBIT_TIMEOUT_MS)
         {
-            (void)RoundPillar_Stop();
-            return ROUND_PILLAR_ERROR_ORBIT_TIMEOUT;
+            return RoundPillar_AbortOrbit(ROUND_PILLAR_ERROR_ORBIT_TIMEOUT);
         }
 
         current_yaw = Jy61P_GetContinuousYaw();
+        reached = (RZ_ORBIT_TARGET_DEG >= 0.0f) ?
+                  (current_yaw >= orbit_target_yaw) :
+                  (current_yaw <= orbit_target_yaw);
+        if (reached != 0U)
+        {
+            break;
+        }
         if ((grab_count < RZ_GRAB_COUNT) &&
             (MaixCamLink_TakeReply() != 0U))
         {
@@ -224,37 +243,32 @@ static RoundPillarStatus RoundPillar_OrbitAndGrab(void)
             orbit_start_tick += HAL_GetTick() - handling_start_tick;
             if (status != ROUND_PILLAR_OK)
             {
-                return status;
+                return RoundPillar_AbortOrbit(status);
             }
             continue;
-        }
-        if (current_yaw >= RZ_ORBIT_TARGET_DEG)
-        {
-            break;
         }
         if (MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,
                                        0.0f,
                                        RZ_ORBIT_OMEGA_RPM) != HAL_OK)
         {
-            (void)RoundPillar_Stop();
-            return ROUND_PILLAR_ERROR_MOTOR;
+            return RoundPillar_AbortOrbit(ROUND_PILLAR_ERROR_MOTOR);
         }
         osDelay(RZ_PERIOD_MS);
     }
 
     if (RoundPillar_Stop() != HAL_OK)
     {
-        return ROUND_PILLAR_ERROR_MOTOR;
+        return RoundPillar_AbortOrbit(ROUND_PILLAR_ERROR_MOTOR);
     }
     status = RoundPillar_WaitSettled(RZ_STOP_SETTLE_MS);
     if (status != ROUND_PILLAR_OK)
     {
-        return status;
+        return RoundPillar_AbortOrbit(status);
     }
 
     /* Reaching RZ_ORBIT_TARGET_DEG is the completion condition.  RZ_GRAB_COUNT
        only limits how many detected balls this orbit may process. */
-    MotionControl_ResetHeadingReference();
+    MotionControl_SetHeadingTarget(orbit_target_yaw);
     MotionControl_State = MOTION_STATUS_FINISHED;
     return ROUND_PILLAR_OK;
 }
@@ -270,7 +284,6 @@ RoundPillarStatus RoundPillar_Run(void)
         return ROUND_PILLAR_ERROR_IMU;
     }
 
-    MotionControl_ResetHeadingReference();
     status = RoundPillar_Approach();
     if (status != ROUND_PILLAR_OK)
     {

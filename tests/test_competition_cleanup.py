@@ -40,9 +40,14 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("MotionControl_SetBodySpeed", motion_h)
         self.assertIn("MotionControl_ResetHeadingReference", motion_h)
         self.assertIn("MotionControl_GetHeadingCorrection", motion_h)
+        self.assertIn("MotionControl_CaptureHeadingTarget", motion_h)
+        self.assertIn("MotionControl_SetHeadingTarget", motion_h)
+        self.assertIn("MotionControl_GetHeadingTarget", motion_h)
+        self.assertIn("MotionControl_HeadingTargetDeg", motion_h)
         self.assertIn("LATERAL_FORWARD_COMPENSATION", motion_c)
         self.assertIn("MotionControl_SetBodySpeed", gray_c)
         self.assertIn("MotionControl_GetHeadingCorrection", gray_c)
+        self.assertNotIn("MotionControl_ResetHeadingReference", gray_c)
         self.assertIn("MotionControl_SetBodySpeed", rz_c)
         self.assertIn("MotionControl_GetHeadingCorrection", rz_c)
         self.assertNotIn("MecanumKinematics_Solve", gray_c + rz_c)
@@ -124,7 +129,10 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("#include \"maixcam_link.h\"", rz_c)
         self.assertIn("MaixCamLink_SendRequest(MAIXCAM_COLOR_RED)", rz_c)
         self.assertIn("MaixCamLink_TakeReply()", rz_c)
-        self.assertIn("while (current_yaw < RZ_ORBIT_TARGET_DEG)", rz_c)
+        self.assertIn("orbit_start_yaw", rz_c)
+        self.assertIn("orbit_target_yaw", rz_c)
+        self.assertIn("orbit_target_yaw = orbit_start_yaw + RZ_ORBIT_TARGET_DEG", rz_c)
+        self.assertIn("RZ_ORBIT_TARGET_DEG >= 0.0f", rz_c)
         self.assertIn(
             "MotionControl_SetBodySpeed(-RZ_ORBIT_FORWARD_RPM,\n"
             "                                       0.0f,\n"
@@ -157,7 +165,11 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         self.assertIn("RoundPillar_HandleDetectedBall(&grab_count)", orbit_body)
         self.assertIn("grab_count < RZ_GRAB_COUNT", orbit_body)
         self.assertNotIn("grab_count != RZ_GRAB_COUNT", orbit_body)
-        self.assertIn("MotionControl_ResetHeadingReference();", orbit_body)
+        self.assertNotIn("MotionControl_ResetHeadingReference", orbit_body)
+        self.assertIn("MotionControl_SetHeadingTarget(orbit_target_yaw);", orbit_body)
+        abort_start = rz_c.index("RoundPillar_AbortOrbit")
+        abort_end = rz_c.index("RoundPillar_OrbitAndGrab", abort_start)
+        self.assertIn("MotionControl_CaptureHeadingTarget();", rz_c[abort_start:abort_end])
         self.assertIn("MotionControl_State = MOTION_STATUS_FINISHED;", orbit_body)
         self.assertIn("return ROUND_PILLAR_OK;", orbit_body)
         self.assertNotIn("MAIXCAM_REQUEST_TIMEOUT_MS", orbit_body)
@@ -192,7 +204,7 @@ class CompetitionCleanupContractTest(unittest.TestCase):
         for token in ("MAIX_TX", "ARM_MOTION_COUNT", "WAREHOUSE_G2_DONE"):
             self.assertNotIn(token, uart_c)
         self.assertIn("PATH\\r\\n", uart_c)
-        for token in ("HEAD_ERR", "HEAD_CORR", "DIST=", "TARGET=", "BALL_STATE", "WAREHOUSE_BALL"):
+        for token in ("HEAD_TARGET", "HEAD_ERR", "HEAD_CORR", "DIST=", "TARGET=", "BALL_STATE", "WAREHOUSE_BALL"):
             self.assertIn(token, uart_c)
 
     def test_fixed_path_sequence_is_static_and_wired_to_chassis_task(self):

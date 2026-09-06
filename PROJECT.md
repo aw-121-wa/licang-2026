@@ -33,7 +33,7 @@
 - `Core/`：CubeMX 系统、时钟、GPIO、串口和 FreeRTOS 初始化。
 - `User/BSP/motor_control.*`：张大头驱动协议、地址和安装方向、`F6/FD` 命令、四轴缓存与同步触发。
 - `User/Algorithm/mecanum_kinematics.*`：不依赖 HAL 的麦轮运动学解算和等比例限幅。
-- `User/Algorithm/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、任意角度平移、故障停车和动作序列。
+- `User/Algorithm/motion_control.*`：速度时间积分距离、软件加减速、20 ms实时航向 PD、全局航向目标、任意角度平移、故障停车和动作序列。
 - `User/Device/imu/jy61p.*`：JY60/JY61P 标准角度帧解析、连续航向角和串口中断接收；文件名及 `Jy61P_*` 接口保留用于兼容历史工程。
 - `User/Task/uart_command.*`：UART5 ASCII 命令接收、解析、精简状态查询和 FreeRTOS 命令投递。
 - `User/BSP/cangku_motor.*`：仓库转盘的单电机 Emm V5.0/x42 协议层；只操作 USART1 地址 `0x05`，不与底盘四轮共用状态。
@@ -52,7 +52,7 @@
 - 四台驱动器的 `S_Vel_IS` 已由用户开启；程序直接按0.1 RPM单位编码，100 RPM编码为1000，不在上电时重复修改驱动器配置。
 - 指定距离采用已下发平移RPM和实际时间的软件积分，按75 mm轮径换算，不读取电机返回值。
 - 四个速度命令先缓存，全部发送成功后才发送广播同步触发。
-- 锁头修正每20 ms叠加到麦轮逆解旋转分量，并限制绝对值和相对平移速度比例。
+- 锁头修正每20 ms以 `HeadingTarget - ContinuousYaw` 叠加到麦轮逆解旋转分量，并限制绝对值和相对平移速度比例；前进、横移与 GrayAlign 不改变目标航向。
 - 软件线性加减速用于降低速度模式启停冲击。
 - 距离控制保留剩余距离减速包络：按用户最新要求，加速度由 300 提至 600 RPM/s；常规减速度 120 RPM/s，20 RPM 以下 40 RPM/s。进入 0.5 mm 积分容差后立即广播硬停。
 - 2026-09-05 根据实车回滚反馈，删除定距结束后的 300 ms 航向修正和残余速度软停。所有零车体速度请求使用 USART3 单帧 `00 FE 98 00 6B` 广播立即停止，不逐轮停车、不失能、不追加 FF 同步帧。行驶航向修正随平移速度限幅，保留 30 RPM/s 变化率，但降速时立即收紧限幅，避免低速残留过大修正。
@@ -67,8 +67,8 @@
 - UART5 保留 F/B/L/R、LF/RF/LR/RR、ROT、BALL、GRAB、RZ、STAIR、PATH、STOP、STATUS、HELP。
 - `PATH` 不是动态路径编辑器；它只运行 `User/Robot/path_sequence.c` 中的固定比赛指令表，并以单条 `CHASSIS_CMD_PATH` 占用底盘命令队列。
 - 平移统一使用 `MotionControl_MovePolarSegmentMm()`；纯横移额外使用唯一的 `LATERAL_FORWARD_COMPENSATION` 前后偏差补偿，初值为 `0.0f`。
-- `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `User/Algorithm/motion_control.c` 保留一套。
-- FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和锁头基准建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
+- `MotionControl_SetBodySpeed()` 和 `MotionControl_GetHeadingCorrection()` 是灰度校准、RZ 与普通平移共用的底盘速度/航向接口；航向 PD 参数只在 `User/Algorithm/motion_control.c` 保留一套。主动旋转和绕柱独占 omega，完成后再更新 `HeadingTarget`。
+- FreeRTOS 启动后由 `ChassisTask` 完成 `MotionControl_Init`、IMU 等待、四轮使能和一次全局 ContinuousYaw/HeadingTarget 建立，再等待 UART5 命令；`main.c` 不再直接执行底盘动作。
 - UART5 接收使用单字节 `HAL_UART_Receive_IT()`；UART5 中断只收字节和投递行缓冲，运动命令统一由 `ChassisTask` 执行。Ready、Busy 和 LastStatus 仅作诊断，不拦截入队。
 - 2026-09-05 删除舵机启动失败时底盘任务的永久等待，以及舵机/仓库/转盘状态对指令入队的跨模块拦截；运行中可排队，队列容量仍为 4，满时回复 ERR QUEUE_FULL。OK 表示已入队，不代表完成。
 - STOP 清空待执行队列，保留当前动作的停止请求；只有底盘任务领取 STOP 之后的新命令时才清理旧请求。出队与 STOP 使用代次校验，避免被清空的旧命令开始执行。
@@ -76,10 +76,10 @@
 
 ## UART5 现场 STATUS
 
-- 2026-09-05 修复 GCC newlib-nano 未链接浮点 printf 时 YAW/HEAD_ERR/HEAD_CORR/DIST/TARGET 为空：使用整数格式化输出小数，角度与修正保留两位、距离取整，不依赖 `_printf_float`。非有限或超范围数据输出 INVALID。
+- 2026-09-06 STATUS 增加 `HEAD_TARGET`。GCC newlib-nano 未链接浮点 printf 时 YAW/HEAD_TARGET/HEAD_ERR/HEAD_CORR/DIST/TARGET 仍使用整数格式化输出，角度与修正保留两位、距离取整，不依赖 `_printf_float`。非有限或超范围数据输出 INVALID。
 - 用户已确认 X42S 使用 Emm 固件，保持 8 字节 F6 格式和 S_Vel_IS=Enable 的 0.1 RPM 编码；不是 X 固件的 9 字节 F6。
 
-- `STATUS` 只输出 `STATE`、`IMU`、`YAW`、`HEAD_ERR`、`HEAD_CORR`、`DIST`、`TARGET`、`LAST`、`BALL_STATE`、`BALL_ROUND`、`PATH_STATE`、`PATH_STEP`、`PATH_LAST`、`PATH_BALL_LAST`、`WAREHOUSE_STATE`、`WAREHOUSE_BALL`、`STOP`、`STOPPED`、`STAIR_STATE`、`STAIR_LAST`、`TURNTABLE_STATE` 和 `TURNTABLE_LAST`。
+- `STATUS` 只输出 `STATE`、`IMU`、`YAW`、`HEAD_TARGET`、`HEAD_ERR`、`HEAD_CORR`、`DIST`、`TARGET`、`LAST`、`BALL_STATE`、`BALL_ROUND`、`PATH_STATE`、`PATH_STEP`、`PATH_LAST`、`PATH_BALL_LAST`、`WAREHOUSE_STATE`、`WAREHOUSE_BALL`、`STOP`、`STOPPED`、`STAIR_STATE`、`STAIR_LAST`、`TURNTABLE_STATE` 和 `TURNTABLE_LAST`。
 - MaixCAM、机械臂和转盘的实际错误处理仍保留，但不再为 STATUS 保存或输出仅用于调试的收发计数、动作计数和预计时间统计。
 
 ## 用户工作偏好
@@ -133,7 +133,7 @@
 ## IMU closed-loop in-place rotation (2026-08-25)
 
 - `MotionControl_RotateDeg(angle_deg)` rotates about the chassis centre using the existing mecanum inverse kinematics: positive angle is counter-clockwise/left and negative angle is clockwise/right.
-- Rotation is measured only by `Jy61P_GetContinuousYaw()`; it has no time- or encoder-pulse-based completion estimate. The heading baseline is reset at the start and after a settled successful rotation, so following translation holds the new vehicle heading.
+- Rotation is measured only by `Jy61P_GetContinuousYaw()`; it has no time- or encoder-pulse-based completion estimate. Each target is `start ContinuousYaw + requested angle`; settled success writes that theoretical target into `HeadingTarget`, while STOP or recoverable rotation failure captures the actual current yaw.
 - UART5 accepts `ROT CCW <deg>` / `ROT CW <deg>` (1..360 degrees)；旋转由 `ChassisTask` 直接执行，不再经过路径编辑器。
 - Default parameters are 50 RPM cruise, 15 RPM approach, 8 RPM minimum effective speed, deceleration from 30 degrees, fine control from 10 degrees, 0.8-degree tolerance, five 20-ms settle periods, 250-ms ramp, and 8-s timeout.
 

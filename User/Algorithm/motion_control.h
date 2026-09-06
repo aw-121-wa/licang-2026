@@ -31,6 +31,10 @@ void MotionControl_Init(UART_HandleTypeDef *motor_uart,
 HAL_StatusTypeDef MotionControl_SetBodySpeed(float forward_rpm,
                                               float left_rpm,
                                               float omega_rpm);
+void MotionControl_CaptureHeadingTarget(void);
+void MotionControl_SetHeadingTarget(float heading_deg);
+float MotionControl_GetHeadingTarget(void);
+/* Compatibility API: captures the current heading and never resets IMU yaw. */
 void MotionControl_ResetHeadingReference(void);
 float MotionControl_GetHeadingCorrection(float translation_rpm);
 void MotionControl_RequestStop(void);
@@ -61,6 +65,7 @@ extern volatile uint8_t MotionControl_StopRequested;
 extern volatile uint8_t MotionControl_StoppedByRequest;
 extern volatile float MotionControl_HeadingErrorDeg;
 extern volatile float MotionControl_HeadingCorrectionRpm;
+extern volatile float MotionControl_HeadingTargetDeg;
 extern volatile uint8_t MotionControl_ImuHeadingHoldActive;
 extern volatile uint32_t MotionControl_PeriodOverrunCount;
 extern volatile float MotionControl_TargetAngleDeg;
