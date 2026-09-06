@@ -30,13 +30,15 @@
 #define FORWARD_DISTANCE_GAIN              1.04f
 #define LEFT_DISTANCE_GAIN                 1.04f
 #define MOTION_ACCELERATION_RPM_PER_S     600.0f
-#define MOTION_DECELERATION_RPM_PER_S     160.0f
+#define MOTION_DECELERATION_RPM_PER_S     120.0f
+/* Nominal braking-entry rounding time; 0 disables entry rounding. */
+#define MOTION_DECEL_ENTRY_MS            6000.0f
 #define MOTION_FINAL_DECEL_RPM_PER_S       40.0f
 #define MOTION_FINAL_APPROACH_RPM          20.0f
 #define MOTION_HEADING_SLEW_RPM_PER_S     120.0f
 #define HEADING_KP_FORWARD                 1.85f
-#define HEADING_KD_FORWARD                 0.08f
-#define HEADING_MAX_FORWARD               5.2f
+#define HEADING_KD_FORWARD                 0.15f
+#define HEADING_MAX_FORWARD                5.2f
 #define HEADING_KP_LATERAL                 2.8f
 #define HEADING_KD_LATERAL                 0.85f
 #define HEADING_MAX_LATERAL                8.0f

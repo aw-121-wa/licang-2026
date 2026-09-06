@@ -42,7 +42,7 @@ class ChassisRuntimeTest(unittest.TestCase):
             self.assertEqual(compiled.returncode, 0, compiled.stdout + compiled.stderr)
             for scenario in ("forward", "lateral", "short", "slow", "diagonal", "overrun",
                              "jitter", "wrap", "stop", "offline", "uart", "early",
-                             "sync_fail", "heading", "invalid", "terminal", "brake", "hard_heading", "stop_protocol",
+                             "sync_fail", "heading", "invalid", "terminal", "brake", "hard_heading", "stop_protocol", "slew_forward", "slew_lateral", "entry_forward", "entry_lateral", "entry_backward", "entry_saturated",
                              "rotate_ccw", "rotate_cw", "rotate_sequence", "active_omega", "longitudinal_limit", "lateral_limit", "fast", "heading_damping", "global_heading"):
                 with self.subTest(scenario=scenario):
                     run = subprocess.run([binary, scenario], capture_output=True, text=True, timeout=10)

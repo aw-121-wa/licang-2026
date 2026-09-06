@@ -464,6 +464,8 @@ static MotionControlStatus MotionControl_RunPolarSegment(
     float final_scale = 1.0f;
     float send_time_ms = 20.0f;
     float correction_rpm = applied_omega_rpm;
+    float brake_entry_peak = 0.0f;
+    float brake_entry_width = 0.0f;
     uint32_t last_control_tick;
     uint32_t next_tick;
 
@@ -549,6 +551,32 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         brake_limit = Motion_BrakingSpeed(remaining_mm / wheel_mm_per_rpm_ms,
                                           end_rpm, horizon_ms);
         if (brake_limit < end_rpm) { brake_limit = end_rpm; }
+        /* Round the intersection of the peak-speed cap and distance envelope.
+           The quadratic stays BELOW both caps, reserving distance rather than
+           filtering a late brake command. Its slope joins 0 and 1 continuously.
+           Latch the applied peak once, including wheel saturation; never re-arm
+           from a shrinking peak on each control cycle. */
+        if (brake_entry_width <= 0.0f && MOTION_DECEL_ENTRY_MS > 0.0f)
+        {
+            float peak = applied_forward_rpm * forward_unit + applied_left_rpm * left_unit;
+            float tail = end_rpm > MOTION_FINAL_APPROACH_RPM ? end_rpm : MOTION_FINAL_APPROACH_RPM;
+            float width = MOTION_DECELERATION_RPM_PER_S * MOTION_DECEL_ENTRY_MS / 2000.0f;
+            if (width > (peak - tail) * 0.5f) { width = (peak - tail) * 0.5f; }
+            if (width > 0.1f && brake_limit <= peak + width)
+            {
+                brake_entry_peak = peak;
+                brake_entry_width = width;
+            }
+        }
+        if (brake_entry_width > 0.0f)
+        {
+            float gap = brake_entry_peak + brake_entry_width - brake_limit;
+            if (gap <= 0.0f) { brake_limit = brake_entry_peak; }
+            else if (gap < 2.0f * brake_entry_width)
+            {
+                brake_limit = brake_entry_peak - gap * gap / (4.0f * brake_entry_width);
+            }
+        }
         base_rpm += MOTION_ACCELERATION_RPM_PER_S * (float)elapsed_ms / 1000.0f;
         if (base_rpm > cruise_rpm) { base_rpm = cruise_rpm; }
         if (base_rpm > brake_limit) { base_rpm = brake_limit; }
@@ -562,10 +590,7 @@ static MotionControlStatus MotionControl_RunPolarSegment(
         {
             uint8_t lateral = (Motion_Absolute(forward_unit) < Motion_Absolute(left_unit)) ? 1U : 0U;
             float desired = Motion_HeadingCorrection(base_rpm, lateral, 0.0f);
-            /* Release obsolete correction immediately; slew only its buildup. */
-            if (correction_rpm * desired <= 0.0f) { correction_rpm = 0.0f; }
-            else if (Motion_Absolute(desired) < Motion_Absolute(correction_rpm))
-            { correction_rpm = desired; }
+            /* Slew both release and reversal to avoid sudden wheel differential. */
             correction_rpm = Motion_Approach(correction_rpm, desired,
                 MOTION_HEADING_SLEW_RPM_PER_S * (float)elapsed_ms / 1000.0f);
             /* Slew limiting must not retain a large correction as speed falls. */

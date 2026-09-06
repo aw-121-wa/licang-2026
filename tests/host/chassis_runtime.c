@@ -25,6 +25,11 @@ static unsigned hard_stops, last_command;
 static float brake_start_x = 1000, last_speed;
 static float peak_wheel_rpm;
 static uint32_t sync_tick;
+static unsigned slew_test, slew_checks;
+static float previous_omega;
+static unsigned entry_test, entry_checks;
+static uint32_t entry_tick;
+static float entry_previous;
 static void advance(uint32_t ms)
 {
     const double k = 0.003926990817;
@@ -37,6 +42,7 @@ static void advance(uint32_t ms)
         physical_yaw += delta;
     }
     tick += ms; elapsed += ms;
+    if (slew_test) yaw = elapsed < 600 ? 3.0f : elapsed < 900 ? 1.0f : -3.0f;
     if (stop_at && elapsed >= stop_at) MotionControl_RequestStop();
     assert(elapsed < 120000);
 }
@@ -64,6 +70,27 @@ HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *h, uint8_t *p,
     }
     else if (p[1] == 0xFF) {
         float v = (queued[0]+queued[1]+queued[2]+queued[3])*0.25f;
+        if (entry_test) {
+            float along = fabsf(v) + fabsf((-queued[0]+queued[1]+queued[2]-queued[3])*0.25f);
+            if (!entry_tick && entry_previous > 100 && along < entry_previous - 0.05f)
+                entry_tick = tick;
+            if (entry_tick && tick-entry_tick < 80) {
+                /* First 80 ms must build braking gradually, including RPM quantization. */
+                assert(entry_previous-along <= 0.7f*MOTION_DECELERATION_RPM_PER_S*(tick-sync_tick)/1000.0f + 0.11f);
+                entry_checks++;
+            }
+            entry_previous = along;
+        }
+        if (slew_test) {
+            float omega = (queued[0]-queued[1]+queued[2]-queued[3])*0.25f;
+            float translation = fabsf(v) + fabsf((-queued[0]+queued[1]+queued[2]-queued[3])*0.25f);
+            if (translation > 40.0f && elapsed > 500 && elapsed < 1200) {
+                float scale = slew_test == 2 ? HEADING_LATERAL_OMEGA_SCALE : 1.0f;
+                assert(fabsf(omega-previous_omega) <= MOTION_HEADING_SLEW_RPM_PER_S * scale * (tick-sync_tick)/1000.0f + 0.11f);
+                slew_checks++;
+            }
+            previous_omega = omega;
+        }
         if (brake_test && last_speed > v + 0.11f) {
             if (brake_start_x == 1000) brake_start_x = (float)x;
             float allowed = (last_speed <= 20.1f ? MOTION_FINAL_DECEL_RPM_PER_S :
@@ -105,6 +132,12 @@ int main(int argc, char **argv)
     if (!strcmp(argv[1], "heading")) { yaw = 3; angle = 30; speed = 180; }
     if (!strcmp(argv[1], "brake")) brake_test = 1;
     if (!strcmp(argv[1], "hard_heading")) { yaw_test = 1; yaw = 3; }
+    if (!strcmp(argv[1], "slew_forward")) slew_test = 1;
+    if (!strcmp(argv[1], "slew_lateral")) { slew_test = 2; angle = 90; }
+    if (!strcmp(argv[1], "entry_forward")) { entry_test = 1; distance = 2000; }
+    if (!strcmp(argv[1], "entry_lateral")) { entry_test = 1; distance = 2000; angle = 90; }
+    if (!strcmp(argv[1], "entry_saturated")) { entry_test = 1; distance = 10000; speed = 660; }
+    if (!strcmp(argv[1], "entry_backward")) { entry_test = 1; distance = 2000; angle = 180; }
     MotionControl_Init(&h, &h);
     MotionControl_ImuHeadingHoldActive = 1;
     /* Model MotionControl_PrepareForMove() after the mocked IMU is online. */
@@ -231,6 +264,8 @@ int main(int argc, char **argv)
     assert(fabsf(wheels[0])+fabsf(wheels[1])+fabsf(wheels[2])+fabsf(wheels[3]) == 0);
     if (brake_test) { printf("braking begins at %.1f mm\n", brake_start_x); assert(brake_start_x < distance); }
     assert(hard_stops > 0 && last_command == 0xFE);
+    if (slew_test) assert(slew_checks > 20);
+    if (entry_test) assert(entry_checks >= 5);
     if (!strcmp(argv[1], "fast")) { assert(peak_wheel_rpm >= 449.9f); }
     if (yaw_test) { assert(yaw >= 0 && yaw < 3.0f); }
     if (stop_at) { assert(MotionControl_WasStopped()); assert(actual < 300); }
